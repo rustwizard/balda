@@ -49,3 +49,4 @@ definitions:
         example: OAuthException
         type: string
     type: object
+    
