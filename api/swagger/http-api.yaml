@@ -1,0 +1,51 @@
+swagger: '2.0'
+info:
+  title: Balda GameServer API
+  description: "Balda GameServer API methods and models"
+  version: 1.0.0
+paths:
+  /signup:
+    post:
+      summary: Sign-up request
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            "$ref": "#/definitions/SignupRequest"
+      responses:
+        200:
+          description: Response for signup request
+          schema:
+            "$ref": "#/definitions/SignupResponse"
+        400:
+          description: Error when signup
+          schema:
+            "$ref": "#/definitions/ErrorResponse"
+      tags:
+        - Application
+
+basePath: "/balda/api/v1"
+schemes:
+  - http
+  - https
+
+host: 127.0.0.1:9666
+
+definitions:
+  ErrorResponse:
+    properties:
+      status:
+        description: the HTTP response code
+        example: '401'
+        type: integer
+      message:
+        description: a human-readable explanation of the error
+        example: Bad Authentication data.
+        type: string
+      type:
+        description: Type of the error message
+        example: OAuthException
+        type: string
+    type: object
