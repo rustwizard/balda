@@ -1,7 +1,13 @@
 swagger: '2.0'
 info:
   title: Balda GameServer API
-  description: "Balda GameServer API methods and models"
+  description: "Balda GameServer API methods and models<br>
+                <h3>Headers</h3><br/>
+                <table>
+                <tr><td><b><i>X-API-Key</i></b></td><td>API key is a special token that the client needs to provide when making API calls.</td></tr>
+                <tr><td><b><i>X-API-User</i></b></td><td>User's ID</td></tr>
+                <tr><td><b><i>X-API-Session</i></b></td><td>Session ID</td></tr>
+                </table>"
   version: 1.0.0
 paths:
   /signup:
@@ -49,3 +55,46 @@ definitions:
         example: OAuthException
         type: string
     type: object
+
+  SignupRequest:
+    properties:
+      firstname:
+        description: User's first name
+        example: 'John'
+        type: string
+      lastname:
+        description: User's last name
+        example: 'Smith'
+        type: string
+      email:
+        description: User's email
+        example: 'js@example.org'
+        type: string
+
+  SignupResponse:
+    properties:
+      user:
+        $ref: '#/definitions/User'
+
+  User:
+    properties:
+      uid:
+        description: User's ID in the system
+        example: '545648798'
+        type: integer
+      firstname:
+        description: User's first name
+        example: 'John'
+        type: string
+      lastname:
+        description: User's last name
+        example: 'Smith'
+        type: string
+      sid:
+        description: User's session ID
+        example: '6c160004-35c8-45b1-a4da-0ab67076afde'
+        type: string
+      key:
+        description: User's API Key that the client needs to provide when making API calls.
+        example: 'some_api_key'
+        type: string
