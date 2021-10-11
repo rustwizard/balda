@@ -70,6 +70,10 @@ definitions:
         description: User's email
         example: 'js@example.org'
         type: string
+      password:
+        description: User's password
+        example: 'some_password'
+        type: string
 
   SignupResponse:
     properties:
