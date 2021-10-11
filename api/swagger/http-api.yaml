@@ -31,7 +31,27 @@ paths:
             "$ref": "#/definitions/ErrorResponse"
       tags:
         - Application
-
+  /auth:
+    post:
+      summary: Auth request
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            "$ref": "#/definitions/AuthRequest"
+      responses:
+        200:
+          description: Response for auth request
+          schema:
+            "$ref": "#/definitions/AuthResponse"
+        401:
+          description: Error when auth
+          schema:
+            "$ref": "#/definitions/ErrorResponse"
+      tags:
+      - Application
 basePath: "/balda/api/v1"
 schemes:
   - http
