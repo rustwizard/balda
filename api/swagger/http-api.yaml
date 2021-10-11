@@ -1,7 +1,13 @@
 swagger: '2.0'
 info:
   title: Balda GameServer API
-  description: "Balda GameServer API methods and models"
+  description: "Balda GameServer API methods and models<br>
+                <h3>Headers</h3><br/>
+                <table>
+                <tr><td><b><i>X-API-Key</i></b></td><td>API key is a special token that the client needs to provide when making API calls.</td></tr>
+                <tr><td><b><i>X-API-User</i></b></td><td>User's ID</td></tr>
+                <tr><td><b><i>X-API-Session</i></b></td><td>Session ID</td></tr>
+                </table>"
   version: 1.0.0
 paths:
   /signup:
@@ -25,7 +31,27 @@ paths:
             "$ref": "#/definitions/ErrorResponse"
       tags:
         - Application
-
+  /auth:
+    post:
+      summary: Auth request
+      consumes:
+        - application/json
+      parameters:
+        - name: body
+          in: body
+          schema:
+            "$ref": "#/definitions/AuthRequest"
+      responses:
+        200:
+          description: Response for auth request
+          schema:
+            "$ref": "#/definitions/AuthResponse"
+        401:
+          description: Error when auth
+          schema:
+            "$ref": "#/definitions/ErrorResponse"
+      tags:
+      - Application
 basePath: "/balda/api/v1"
 schemes:
   - http
@@ -49,3 +75,50 @@ definitions:
         example: OAuthException
         type: string
     type: object
+
+  SignupRequest:
+    properties:
+      firstname:
+        description: User's first name
+        example: 'John'
+        type: string
+      lastname:
+        description: User's last name
+        example: 'Smith'
+        type: string
+      email:
+        description: User's email
+        example: 'js@example.org'
+        type: string
+      password:
+        description: User's password
+        example: 'some_password'
+        type: string
+
+  SignupResponse:
+    properties:
+      user:
+        $ref: '#/definitions/User'
+
+  User:
+    properties:
+      uid:
+        description: User's ID in the system
+        example: '545648798'
+        type: integer
+      firstname:
+        description: User's first name
+        example: 'John'
+        type: string
+      lastname:
+        description: User's last name
+        example: 'Smith'
+        type: string
+      sid:
+        description: User's session ID
+        example: '6c160004-35c8-45b1-a4da-0ab67076afde'
+        type: string
+      key:
+        description: User's API Key that the client needs to provide when making API calls.
+        example: 'some_api_key'
+        type: string
