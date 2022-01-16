@@ -15,5 +15,4 @@ build:
 
 code-gen:
 	@echo -e $(GREEN_COLOR)[generating models and server...]$(DEFAULT_COLOR)
-	@swagger generate model -f api/swagger/http-api.yaml -m internal/server/models
-	@swagger generate server -f api/swagger/http-api.yaml -s internal/server/restapi --exclude-main --skip-models
+	@swagger generate server -f api/swagger/http-api.yaml -s internal/server/restapi --exclude-main -m internal/server/models

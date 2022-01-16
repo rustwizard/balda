@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-openapi/runtime"
 
-	"balda/models"
+	"balda/internal/server/models"
 )
 
 // PostAuthOKCode is the HTTP code returned for type PostAuthOK
