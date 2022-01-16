@@ -12,3 +12,7 @@ DEFAULT_COLOR = "\033[m"
 build:
 	@echo -e $(GREEN_COLOR)[building balda to $(BUILD_TARGET)]$(DEFAULT_COLOR)
 	@go generate ./... && go build -o $(BUILD_TARGET)
+
+code-gen:
+	@echo -e $(GREEN_COLOR)[generating models, client and server...]$(DEFAULT_COLOR)
+	@swagger generate model -f api/swagger/http-api.yaml -m internal/server/models

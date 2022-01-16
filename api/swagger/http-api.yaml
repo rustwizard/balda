@@ -122,3 +122,27 @@ definitions:
         description: User's API Key that the client needs to provide when making API calls.
         example: 'some_api_key'
         type: string
+
+  AuthRequest:
+    properties:
+      firstname:
+        description: User's first name
+        example: 'John'
+        type: string
+      lastname:
+        description: User's last name
+        example: 'Smith'
+        type: string
+      email:
+        description: User's email
+        example: 'js@example.org'
+        type: string
+      password:
+        description: User's password
+        example: 'some_password'
+        type: string
+
+  AuthResponse:
+    properties:
+      user:
+        $ref: '#/definitions/User'
