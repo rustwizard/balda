@@ -7,7 +7,7 @@ BUILD_TARGET=$(MAKEFILE_PATH)/bin/balda
 GREEN_COLOR   = "\033[0;32m"
 DEFAULT_COLOR = "\033[m"
 
-.PHONY: build
+.PHONY: build code-gen
 
 build:
 	@echo -e $(GREEN_COLOR)[building balda to $(BUILD_TARGET)]$(DEFAULT_COLOR)
