@@ -1,6 +1,6 @@
 swagger: '2.0'
 info:
-  title: Balda GameServer API
+  title: Balda GameServer
   description: "Balda GameServer API methods and models<br>
                 <h3>Headers</h3><br/>
                 <table>

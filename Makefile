@@ -14,5 +14,6 @@ build:
 	@go generate ./... && go build -o $(BUILD_TARGET)
 
 code-gen:
-	@echo -e $(GREEN_COLOR)[generating models, client and server...]$(DEFAULT_COLOR)
+	@echo -e $(GREEN_COLOR)[generating models and server...]$(DEFAULT_COLOR)
 	@swagger generate model -f api/swagger/http-api.yaml -m internal/server/models
+	@swagger generate server -f api/swagger/http-api.yaml -s internal/server/restapi
