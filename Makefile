@@ -11,7 +11,7 @@ DEFAULT_COLOR = "\033[m"
 
 build:
 	@echo -e $(GREEN_COLOR)[building balda to $(BUILD_TARGET)]$(DEFAULT_COLOR)
-	@make code-gen && go build -o $(BUILD_TARGET)
+	@go generate ./... && go build -o $(BUILD_TARGET)
 
 code-gen:
 	@echo -e $(GREEN_COLOR)[generating models and server...]$(DEFAULT_COLOR)
