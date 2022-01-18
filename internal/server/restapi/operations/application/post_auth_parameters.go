@@ -14,7 +14,7 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/go-openapi/validate"
 
-	"balda/internal/server/models"
+	"github.com/rustwizard/balda/internal/server/models"
 )
 
 // NewPostAuthParams creates a new PostAuthParams object

@@ -19,7 +19,7 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
-	"balda/internal/server/restapi/operations/application"
+	"github.com/rustwizard/balda/internal/server/restapi/operations/application"
 )
 
 // NewBaldaGameServerAPI creates a new BaldaGameServer instance

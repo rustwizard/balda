@@ -25,7 +25,7 @@ import (
 	flags "github.com/jessevdk/go-flags"
 	"golang.org/x/net/netutil"
 
-	"balda/internal/server/restapi/operations"
+	"github.com/rustwizard/balda/internal/server/restapi/operations"
 )
 
 const (

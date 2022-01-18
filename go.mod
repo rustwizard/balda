@@ -1,4 +1,4 @@
-module balda
+module github.com/rustwizard/balda
 
 go 1.17
 
