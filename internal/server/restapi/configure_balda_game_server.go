@@ -10,11 +10,11 @@ import (
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/runtime/middleware"
 
-	"balda/internal/server/restapi/operations"
-	"balda/internal/server/restapi/operations/application"
+	"github.com/rustwizard/balda/internal/server/restapi/operations"
+	"github.com/rustwizard/balda/internal/server/restapi/operations/application"
 )
 
-//go:generate swagger generate server --target ../../../../balda --name BaldaGameServer --spec ../../../api/swagger/http-api.yaml --server-package internal/server/restapi --principal interface{}
+//go:generate swagger generate server --target ../../../../balda --name BaldaGameServer --spec ../../../api/swagger/http-api.yaml --model-package internal/server/models --server-package internal/server/restapi --principal interface{} --exclude-main
 
 func configureFlags(api *operations.BaldaGameServerAPI) {
 	// api.CommandLineOptionsGroups = []swag.CommandLineOptionsGroup{ ... }

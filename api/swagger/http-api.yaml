@@ -55,7 +55,6 @@ paths:
 basePath: "/balda/api/v1"
 schemes:
   - http
-  - https
 
 host: 127.0.0.1:9666
 
