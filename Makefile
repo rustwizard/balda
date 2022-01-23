@@ -11,7 +11,7 @@ DEFAULT_COLOR = "\033[m"
 
 build:
 	@echo -e $(GREEN_COLOR)[building balda to $(BUILD_TARGET)]$(DEFAULT_COLOR)
-	@go generate ./... && go build -o $(BUILD_TARGET)
+	@go build -o $(BUILD_TARGET)
 
 code-gen:
 	@echo -e $(GREEN_COLOR)[generating models and server...]$(DEFAULT_COLOR)
@@ -20,4 +20,7 @@ code-gen:
 test:
 	@echo -e $(GREEN_COLOR)[running tests]$(DEFAULT_COLOR)
 	@go generate ./... && go test -v `go list ./... | grep -v integration`
+
+docker:
+	@docker build -f ./build/Dockerfile ./
 
