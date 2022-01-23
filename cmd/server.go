@@ -3,11 +3,20 @@ package cmd
 import (
 	"log"
 
+	"github.com/spf13/pflag"
+
 	"github.com/go-openapi/loads"
 	"github.com/rustwizard/balda/internal/server/restapi"
 	"github.com/rustwizard/balda/internal/server/restapi/operations"
 	"github.com/spf13/cobra"
 )
+
+var cfg Config
+
+type Config struct {
+	Addr string
+	Port int
+}
 
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
@@ -20,7 +29,8 @@ var serverCmd = &cobra.Command{
 		}
 		api := operations.NewBaldaGameServerAPI(swaggerSpec)
 		server := restapi.NewServer(api)
-		server.Port = 9666
+		server.Port = cfg.Port
+		server.Host = cfg.Addr
 		defer func(server *restapi.Server) {
 			err := server.Shutdown()
 			if err != nil {
@@ -36,6 +46,19 @@ var serverCmd = &cobra.Command{
 	},
 }
 
+// Flags ...
+func (c *Config) Flags(prefix string) *pflag.FlagSet {
+	if prefix != "" {
+		prefix += "."
+	}
+
+	f := pflag.NewFlagSet("", pflag.PanicOnError)
+	f.StringVar(&c.Addr, prefix+"addr", "127.0.0.1", "server addr")
+	f.IntVar(&c.Port, prefix+"port", 9666, "server port")
+	return f
+}
+
 func init() {
+	serverCmd.Flags().AddFlagSet(cfg.Flags("server"))
 	rootCmd.AddCommand(serverCmd)
 }
