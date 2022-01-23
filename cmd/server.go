@@ -29,7 +29,8 @@ var serverCmd = &cobra.Command{
 		}
 		api := operations.NewBaldaGameServerAPI(swaggerSpec)
 		server := restapi.NewServer(api)
-		server.Port = 9666
+		server.Port = cfg.Port
+		server.Host = cfg.Addr
 		defer func(server *restapi.Server) {
 			err := server.Shutdown()
 			if err != nil {
