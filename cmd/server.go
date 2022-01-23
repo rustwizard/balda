@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"log"
+	"github.com/rs/zerolog/log"
+	"github.com/rustwizard/balda/internal/flags"
 
 	"github.com/spf13/pflag"
 
@@ -14,8 +15,8 @@ import (
 var cfg Config
 
 type Config struct {
-	Addr string
-	Port int
+	ServerAddr string
+	ServerPort int
 }
 
 // serverCmd represents the server command
@@ -23,25 +24,26 @@ var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Balda Game Server",
 	Run: func(cmd *cobra.Command, args []string) {
+		flags.BindEnv(cmd)
 		swaggerSpec, err := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
 		if err != nil {
-			log.Fatalln(err)
+			log.Fatal().Err(err).Msg("load swagger spec")
 		}
 		api := operations.NewBaldaGameServerAPI(swaggerSpec)
 		server := restapi.NewServer(api)
-		server.Port = cfg.Port
-		server.Host = cfg.Addr
+		server.Port = cfg.ServerPort
+		server.Host = cfg.ServerAddr
 		defer func(server *restapi.Server) {
 			err := server.Shutdown()
 			if err != nil {
-				log.Println(err)
+				log.Err(err).Msg("server shutdown")
 			}
 		}(server)
 
 		server.ConfigureAPI()
 
 		if err := server.Serve(); err != nil {
-			log.Fatalln(err)
+			log.Fatal().Err(err).Msg("serve")
 		}
 	},
 }
@@ -53,12 +55,11 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	}
 
 	f := pflag.NewFlagSet("", pflag.PanicOnError)
-	f.StringVar(&c.Addr, prefix+"addr", "127.0.0.1", "server addr")
-	f.IntVar(&c.Port, prefix+"port", 9666, "server port")
+	f.StringVar(&c.ServerAddr, prefix+"addr", "127.0.0.1", "server addr")
+	f.IntVar(&c.ServerPort, prefix+"port", 9666, "server port")
 	return f
 }
 
 func init() {
 	serverCmd.Flags().AddFlagSet(cfg.Flags("server"))
-	rootCmd.AddCommand(serverCmd)
 }

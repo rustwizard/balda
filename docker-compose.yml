@@ -1,0 +1,13 @@
+version: "3"
+services:
+  server:
+    image: rustwizard/balda-server
+    build:
+      context: .
+      dockerfile: ./build/Dockerfile
+    ports:
+      - "127.0.0.1:9666:9666"
+    environment:
+      SERVER_ADDR: 0.0.0.0
+      SERVER_PORT: 9666
+    command: ["server"]
