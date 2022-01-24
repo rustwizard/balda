@@ -38,8 +38,21 @@ func configureAPI(api *operations.BaldaGameServerAPI) http.Handler {
 
 	api.JSONProducer = runtime.JSONProducer()
 
+	// Applies when the "X-API-Key" header is set
+	if api.APIKeyHeaderAuth == nil {
+		api.APIKeyHeaderAuth = func(token string) (interface{}, error) {
+			return nil, errors.NotImplemented("api key auth (APIKeyHeader) X-API-Key from header param [X-API-Key] has not yet been implemented")
+		}
+	}
+
+	// Set your custom authorizer if needed. Default one is security.Authorized()
+	// Expected interface runtime.Authorizer
+	//
+	// Example:
+	// api.APIAuthorizer = security.Authorized()
+
 	if api.ApplicationPostAuthHandler == nil {
-		api.ApplicationPostAuthHandler = application.PostAuthHandlerFunc(func(params application.PostAuthParams) middleware.Responder {
+		api.ApplicationPostAuthHandler = application.PostAuthHandlerFunc(func(params application.PostAuthParams, principal interface{}) middleware.Responder {
 			return middleware.NotImplemented("operation application.PostAuth has not yet been implemented")
 		})
 	}
