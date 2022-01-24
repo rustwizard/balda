@@ -32,6 +32,11 @@ func init() {
   "paths": {
     "/auth": {
       "post": {
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
         "consumes": [
           "application/json"
         ],
@@ -210,6 +215,18 @@ func init() {
           "example": "545648798"
         }
       }
+    }
+  },
+  "securityDefinitions": {
+    "APIKeyHeader": {
+      "type": "apiKey",
+      "name": "X-API-Key",
+      "in": "header"
+    },
+    "APIKeyQueryParam": {
+      "type": "apiKey",
+      "name": "api_key",
+      "in": "query"
     }
   }
 }`))
@@ -228,6 +245,11 @@ func init() {
   "paths": {
     "/auth": {
       "post": {
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ],
         "consumes": [
           "application/json"
         ],
@@ -406,6 +428,18 @@ func init() {
           "example": "545648798"
         }
       }
+    }
+  },
+  "securityDefinitions": {
+    "APIKeyHeader": {
+      "type": "apiKey",
+      "name": "X-API-Key",
+      "in": "header"
+    },
+    "APIKeyQueryParam": {
+      "type": "apiKey",
+      "name": "api_key",
+      "in": "query"
     }
   }
 }`))

@@ -44,12 +44,19 @@ func NewBaldaGameServerAPI(spec *loads.Document) *BaldaGameServerAPI {
 
 		JSONProducer: runtime.JSONProducer(),
 
-		ApplicationPostAuthHandler: application.PostAuthHandlerFunc(func(params application.PostAuthParams) middleware.Responder {
+		ApplicationPostAuthHandler: application.PostAuthHandlerFunc(func(params application.PostAuthParams, principal interface{}) middleware.Responder {
 			return middleware.NotImplemented("operation application.PostAuth has not yet been implemented")
 		}),
 		ApplicationPostSignupHandler: application.PostSignupHandlerFunc(func(params application.PostSignupParams) middleware.Responder {
 			return middleware.NotImplemented("operation application.PostSignup has not yet been implemented")
 		}),
+
+		// Applies when the "X-API-Key" header is set
+		APIKeyHeaderAuth: func(token string) (interface{}, error) {
+			return nil, errors.NotImplemented("api key auth (APIKeyHeader) X-API-Key from header param [X-API-Key] has not yet been implemented")
+		},
+		// default authorizer is authorized meaning no requests are blocked
+		APIAuthorizer: security.Authorized(),
 	}
 }
 
@@ -85,6 +92,13 @@ type BaldaGameServerAPI struct {
 	// JSONProducer registers a producer for the following mime types:
 	//   - application/json
 	JSONProducer runtime.Producer
+
+	// APIKeyHeaderAuth registers a function that takes a token and returns a principal
+	// it performs authentication based on an api key X-API-Key provided in the header
+	APIKeyHeaderAuth func(string) (interface{}, error)
+
+	// APIAuthorizer provides access control (ACL/RBAC/ABAC) by providing access to the request and authenticated principal
+	APIAuthorizer runtime.Authorizer
 
 	// ApplicationPostAuthHandler sets the operation handler for the post auth operation
 	ApplicationPostAuthHandler application.PostAuthHandler
@@ -167,6 +181,10 @@ func (o *BaldaGameServerAPI) Validate() error {
 		unregistered = append(unregistered, "JSONProducer")
 	}
 
+	if o.APIKeyHeaderAuth == nil {
+		unregistered = append(unregistered, "XAPIKeyAuth")
+	}
+
 	if o.ApplicationPostAuthHandler == nil {
 		unregistered = append(unregistered, "application.PostAuthHandler")
 	}
@@ -188,12 +206,21 @@ func (o *BaldaGameServerAPI) ServeErrorFor(operationID string) func(http.Respons
 
 // AuthenticatorsFor gets the authenticators for the specified security schemes
 func (o *BaldaGameServerAPI) AuthenticatorsFor(schemes map[string]spec.SecurityScheme) map[string]runtime.Authenticator {
-	return nil
+	result := make(map[string]runtime.Authenticator)
+	for name := range schemes {
+		switch name {
+		case "APIKeyHeader":
+			scheme := schemes[name]
+			result[name] = o.APIKeyAuthenticator(scheme.Name, scheme.In, o.APIKeyHeaderAuth)
+
+		}
+	}
+	return result
 }
 
 // Authorizer returns the registered authorizer
 func (o *BaldaGameServerAPI) Authorizer() runtime.Authorizer {
-	return nil
+	return o.APIAuthorizer
 }
 
 // ConsumersFor gets the consumers for the specified media types.
