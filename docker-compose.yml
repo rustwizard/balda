@@ -11,3 +11,14 @@ services:
       SERVER_ADDR: 0.0.0.0
       SERVER_PORT: 9666
     command: ["server"]
+
+  pg:
+    image: postgres:14
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - /opt/postgres:/var/lib/postgresql/data
+    environment:
+        - POSTGRES_PASSWORD=password
+        - POSTGRES_USER=balda
+        - POSTGRES_DB=balda
