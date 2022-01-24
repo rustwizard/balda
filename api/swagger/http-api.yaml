@@ -9,6 +9,7 @@ info:
                 <tr><td><b><i>X-API-Session</i></b></td><td>Session ID</td></tr>
                 </table>"
   version: 1.0.0
+
 paths:
   /signup:
     post:
@@ -41,6 +42,8 @@ paths:
           in: body
           schema:
             "$ref": "#/definitions/AuthRequest"
+      security:
+        - APIKeyHeader: [ ]
       responses:
         200:
           description: Response for auth request
@@ -145,3 +148,15 @@ definitions:
     properties:
       user:
         $ref: '#/definitions/User'
+
+securityDefinitions:
+  # X-API-Key: abcdef12345
+  APIKeyHeader:
+    type: apiKey
+    in: header
+    name: X-API-Key
+  # /path?api_key=abcdef12345
+  APIKeyQueryParam:
+    type: apiKey
+    in: query
+    name: api_key
