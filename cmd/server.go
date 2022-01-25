@@ -49,7 +49,9 @@ var serverCmd = &cobra.Command{
 		api := operations.NewBaldaGameServerAPI(swaggerSpec)
 		// handlers
 		api.SignupPostSignupHandler = handlers.NewSignUp(db)
-
+		// TODO: call api.Validate()
+		// TODO: impl api x-api-key checker
+		api.UseSwaggerUI()
 		server := restapi.NewServer(api)
 		server.Port = cfg.ServerPort
 		server.Host = cfg.ServerAddr
