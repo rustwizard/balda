@@ -22,7 +22,6 @@ func NewSignUp(db *pg.DB) *SignUp {
 
 func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 	log.Info().Msg("signup handler called")
-	// TODO: validate body request
 	// TODO: use context in proper way
 	ctx := context.Background()
 	tx, err := s.db.Pool.Begin(ctx)
@@ -62,9 +61,9 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 	// TODO: generate session_id and put sid to the session storage
 	sid := "test_sid"
 	return signup.NewPostSignupOK().WithPayload(&models.SignupResponse{User: &models.User{
-		Firstname: params.Body.Firstname,
+		Firstname: *params.Body.Firstname,
 		Key:       apiKey,
-		Lastname:  params.Body.Lastname,
+		Lastname:  *params.Body.Lastname,
 		Sid:       sid,
 		UID:       uid,
 	}})

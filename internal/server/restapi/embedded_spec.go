@@ -163,10 +163,17 @@ func init() {
       }
     },
     "SignupRequest": {
+      "required": [
+        "firstname",
+        "lastname",
+        "email",
+        "password"
+      ],
       "properties": {
         "email": {
           "description": "User's email",
           "type": "string",
+          "format": "email",
           "example": "js@example.org"
         },
         "firstname": {
@@ -382,10 +389,17 @@ func init() {
       }
     },
     "SignupRequest": {
+      "required": [
+        "firstname",
+        "lastname",
+        "email",
+        "password"
+      ],
       "properties": {
         "email": {
           "description": "User's email",
           "type": "string",
+          "format": "email",
           "example": "js@example.org"
         },
         "firstname": {

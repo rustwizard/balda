@@ -85,6 +85,7 @@ definitions:
     type: object
 
   SignupRequest:
+    required: [firstname, lastname, email, password]
     properties:
       firstname:
         description: User's first name
@@ -98,6 +99,7 @@ definitions:
         description: User's email
         example: 'js@example.org'
         type: string
+        format: email
       password:
         description: User's password
         example: 'some_password'
