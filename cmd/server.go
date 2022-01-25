@@ -33,7 +33,7 @@ var serverCmd = &cobra.Command{
 			log.Fatal().Err(err).Msg("load swagger spec")
 		}
 		db := pg.NewDB()
-		// TODO: config params form flags
+		// TODO: config params from flags
 		err = db.Connect(&pg.Config{
 			Host:         "pg",
 			Port:         5432,
@@ -52,6 +52,7 @@ var serverCmd = &cobra.Command{
 		// TODO: call api.Validate()
 		// TODO: impl api x-api-key checker
 		api.UseSwaggerUI()
+
 		server := restapi.NewServer(api)
 		server.Port = cfg.ServerPort
 		server.Host = cfg.ServerAddr

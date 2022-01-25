@@ -33,12 +33,10 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 		})
 	}
 
-	// TODO: impl hash + salt function
-
 	var uid int64
 	var apiKey string
 	err = tx.QueryRow(ctx, `INSERT INTO users(first_name, last_name, email, hash_password) 
-		VALUES($1, $2, $3, $4) RETURNING user_id, api_key`, params.Body.Firstname,
+		VALUES($1, $2, $3, crypt($4, gen_salt('bf', 8))) RETURNING user_id, api_key`, params.Body.Firstname,
 		params.Body.Lastname, params.Body.Email, params.Body.Password).Scan(&uid, &apiKey)
 	if err != nil {
 		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
@@ -50,7 +48,9 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 
 	err = tx.Commit(ctx)
 	if err != nil {
-		err = tx.Rollback(ctx)
+		if err = tx.Rollback(ctx); err != nil {
+			log.Error().Err(err).Msg("signup: rollback")
+		}
 		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
 			Message: "",
 			Status:  http.StatusBadRequest,
