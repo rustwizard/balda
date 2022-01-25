@@ -10,6 +10,17 @@ info:
                 </table>"
   version: 1.0.0
 
+basePath: "/balda/api/v1"
+schemes:
+  - http
+
+host: 127.0.0.1:9666
+
+consumes:
+  - application/json
+produces:
+  - application/json
+
 paths:
   /signup:
     post:
@@ -31,7 +42,7 @@ paths:
           schema:
             "$ref": "#/definitions/ErrorResponse"
       tags:
-        - Application
+        - Signup
   /auth:
     post:
       summary: Auth request
@@ -54,12 +65,7 @@ paths:
           schema:
             "$ref": "#/definitions/ErrorResponse"
       tags:
-      - Application
-basePath: "/balda/api/v1"
-schemes:
-  - http
-
-host: 127.0.0.1:9666
+      - Auth
 
 definitions:
   ErrorResponse:

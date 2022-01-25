@@ -18,6 +18,12 @@ var (
 
 func init() {
 	SwaggerJSON = json.RawMessage([]byte(`{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
   "schemes": [
     "http"
   ],
@@ -41,7 +47,7 @@ func init() {
           "application/json"
         ],
         "tags": [
-          "Application"
+          "Auth"
         ],
         "summary": "Auth request",
         "parameters": [
@@ -75,7 +81,7 @@ func init() {
           "application/json"
         ],
         "tags": [
-          "Application"
+          "Signup"
         ],
         "summary": "Sign-up request",
         "parameters": [
@@ -231,6 +237,12 @@ func init() {
   }
 }`))
 	FlatSwaggerJSON = json.RawMessage([]byte(`{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
   "schemes": [
     "http"
   ],
@@ -254,7 +266,7 @@ func init() {
           "application/json"
         ],
         "tags": [
-          "Application"
+          "Auth"
         ],
         "summary": "Auth request",
         "parameters": [
@@ -288,7 +300,7 @@ func init() {
           "application/json"
         ],
         "tags": [
-          "Application"
+          "Signup"
         ],
         "summary": "Sign-up request",
         "parameters": [

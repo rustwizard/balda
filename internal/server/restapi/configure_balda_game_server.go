@@ -11,7 +11,8 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 
 	"github.com/rustwizard/balda/internal/server/restapi/operations"
-	"github.com/rustwizard/balda/internal/server/restapi/operations/application"
+	"github.com/rustwizard/balda/internal/server/restapi/operations/auth"
+	"github.com/rustwizard/balda/internal/server/restapi/operations/signup"
 )
 
 //go:generate swagger generate server --target ../../../../balda --name BaldaGameServer --spec ../../../api/swagger/http-api.yaml --model-package internal/server/models --server-package internal/server/restapi --principal interface{} --exclude-main
@@ -51,14 +52,14 @@ func configureAPI(api *operations.BaldaGameServerAPI) http.Handler {
 	// Example:
 	// api.APIAuthorizer = security.Authorized()
 
-	if api.ApplicationPostAuthHandler == nil {
-		api.ApplicationPostAuthHandler = application.PostAuthHandlerFunc(func(params application.PostAuthParams, principal interface{}) middleware.Responder {
-			return middleware.NotImplemented("operation application.PostAuth has not yet been implemented")
+	if api.AuthPostAuthHandler == nil {
+		api.AuthPostAuthHandler = auth.PostAuthHandlerFunc(func(params auth.PostAuthParams, principal interface{}) middleware.Responder {
+			return middleware.NotImplemented("operation auth.PostAuth has not yet been implemented")
 		})
 	}
-	if api.ApplicationPostSignupHandler == nil {
-		api.ApplicationPostSignupHandler = application.PostSignupHandlerFunc(func(params application.PostSignupParams) middleware.Responder {
-			return middleware.NotImplemented("operation application.PostSignup has not yet been implemented")
+	if api.SignupPostSignupHandler == nil {
+		api.SignupPostSignupHandler = signup.PostSignupHandlerFunc(func(params signup.PostSignupParams) middleware.Responder {
+			return middleware.NotImplemented("operation signup.PostSignup has not yet been implemented")
 		})
 	}
 
