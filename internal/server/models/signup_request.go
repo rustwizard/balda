@@ -8,8 +8,10 @@ package models
 import (
 	"context"
 
+	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // SignupRequest signup request
@@ -19,23 +21,89 @@ type SignupRequest struct {
 
 	// User's email
 	// Example: js@example.org
-	Email string `json:"email,omitempty"`
+	// Required: true
+	// Format: email
+	Email *strfmt.Email `json:"email"`
 
 	// User's first name
 	// Example: John
-	Firstname string `json:"firstname,omitempty"`
+	// Required: true
+	Firstname *string `json:"firstname"`
 
 	// User's last name
 	// Example: Smith
-	Lastname string `json:"lastname,omitempty"`
+	// Required: true
+	Lastname *string `json:"lastname"`
 
 	// User's password
 	// Example: some_password
-	Password string `json:"password,omitempty"`
+	// Required: true
+	Password *string `json:"password"`
 }
 
 // Validate validates this signup request
 func (m *SignupRequest) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateEmail(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateFirstname(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateLastname(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validatePassword(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *SignupRequest) validateEmail(formats strfmt.Registry) error {
+
+	if err := validate.Required("email", "body", m.Email); err != nil {
+		return err
+	}
+
+	if err := validate.FormatOf("email", "body", "email", m.Email.String(), formats); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *SignupRequest) validateFirstname(formats strfmt.Registry) error {
+
+	if err := validate.Required("firstname", "body", m.Firstname); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *SignupRequest) validateLastname(formats strfmt.Registry) error {
+
+	if err := validate.Required("lastname", "body", m.Lastname); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *SignupRequest) validatePassword(formats strfmt.Registry) error {
+
+	if err := validate.Required("password", "body", m.Password); err != nil {
+		return err
+	}
+
 	return nil
 }
 

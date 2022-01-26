@@ -19,7 +19,8 @@ import (
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 
-	"github.com/rustwizard/balda/internal/server/restapi/operations/application"
+	"github.com/rustwizard/balda/internal/server/restapi/operations/auth"
+	"github.com/rustwizard/balda/internal/server/restapi/operations/signup"
 )
 
 // NewBaldaGameServerAPI creates a new BaldaGameServer instance
@@ -44,11 +45,11 @@ func NewBaldaGameServerAPI(spec *loads.Document) *BaldaGameServerAPI {
 
 		JSONProducer: runtime.JSONProducer(),
 
-		ApplicationPostAuthHandler: application.PostAuthHandlerFunc(func(params application.PostAuthParams, principal interface{}) middleware.Responder {
-			return middleware.NotImplemented("operation application.PostAuth has not yet been implemented")
+		AuthPostAuthHandler: auth.PostAuthHandlerFunc(func(params auth.PostAuthParams, principal interface{}) middleware.Responder {
+			return middleware.NotImplemented("operation auth.PostAuth has not yet been implemented")
 		}),
-		ApplicationPostSignupHandler: application.PostSignupHandlerFunc(func(params application.PostSignupParams) middleware.Responder {
-			return middleware.NotImplemented("operation application.PostSignup has not yet been implemented")
+		SignupPostSignupHandler: signup.PostSignupHandlerFunc(func(params signup.PostSignupParams) middleware.Responder {
+			return middleware.NotImplemented("operation signup.PostSignup has not yet been implemented")
 		}),
 
 		// Applies when the "X-API-Key" header is set
@@ -100,10 +101,10 @@ type BaldaGameServerAPI struct {
 	// APIAuthorizer provides access control (ACL/RBAC/ABAC) by providing access to the request and authenticated principal
 	APIAuthorizer runtime.Authorizer
 
-	// ApplicationPostAuthHandler sets the operation handler for the post auth operation
-	ApplicationPostAuthHandler application.PostAuthHandler
-	// ApplicationPostSignupHandler sets the operation handler for the post signup operation
-	ApplicationPostSignupHandler application.PostSignupHandler
+	// AuthPostAuthHandler sets the operation handler for the post auth operation
+	AuthPostAuthHandler auth.PostAuthHandler
+	// SignupPostSignupHandler sets the operation handler for the post signup operation
+	SignupPostSignupHandler signup.PostSignupHandler
 
 	// ServeError is called when an error is received, there is a default handler
 	// but you can set your own with this
@@ -185,11 +186,11 @@ func (o *BaldaGameServerAPI) Validate() error {
 		unregistered = append(unregistered, "XAPIKeyAuth")
 	}
 
-	if o.ApplicationPostAuthHandler == nil {
-		unregistered = append(unregistered, "application.PostAuthHandler")
+	if o.AuthPostAuthHandler == nil {
+		unregistered = append(unregistered, "auth.PostAuthHandler")
 	}
-	if o.ApplicationPostSignupHandler == nil {
-		unregistered = append(unregistered, "application.PostSignupHandler")
+	if o.SignupPostSignupHandler == nil {
+		unregistered = append(unregistered, "signup.PostSignupHandler")
 	}
 
 	if len(unregistered) > 0 {
@@ -291,11 +292,11 @@ func (o *BaldaGameServerAPI) initHandlerCache() {
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
-	o.handlers["POST"]["/auth"] = application.NewPostAuth(o.context, o.ApplicationPostAuthHandler)
+	o.handlers["POST"]["/auth"] = auth.NewPostAuth(o.context, o.AuthPostAuthHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}
-	o.handlers["POST"]["/signup"] = application.NewPostSignup(o.context, o.ApplicationPostSignupHandler)
+	o.handlers["POST"]["/signup"] = signup.NewPostSignup(o.context, o.SignupPostSignupHandler)
 }
 
 // Serve creates a http handler to serve the API over HTTP

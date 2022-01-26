@@ -18,6 +18,12 @@ var (
 
 func init() {
 	SwaggerJSON = json.RawMessage([]byte(`{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
   "schemes": [
     "http"
   ],
@@ -41,7 +47,7 @@ func init() {
           "application/json"
         ],
         "tags": [
-          "Application"
+          "Auth"
         ],
         "summary": "Auth request",
         "parameters": [
@@ -75,7 +81,7 @@ func init() {
           "application/json"
         ],
         "tags": [
-          "Application"
+          "Signup"
         ],
         "summary": "Sign-up request",
         "parameters": [
@@ -157,10 +163,17 @@ func init() {
       }
     },
     "SignupRequest": {
+      "required": [
+        "firstname",
+        "lastname",
+        "email",
+        "password"
+      ],
       "properties": {
         "email": {
           "description": "User's email",
           "type": "string",
+          "format": "email",
           "example": "js@example.org"
         },
         "firstname": {
@@ -231,6 +244,12 @@ func init() {
   }
 }`))
 	FlatSwaggerJSON = json.RawMessage([]byte(`{
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
   "schemes": [
     "http"
   ],
@@ -254,7 +273,7 @@ func init() {
           "application/json"
         ],
         "tags": [
-          "Application"
+          "Auth"
         ],
         "summary": "Auth request",
         "parameters": [
@@ -288,7 +307,7 @@ func init() {
           "application/json"
         ],
         "tags": [
-          "Application"
+          "Signup"
         ],
         "summary": "Sign-up request",
         "parameters": [
@@ -370,10 +389,17 @@ func init() {
       }
     },
     "SignupRequest": {
+      "required": [
+        "firstname",
+        "lastname",
+        "email",
+        "password"
+      ],
       "properties": {
         "email": {
           "description": "User's email",
           "type": "string",
+          "format": "email",
           "example": "js@example.org"
         },
         "firstname": {
