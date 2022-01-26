@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/rs/zerolog/log"
 	"github.com/rustwizard/balda/internal/flags"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
@@ -26,8 +28,7 @@ type Config struct {
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Balda Game Server",
-	// TODO: Run -> RunE
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		flags.BindEnv(cmd)
 		swaggerSpec, err := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
 		if err != nil {
@@ -45,7 +46,7 @@ var serverCmd = &cobra.Command{
 			SSL:          cfg.Pg.SSL,
 		})
 		if err != nil {
-			log.Fatal().Err(err).Msg("load swagger spec")
+			return fmt.Errorf("load swagger spec: %v", err)
 		}
 		api := operations.NewBaldaGameServerAPI(swaggerSpec)
 		// handlers
@@ -67,8 +68,10 @@ var serverCmd = &cobra.Command{
 		server.ConfigureAPI()
 
 		if err := server.Serve(); err != nil {
-			log.Fatal().Err(err).Msg("serve")
+			return fmt.Errorf("server serve: %v", err)
 		}
+
+		return nil
 	},
 }
 
