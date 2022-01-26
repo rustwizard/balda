@@ -19,6 +19,7 @@ var cfg Config
 type Config struct {
 	ServerAddr string
 	ServerPort int
+	Pg         pg.Config
 }
 
 // serverCmd represents the server command
@@ -35,13 +36,13 @@ var serverCmd = &cobra.Command{
 		db := pg.NewDB()
 		// TODO: config params from flags
 		err = db.Connect(&pg.Config{
-			Host:         "pg",
-			Port:         5432,
-			User:         "balda",
-			Password:     "password",
-			DatabaseName: "balda",
-			MaxPoolSize:  100,
-			SSL:          "disable",
+			Host:         cfg.Pg.Host,
+			Port:         cfg.Pg.Port,
+			User:         cfg.Pg.User,
+			Password:     cfg.Pg.Password,
+			DatabaseName: cfg.Pg.DatabaseName,
+			MaxPoolSize:  cfg.Pg.MaxPoolSize,
+			SSL:          cfg.Pg.SSL,
 		})
 		if err != nil {
 			log.Fatal().Err(err).Msg("load swagger spec")
@@ -80,6 +81,13 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	f := pflag.NewFlagSet("", pflag.PanicOnError)
 	f.StringVar(&c.ServerAddr, prefix+"addr", "127.0.0.1", "server addr")
 	f.IntVar(&c.ServerPort, prefix+"port", 9666, "server port")
+	f.StringVar(&c.Pg.Host, "pg.host", "127.0.0.1", "postgres addr")
+	f.IntVar(&c.Pg.Port, "pg.port", 5432, "postgres port")
+	f.StringVar(&c.Pg.User, "pg.user", "", "postgres user")
+	f.StringVar(&c.Pg.DatabaseName, "pg.database", "", "postgres database")
+	f.StringVar(&c.Pg.Password, "pg.password", "", "postgres password")
+	f.IntVar(&c.Pg.MaxPoolSize, "pg.max_pool_size", 0, "postgres max pool size")
+	f.StringVar(&c.Pg.SSL, "pg.ssl", "disable", "postgres ssl")
 	return f
 }
 
