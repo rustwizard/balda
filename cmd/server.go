@@ -32,10 +32,10 @@ var serverCmd = &cobra.Command{
 		flags.BindEnv(cmd)
 		swaggerSpec, err := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
 		if err != nil {
-			log.Fatal().Err(err).Msg("load swagger spec")
+			return fmt.Errorf("load swagger spec: %v", err)
 		}
+
 		db := pg.NewDB()
-		// TODO: config params from flags
 		err = db.Connect(&pg.Config{
 			Host:         cfg.Pg.Host,
 			Port:         cfg.Pg.Port,
@@ -46,7 +46,7 @@ var serverCmd = &cobra.Command{
 			SSL:          cfg.Pg.SSL,
 		})
 		if err != nil {
-			return fmt.Errorf("load swagger spec: %v", err)
+			return fmt.Errorf("connect to pg: %v", err)
 		}
 		api := operations.NewBaldaGameServerAPI(swaggerSpec)
 		// handlers
