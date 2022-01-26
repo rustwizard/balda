@@ -3,10 +3,12 @@ package handlers
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/go-openapi/runtime/middleware"
+	"github.com/google/uuid"
 	"github.com/rustwizard/balda/internal/server/models"
 	"github.com/rustwizard/balda/internal/server/restapi/operations/signup"
 	"github.com/rustwizard/cleargo/db/pg"
@@ -22,8 +24,10 @@ func NewSignUp(db *pg.DB) *SignUp {
 
 func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 	log.Info().Msg("signup handler called")
-	// TODO: use context in proper way
-	ctx := context.Background()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	tx, err := s.db.Pool.Begin(ctx)
 	if err != nil {
 		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
@@ -58,13 +62,21 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 		})
 	}
 
-	// TODO: generate session_id and put sid to the session storage
-	sid := "test_sid"
+	sid, err := uuid.NewRandom()
+	if err != nil {
+		log.Error().Err(err).Msg("signup: gen session id")
+		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
+			Message: "",
+			Status:  http.StatusBadRequest,
+			Type:    "SignUp Error",
+		})
+	}
+
 	return signup.NewPostSignupOK().WithPayload(&models.SignupResponse{User: &models.User{
 		Firstname: *params.Body.Firstname,
 		Key:       apiKey,
 		Lastname:  *params.Body.Lastname,
-		Sid:       sid,
+		Sid:       sid.String(),
 		UID:       uid,
 	}})
 }

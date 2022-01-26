@@ -61,6 +61,9 @@ github.com/go-openapi/validate
 github.com/go-stack/stack
 # github.com/google/go-cmp v0.5.6
 ## explicit; go 1.8
+# github.com/google/uuid v1.3.0
+## explicit
+github.com/google/uuid
 # github.com/inconshreveable/mousetrap v1.0.0
 ## explicit
 github.com/inconshreveable/mousetrap
