@@ -62,7 +62,7 @@ type User struct {
 func (s *Service) Get(r *http.Request) (*User, error) {
 	sid := r.Header.Get("X-API-Session")
 	if len(sid) == 0 {
-		log.Error().Msg("sessions service: x-api-key not set")
+		log.Error().Msg("sessions service: x-api-session not set")
 		return nil, ErrEmptySessionID
 	}
 
@@ -85,18 +85,16 @@ func (s *Service) Save(u *User) error {
 		log.Error().Msg("sessions service: user session id not set")
 		return ErrEmptySessionID
 	}
-	dict := dictpool.AcquireDict()
-	dict.Set("uid", u.UID)
 	ss := acquireSession()
 	ss.sessionID = u.Sid
 	ss.lastAccessTime = time.Now().UnixNano()
 	ss.expiration = s.cfg.Expiration
-	ss.data = dict
+	ss.data = dictpool.AcquireDict()
+	ss.data.Set("uid", u.UID)
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
 	s.storage.Set(u.Sid, ss)
-	releaseSession(ss)
-	dictpool.ReleaseDict(dict)
+
 	return nil
 }
