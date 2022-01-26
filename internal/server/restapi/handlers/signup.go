@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rustwizard/balda/internal/session"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/go-openapi/runtime/middleware"
@@ -15,11 +17,12 @@ import (
 )
 
 type SignUp struct {
-	db *pg.DB
+	db   *pg.DB
+	sess *session.Service
 }
 
-func NewSignUp(db *pg.DB) *SignUp {
-	return &SignUp{db: db}
+func NewSignUp(db *pg.DB, sess *session.Service) *SignUp {
+	return &SignUp{db: db, sess: sess}
 }
 
 func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
@@ -72,6 +75,18 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 		})
 	}
 
+	err = s.sess.Save(&session.User{
+		Sid: sid.String(),
+		UID: uid,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("signup: gen session id")
+		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
+			Message: "",
+			Status:  http.StatusBadRequest,
+			Type:    "SignUp Error",
+		})
+	}
 	return signup.NewPostSignupOK().WithPayload(&models.SignupResponse{User: &models.User{
 		Firstname: *params.Body.Firstname,
 		Key:       apiKey,

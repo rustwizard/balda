@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/rustwizard/balda/internal/session"
+
 	"github.com/rs/zerolog/log"
 	"github.com/rustwizard/balda/internal/flags"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
@@ -22,6 +24,7 @@ type Config struct {
 	ServerAddr string
 	ServerPort int
 	Pg         pg.Config
+	Session    session.Config
 }
 
 // serverCmd represents the server command
@@ -48,9 +51,11 @@ var serverCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("connect to pg: %v", err)
 		}
+		// sessions service
+		sess := session.NewService(session.Config{Expiration: cfg.Session.Expiration})
 		api := operations.NewBaldaGameServerAPI(swaggerSpec)
 		// handlers
-		api.SignupPostSignupHandler = handlers.NewSignUp(db)
+		api.SignupPostSignupHandler = handlers.NewSignUp(db, sess)
 		// TODO: call api.Validate()
 		// TODO: impl api x-api-key checker
 		api.UseSwaggerUI()
@@ -96,4 +101,5 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 
 func init() {
 	serverCmd.Flags().AddFlagSet(cfg.Flags("server"))
+	serverCmd.Flags().AddFlagSet(cfg.Session.Flags("session"))
 }
