@@ -69,8 +69,8 @@ func (s *Service) Get(r *http.Request) (*User, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	item := s.storage.Get(sid).(*session)
-	if item == nil {
+	item, ok := s.storage.Get(sid).(*session)
+	if !ok {
 		return nil, ErrNotFound
 	}
 
