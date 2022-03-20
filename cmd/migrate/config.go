@@ -39,5 +39,5 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 }
 
 func (c *Config) BuildDSN() string {
-	return fmt.Sprintf("pgx://%s:%s@%s/%s?x-multi-statement=true", c.User, c.Password, c.Addr, c.Database)
+	return fmt.Sprintf("pgx://%s:%s@%s/%s?x-multi-statement=true&x-statement-timeout=320000", c.User, c.Password, c.Addr, c.Database)
 }
