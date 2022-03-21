@@ -39,7 +39,7 @@ func BindEnvToFlagSet(fs *pflag.FlagSet) error {
 		if val := os.Getenv(envVar); val != "" {
 			switch f.Value.Type() {
 			case "stringArray", "stringSlice":
-				vals := strings.Split(val, ",")
+				vals := strings.Split(val, " ")
 				for _, v := range vals {
 					if err := fs.Set(f.Name, v); err != nil {
 						flagError = fmt.Errorf("cannot set flag [%s] with value [%s] got err: %w", f.Name, v, err)
