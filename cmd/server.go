@@ -6,7 +6,6 @@ import (
 	"github.com/rustwizard/balda/internal/session"
 
 	"github.com/rs/zerolog/log"
-	"github.com/rustwizard/balda/internal/flags"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/cleargo/db/pg"
 
@@ -16,6 +15,8 @@ import (
 	"github.com/rustwizard/balda/internal/server/restapi"
 	"github.com/rustwizard/balda/internal/server/restapi/operations"
 	"github.com/spf13/cobra"
+
+	"github.com/rustwizard/cleargo/flags"
 )
 
 var cfg Config
