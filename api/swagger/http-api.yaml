@@ -135,14 +135,6 @@ definitions:
 
   AuthRequest:
     properties:
-      firstname:
-        description: User's first name
-        example: 'John'
-        type: string
-      lastname:
-        description: User's last name
-        example: 'Smith'
-        type: string
       email:
         description: User's email
         example: 'js@example.org'

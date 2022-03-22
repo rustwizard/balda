@@ -21,14 +21,6 @@ type AuthRequest struct {
 	// Example: js@example.org
 	Email string `json:"email,omitempty"`
 
-	// User's first name
-	// Example: John
-	Firstname string `json:"firstname,omitempty"`
-
-	// User's last name
-	// Example: Smith
-	Lastname string `json:"lastname,omitempty"`
-
 	// User's password
 	// Example: some_password
 	Password string `json:"password,omitempty"`

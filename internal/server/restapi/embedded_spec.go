@@ -118,16 +118,6 @@ func init() {
           "type": "string",
           "example": "js@example.org"
         },
-        "firstname": {
-          "description": "User's first name",
-          "type": "string",
-          "example": "John"
-        },
-        "lastname": {
-          "description": "User's last name",
-          "type": "string",
-          "example": "Smith"
-        },
         "password": {
           "description": "User's password",
           "type": "string",
@@ -343,16 +333,6 @@ func init() {
           "description": "User's email",
           "type": "string",
           "example": "js@example.org"
-        },
-        "firstname": {
-          "description": "User's first name",
-          "type": "string",
-          "example": "John"
-        },
-        "lastname": {
-          "description": "User's last name",
-          "type": "string",
-          "example": "Smith"
         },
         "password": {
           "description": "User's password",

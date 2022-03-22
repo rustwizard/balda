@@ -13,7 +13,7 @@ import (
 
 var (
 	ErrNotFound       = errors.New("session service: not found")
-	ErrEmptySessionID = errors.New("session service: empty session id")
+	ErrEmptySessionID = errors.New("session service: empty session id. set X-API-Session")
 )
 
 type Service struct {
@@ -61,7 +61,7 @@ type User struct {
 
 func (s *Service) Get(r *http.Request) (*User, error) {
 	sid := r.Header.Get("X-API-Session")
-	if len(sid) == 0 {
+	if sid == "" {
 		log.Error().Msg("sessions service: x-api-session not set")
 		return nil, ErrEmptySessionID
 	}
@@ -81,7 +81,7 @@ func (s *Service) Get(r *http.Request) (*User, error) {
 }
 
 func (s *Service) Save(u *User) error {
-	if len(u.Sid) == 0 {
+	if u.Sid == "" {
 		log.Error().Msg("sessions service: user session id not set")
 		return ErrEmptySessionID
 	}
