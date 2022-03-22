@@ -112,6 +112,10 @@ func init() {
   },
   "definitions": {
     "AuthRequest": {
+      "required": [
+        "email",
+        "password"
+      ],
       "properties": {
         "email": {
           "description": "User's email",
@@ -328,6 +332,10 @@ func init() {
   },
   "definitions": {
     "AuthRequest": {
+      "required": [
+        "email",
+        "password"
+      ],
       "properties": {
         "email": {
           "description": "User's email",

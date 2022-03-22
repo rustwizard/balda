@@ -8,8 +8,10 @@ package models
 import (
 	"context"
 
+	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // AuthRequest auth request
@@ -19,15 +21,48 @@ type AuthRequest struct {
 
 	// User's email
 	// Example: js@example.org
-	Email string `json:"email,omitempty"`
+	// Required: true
+	Email *string `json:"email"`
 
 	// User's password
 	// Example: some_password
-	Password string `json:"password,omitempty"`
+	// Required: true
+	Password *string `json:"password"`
 }
 
 // Validate validates this auth request
 func (m *AuthRequest) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateEmail(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validatePassword(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *AuthRequest) validateEmail(formats strfmt.Registry) error {
+
+	if err := validate.Required("email", "body", m.Email); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *AuthRequest) validatePassword(formats strfmt.Registry) error {
+
+	if err := validate.Required("password", "body", m.Password); err != nil {
+		return err
+	}
+
 	return nil
 }
 

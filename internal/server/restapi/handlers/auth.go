@@ -30,7 +30,7 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 			Type:    "SignUp Error",
 		})
 	}
-	_ = ss
+	_ = ss.Sid
 	return auth.NewPostAuthOK()
 }
 
