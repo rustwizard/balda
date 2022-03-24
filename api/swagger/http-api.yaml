@@ -54,7 +54,8 @@ paths:
           schema:
             "$ref": "#/definitions/AuthRequest"
       security:
-        - APIKeyHeader: [ ]
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
       responses:
         200:
           description: Response for auth request

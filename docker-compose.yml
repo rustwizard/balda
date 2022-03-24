@@ -10,6 +10,7 @@ services:
     environment:
       SERVER_ADDR: 0.0.0.0
       SERVER_PORT: 9666
+      SERVER_X_API_TOKEN: abcdefuvwxyz
       PG_HOST: pg
       PG_USER: balda
       PG_DATABASE: balda

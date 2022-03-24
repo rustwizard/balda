@@ -56,7 +56,8 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 			Type:    "Auth Error",
 		})
 	}
-	return auth.NewPostAuthOK()
+	_ = ss
+	return auth.NewPostAuthOK().WithPayload(&models.AuthResponse{User: user})
 }
 
 func NewAuth(db *pg.DB, sess *session.Service) *Auth {

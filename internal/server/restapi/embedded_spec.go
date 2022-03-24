@@ -41,6 +41,9 @@ func init() {
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "APIKeyQueryParam": []
           }
         ],
         "consumes": [
@@ -261,6 +264,9 @@ func init() {
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "APIKeyQueryParam": []
           }
         ],
         "consumes": [

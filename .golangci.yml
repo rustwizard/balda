@@ -14,8 +14,6 @@ linters-settings:
     locale: US
   lll:
     line-length: 140
-  goimports:
-    local-prefixes: github.com/rustwizard/balda
   gocritic:
     enabled-tags:
       - diagnostic
