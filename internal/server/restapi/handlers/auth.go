@@ -21,22 +21,12 @@ type Auth struct {
 func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Responder {
 	log.Info().Msg("auth handler called")
 
-	ss, err := a.sess.Get(params.HTTPRequest)
-	if err == session.ErrNotFound {
-		// TODO: create session
-	}
-	if err != nil {
-		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
-			Message: err.Error(),
-			Status:  http.StatusUnauthorized,
-			Type:    "Auth Error",
-		})
-	}
+	// TODO: create session
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	user := &models.User{}
-	err = a.db.Pool.QueryRow(ctx, `SELECT user_id, first_name, last_name FROM users WHERE email = $1 AND 
+	err := a.db.Pool.QueryRow(ctx, `SELECT user_id, first_name, last_name FROM users WHERE email = $1 AND 
 						hash_password = crypt($1, hash_password)
 									`, params.Body.Email, params.Body.Password).
 		Scan(user.UID, user.Firstname, user.Lastname)
@@ -56,7 +46,7 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 			Type:    "Auth Error",
 		})
 	}
-	_ = ss
+
 	return auth.NewPostAuthOK().WithPayload(&models.AuthResponse{User: user})
 }
 
