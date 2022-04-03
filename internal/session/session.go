@@ -13,6 +13,8 @@ import (
 	"github.com/go-redis/redis/v8"
 )
 
+const keyPrefix = "sessions:"
+
 var (
 	ErrNotFound       = errors.New("session service: not found")
 	ErrEmptySessionID = errors.New("session service: empty session id. set X-API-Session")
@@ -45,7 +47,7 @@ func (s *Service) Get(uid int64) (*User, error) {
 	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cacnel()
 
-	val, err := s.storage.GetEx(ctx, strconv.FormatInt(uid, 10), s.cfg.Expiration).Result()
+	val, err := s.storage.GetEx(ctx, keyPrefix+strconv.FormatInt(uid, 10), s.cfg.Expiration).Result()
 	if err == redis.Nil {
 		return user, ErrNotFound
 	}
@@ -67,7 +69,7 @@ func (s *Service) Save(u *User) error {
 	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cacnel()
 
-	err := s.storage.Set(ctx, strconv.FormatInt(u.UID, 10), u.Sid, s.cfg.Expiration).Err()
+	err := s.storage.Set(ctx, keyPrefix+strconv.FormatInt(u.UID, 10), u.Sid, s.cfg.Expiration).Err()
 	if err != nil {
 		return err
 	}
@@ -79,7 +81,7 @@ func (s *Service) Create(uid int64) (string, error) {
 	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cacnel()
 	sid := uuid.New().String()
-	err := s.storage.Set(ctx, strconv.FormatInt(uid, 10), sid, s.cfg.Expiration).Err()
+	err := s.storage.Set(ctx, keyPrefix+strconv.FormatInt(uid, 10), sid, s.cfg.Expiration).Err()
 	if err != nil {
 		return sid, err
 	}
