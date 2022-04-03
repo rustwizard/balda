@@ -2,7 +2,7 @@ package session
 
 import (
 	"errors"
-	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -61,17 +61,11 @@ type User struct {
 	UID int64
 }
 
-func (s *Service) Get(r *http.Request) (*User, error) {
-	sid := r.Header.Get("X-API-Session")
-	if sid == "" {
-		log.Error().Msg("sessions service: x-api-session not set")
-		return nil, ErrEmptySessionID
-	}
-
+func (s *Service) Get(uid int64) (*User, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	item, ok := s.storage.Get(sid).(*session)
+	item, ok := s.storage.Get(strconv.FormatInt(uid, 10)).(*session)
 	if !ok {
 		return nil, ErrNotFound
 	}
@@ -96,7 +90,7 @@ func (s *Service) Save(u *User) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.storage.Set(u.Sid, ss)
+	s.storage.Set(strconv.FormatInt(u.UID, 10), ss)
 
 	return nil
 }

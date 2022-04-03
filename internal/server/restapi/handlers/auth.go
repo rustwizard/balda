@@ -37,7 +37,7 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 				Type:    "Auth Error",
 			})
 		}
-		log.Error().Err(err).Msg("auth: fetch user form db")
+		log.Error().Err(err).Msg("auth: fetch user from db")
 		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
 			Message: "",
 			Status:  http.StatusUnauthorized,
@@ -45,7 +45,20 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 		})
 	}
 
-	user.Sid = a.sess.Create(user.UID)
+	sid, err := a.sess.Get(user.UID)
+	if err == session.ErrNotFound {
+		user.Sid = a.sess.Create(user.UID)
+		return auth.NewPostAuthOK().WithPayload(&models.AuthResponse{User: user})
+	}
+	if err != nil {
+		log.Error().Err(err).Msg("auth: get user session from session storage")
+		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
+			Message: "",
+			Status:  http.StatusUnauthorized,
+			Type:    "Auth Error",
+		})
+	}
+	user.Sid = sid.Sid
 	return auth.NewPostAuthOK().WithPayload(&models.AuthResponse{User: user})
 }
 
