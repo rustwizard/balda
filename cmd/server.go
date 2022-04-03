@@ -79,8 +79,7 @@ var serverCmd = &cobra.Command{
 
 			return nil, errors.New("tapi key header: token error")
 		}
-		// TODO: call api.Validate()
-		// TODO: impl api x-api-key checker
+
 		api.UseSwaggerUI()
 
 		server := restapi.NewServer(api)
