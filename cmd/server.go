@@ -67,7 +67,7 @@ var serverCmd = &cobra.Command{
 			}
 			log.Error().Msgf("access attempt with incorrect api key auth: %s", token)
 
-			return nil, errors.New("token error")
+			return nil, errors.New("api key param: token error")
 		}
 
 		api.APIKeyHeaderAuth = func(token string) (interface{}, error) {
@@ -77,7 +77,7 @@ var serverCmd = &cobra.Command{
 			}
 			log.Error().Msgf("access attempt with incorrect api key auth: %s", token)
 
-			return nil, errors.New("token error")
+			return nil, errors.New("tapi key header: token error")
 		}
 		// TODO: call api.Validate()
 		// TODO: impl api x-api-key checker
