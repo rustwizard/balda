@@ -28,3 +28,8 @@ services:
         - POSTGRES_PASSWORD=password
         - POSTGRES_USER=balda
         - POSTGRES_DB=balda
+
+  redis:
+    image: redis:6.2-bullseye
+    ports:
+      - "127.0.0.1:6379:6379"
