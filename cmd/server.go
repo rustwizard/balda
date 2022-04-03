@@ -69,6 +69,16 @@ var serverCmd = &cobra.Command{
 
 			return nil, errors.New("token error")
 		}
+
+		api.APIKeyHeaderAuth = func(token string) (interface{}, error) {
+			log.Info().Msg("KeyAuth handler called")
+			if token == cfg.XAPIToken {
+				return true, nil
+			}
+			log.Error().Msgf("access attempt with incorrect api key auth: %s", token)
+
+			return nil, errors.New("token error")
+		}
 		// TODO: call api.Validate()
 		// TODO: impl api x-api-key checker
 		api.UseSwaggerUI()

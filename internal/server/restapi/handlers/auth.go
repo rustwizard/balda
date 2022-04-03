@@ -27,9 +27,9 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 	defer cancel()
 	user := &models.User{}
 	err := a.db.Pool.QueryRow(ctx, `SELECT user_id, first_name, last_name FROM users WHERE email = $1 AND 
-						hash_password = crypt($1, hash_password)
+						hash_password = crypt($2, hash_password)
 									`, params.Body.Email, params.Body.Password).
-		Scan(user.UID, user.Firstname, user.Lastname)
+		Scan(&user.UID, &user.Firstname, &user.Lastname)
 	if err != nil {
 		log.Error().Err(err).Msg("auth: fetch user form db")
 		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
