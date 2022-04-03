@@ -45,7 +45,7 @@ func (s *Service) Get(uid int64) (*User, error) {
 	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cacnel()
 
-	val, err := s.storage.Get(ctx, strconv.FormatInt(uid, 10)).Result()
+	val, err := s.storage.GetEx(ctx, strconv.FormatInt(uid, 10), s.cfg.Expiration).Result()
 	if err == redis.Nil {
 		return user, ErrNotFound
 	}
