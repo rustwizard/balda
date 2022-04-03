@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/savsgio/dictpool"
@@ -97,4 +99,19 @@ func (s *Service) Save(u *User) error {
 	s.storage.Set(u.Sid, ss)
 
 	return nil
+}
+
+func (s *Service) Create(uid int64) string {
+	ss := acquireSession()
+	ss.sessionID = uuid.New().String()
+	ss.lastAccessTime = time.Now().UnixNano()
+	ss.expiration = s.cfg.Expiration
+	ss.data = dictpool.AcquireDict()
+	ss.data.Set("uid", uid)
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.storage.Set(ss.sessionID, ss)
+
+	return ss.sessionID
 }

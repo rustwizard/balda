@@ -21,8 +21,6 @@ type Auth struct {
 func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Responder {
 	log.Info().Msg("auth handler called")
 
-	// TODO: create session
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	user := &models.User{}
@@ -31,6 +29,14 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 									`, params.Body.Email, params.Body.Password).
 		Scan(&user.UID, &user.Firstname, &user.Lastname)
 	if err != nil {
+		if user.UID == 0 {
+			log.Error().Err(err).Msg("auth: wrong email/password")
+			return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
+				Message: "",
+				Status:  http.StatusUnauthorized,
+				Type:    "Auth Error",
+			})
+		}
 		log.Error().Err(err).Msg("auth: fetch user form db")
 		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
 			Message: "",
@@ -38,15 +44,8 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 			Type:    "Auth Error",
 		})
 	}
-	if user.UID == 0 {
-		log.Error().Err(err).Msg("auth: wrong email/password")
-		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
-			Message: "",
-			Status:  http.StatusUnauthorized,
-			Type:    "Auth Error",
-		})
-	}
 
+	user.Sid = a.sess.Create(user.UID)
 	return auth.NewPostAuthOK().WithPayload(&models.AuthResponse{User: user})
 }
 
