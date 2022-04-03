@@ -1,7 +1,6 @@
 package session
 
 import (
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,18 +15,12 @@ func TestSessionService(t *testing.T) {
 	err := svc.Save(u)
 	assert.NoError(t, err)
 
-	req := &http.Request{}
-	u, err = svc.Get(req)
-	assert.EqualError(t, err, ErrEmptySessionID.Error())
-
-	req = &http.Request{Header: make(map[string][]string)}
-	req.Header.Add("X-API-Session", "there_is_no_such_sid")
-	u, err = svc.Get(req)
-	assert.EqualError(t, err, ErrNotFound.Error())
-
-	req = &http.Request{Header: make(map[string][]string)}
-	req.Header.Add("X-API-Session", "test_sid")
-	u, err = svc.Get(req)
+	u, err = svc.Get(1000)
 	assert.NoError(t, err)
-	assert.NotNil(t, u)
+	assert.Equal(t, int64(1000), u.UID)
+
+	u, err = svc.Get(1001)
+	assert.EqualError(t, ErrNotFound, err.Error())
+	assert.Nil(t, u)
+
 }

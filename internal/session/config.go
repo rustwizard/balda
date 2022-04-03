@@ -12,7 +12,6 @@ type Config struct {
 	Expiration time.Duration
 }
 
-// Flags ...
 func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	if prefix != "" {
 		prefix += "."

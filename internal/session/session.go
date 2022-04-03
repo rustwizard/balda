@@ -2,9 +2,11 @@ package session
 
 import (
 	"errors"
-	"net/http"
+	"strconv"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/rs/zerolog/log"
 
@@ -13,7 +15,7 @@ import (
 
 var (
 	ErrNotFound       = errors.New("session service: not found")
-	ErrEmptySessionID = errors.New("session service: empty session id")
+	ErrEmptySessionID = errors.New("session service: empty session id. set X-API-Session")
 )
 
 type Service struct {
@@ -59,17 +61,11 @@ type User struct {
 	UID int64
 }
 
-func (s *Service) Get(r *http.Request) (*User, error) {
-	sid := r.Header.Get("X-API-Session")
-	if len(sid) == 0 {
-		log.Error().Msg("sessions service: x-api-session not set")
-		return nil, ErrEmptySessionID
-	}
-
+func (s *Service) Get(uid int64) (*User, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	item, ok := s.storage.Get(sid).(*session)
+	item, ok := s.storage.Get(strconv.FormatInt(uid, 10)).(*session)
 	if !ok {
 		return nil, ErrNotFound
 	}
@@ -81,7 +77,7 @@ func (s *Service) Get(r *http.Request) (*User, error) {
 }
 
 func (s *Service) Save(u *User) error {
-	if len(u.Sid) == 0 {
+	if u.Sid == "" {
 		log.Error().Msg("sessions service: user session id not set")
 		return ErrEmptySessionID
 	}
@@ -94,7 +90,22 @@ func (s *Service) Save(u *User) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	s.storage.Set(u.Sid, ss)
+	s.storage.Set(strconv.FormatInt(u.UID, 10), ss)
 
 	return nil
+}
+
+func (s *Service) Create(uid int64) string {
+	ss := acquireSession()
+	ss.sessionID = uuid.New().String()
+	ss.lastAccessTime = time.Now().UnixNano()
+	ss.expiration = s.cfg.Expiration
+	ss.data = dictpool.AcquireDict()
+	ss.data.Set("uid", uid)
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.storage.Set(ss.sessionID, ss)
+
+	return ss.sessionID
 }

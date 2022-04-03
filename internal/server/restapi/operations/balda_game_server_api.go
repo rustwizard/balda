@@ -56,6 +56,10 @@ func NewBaldaGameServerAPI(spec *loads.Document) *BaldaGameServerAPI {
 		APIKeyHeaderAuth: func(token string) (interface{}, error) {
 			return nil, errors.NotImplemented("api key auth (APIKeyHeader) X-API-Key from header param [X-API-Key] has not yet been implemented")
 		},
+		// Applies when the "api_key" query is set
+		APIKeyQueryParamAuth: func(token string) (interface{}, error) {
+			return nil, errors.NotImplemented("api key auth (APIKeyQueryParam) api_key from query param [api_key] has not yet been implemented")
+		},
 		// default authorizer is authorized meaning no requests are blocked
 		APIAuthorizer: security.Authorized(),
 	}
@@ -97,6 +101,10 @@ type BaldaGameServerAPI struct {
 	// APIKeyHeaderAuth registers a function that takes a token and returns a principal
 	// it performs authentication based on an api key X-API-Key provided in the header
 	APIKeyHeaderAuth func(string) (interface{}, error)
+
+	// APIKeyQueryParamAuth registers a function that takes a token and returns a principal
+	// it performs authentication based on an api key api_key provided in the query
+	APIKeyQueryParamAuth func(string) (interface{}, error)
 
 	// APIAuthorizer provides access control (ACL/RBAC/ABAC) by providing access to the request and authenticated principal
 	APIAuthorizer runtime.Authorizer
@@ -185,6 +193,9 @@ func (o *BaldaGameServerAPI) Validate() error {
 	if o.APIKeyHeaderAuth == nil {
 		unregistered = append(unregistered, "XAPIKeyAuth")
 	}
+	if o.APIKeyQueryParamAuth == nil {
+		unregistered = append(unregistered, "APIKeyAuth")
+	}
 
 	if o.AuthPostAuthHandler == nil {
 		unregistered = append(unregistered, "auth.PostAuthHandler")
@@ -213,6 +224,10 @@ func (o *BaldaGameServerAPI) AuthenticatorsFor(schemes map[string]spec.SecurityS
 		case "APIKeyHeader":
 			scheme := schemes[name]
 			result[name] = o.APIKeyAuthenticator(scheme.Name, scheme.In, o.APIKeyHeaderAuth)
+
+		case "APIKeyQueryParam":
+			scheme := schemes[name]
+			result[name] = o.APIKeyAuthenticator(scheme.Name, scheme.In, o.APIKeyQueryParamAuth)
 
 		}
 	}

@@ -54,7 +54,8 @@ paths:
           schema:
             "$ref": "#/definitions/AuthRequest"
       security:
-        - APIKeyHeader: [ ]
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
       responses:
         200:
           description: Response for auth request
@@ -134,15 +135,8 @@ definitions:
         type: string
 
   AuthRequest:
+    required: [email, password]
     properties:
-      firstname:
-        description: User's first name
-        example: 'John'
-        type: string
-      lastname:
-        description: User's last name
-        example: 'Smith'
-        type: string
       email:
         description: User's email
         example: 'js@example.org'

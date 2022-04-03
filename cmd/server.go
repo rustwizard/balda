@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/rustwizard/balda/internal/session"
@@ -26,6 +27,7 @@ type Config struct {
 	ServerPort int
 	Pg         pg.Config
 	Session    session.Config
+	XAPIToken  string
 }
 
 // serverCmd represents the server command
@@ -57,6 +59,26 @@ var serverCmd = &cobra.Command{
 		api := operations.NewBaldaGameServerAPI(swaggerSpec)
 		// handlers
 		api.SignupPostSignupHandler = handlers.NewSignUp(db, sess)
+		api.AuthPostAuthHandler = handlers.NewAuth(db, sess)
+		api.APIKeyQueryParamAuth = func(token string) (interface{}, error) {
+			log.Info().Msg("KeyAuth handler called")
+			if token == cfg.XAPIToken {
+				return true, nil
+			}
+			log.Error().Msgf("access attempt with incorrect api key auth: %s", token)
+
+			return nil, errors.New("token error")
+		}
+
+		api.APIKeyHeaderAuth = func(token string) (interface{}, error) {
+			log.Info().Msg("KeyAuth handler called")
+			if token == cfg.XAPIToken {
+				return true, nil
+			}
+			log.Error().Msgf("access attempt with incorrect api key auth: %s", token)
+
+			return nil, errors.New("token error")
+		}
 		// TODO: call api.Validate()
 		// TODO: impl api x-api-key checker
 		api.UseSwaggerUI()
@@ -81,7 +103,6 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-// Flags ...
 func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	if prefix != "" {
 		prefix += "."
@@ -97,6 +118,7 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	f.StringVar(&c.Pg.Password, "pg.password", "", "postgres password")
 	f.IntVar(&c.Pg.MaxPoolSize, "pg.max_pool_size", 0, "postgres max pool size")
 	f.StringVar(&c.Pg.SSL, "pg.ssl", "disable", "postgres ssl")
+	f.StringVar(&c.XAPIToken, prefix+"x_api_token", "", "x-api-token for header or query param")
 	return f
 }
 

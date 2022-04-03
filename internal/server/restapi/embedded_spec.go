@@ -41,6 +41,9 @@ func init() {
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "APIKeyQueryParam": []
           }
         ],
         "consumes": [
@@ -112,21 +115,15 @@ func init() {
   },
   "definitions": {
     "AuthRequest": {
+      "required": [
+        "email",
+        "password"
+      ],
       "properties": {
         "email": {
           "description": "User's email",
           "type": "string",
           "example": "js@example.org"
-        },
-        "firstname": {
-          "description": "User's first name",
-          "type": "string",
-          "example": "John"
-        },
-        "lastname": {
-          "description": "User's last name",
-          "type": "string",
-          "example": "Smith"
         },
         "password": {
           "description": "User's password",
@@ -267,6 +264,9 @@ func init() {
         "security": [
           {
             "APIKeyHeader": []
+          },
+          {
+            "APIKeyQueryParam": []
           }
         ],
         "consumes": [
@@ -338,21 +338,15 @@ func init() {
   },
   "definitions": {
     "AuthRequest": {
+      "required": [
+        "email",
+        "password"
+      ],
       "properties": {
         "email": {
           "description": "User's email",
           "type": "string",
           "example": "js@example.org"
-        },
-        "firstname": {
-          "description": "User's first name",
-          "type": "string",
-          "example": "John"
-        },
-        "lastname": {
-          "description": "User's last name",
-          "type": "string",
-          "example": "Smith"
         },
         "password": {
           "description": "User's password",
