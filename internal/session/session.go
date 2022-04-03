@@ -46,11 +46,16 @@ func (s *Service) Get(uid int64) (*User, error) {
 	defer cacnel()
 
 	val, err := s.storage.Get(ctx, strconv.FormatInt(uid, 10)).Result()
+	if err == redis.Nil {
+		return user, ErrNotFound
+	}
 	if err != nil {
 		return user, err
 	}
-	user.UID = uid
-	user.Sid = val
+	user = &User{
+		Sid: val,
+		UID: uid,
+	}
 	return user, nil
 }
 
