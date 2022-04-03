@@ -55,7 +55,7 @@ var serverCmd = &cobra.Command{
 			return fmt.Errorf("connect to pg: %v", err)
 		}
 		// sessions service
-		sess := session.NewService(session.Config{Expiration: cfg.Session.Expiration})
+		sess := session.NewService(cfg.Session)
 		api := operations.NewBaldaGameServerAPI(swaggerSpec)
 		// handlers
 		api.SignupPostSignupHandler = handlers.NewSignUp(db, sess)
@@ -123,5 +123,5 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 
 func init() {
 	serverCmd.Flags().AddFlagSet(cfg.Flags("server"))
-	serverCmd.Flags().AddFlagSet(cfg.Session.Flags("session"))
+	serverCmd.Flags().AddFlagSet(cfg.Session.Flags("redis"))
 }
