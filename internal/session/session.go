@@ -26,11 +26,11 @@ type Service struct {
 func NewService(cfg Config) *Service {
 	return &Service{
 		cfg: cfg,
-		// TODO: move to config
 		storage: redis.NewClient(&redis.Options{
-			Addr:     "127.0.0.1:6379",
-			Password: "", // no password set
-			DB:       0,  // use default DB
+			Addr:     cfg.Addr,
+			Password: cfg.Password,
+			DB:       cfg.DBNum,
+			Username: cfg.Username,
 		}),
 	}
 }
