@@ -1,17 +1,19 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"strconv"
-	"sync"
 	"time"
 
 	"github.com/google/uuid"
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/savsgio/dictpool"
+	"github.com/go-redis/redis/v8"
 )
+
+const keyPrefix = "sessions:"
 
 var (
 	ErrNotFound       = errors.New("session service: not found")
@@ -20,40 +22,19 @@ var (
 
 type Service struct {
 	cfg     Config
-	storage *dictpool.Dict
-	lock    sync.RWMutex
+	storage *redis.Client
 }
 
 func NewService(cfg Config) *Service {
 	return &Service{
-		cfg:     cfg,
-		storage: new(dictpool.Dict),
+		cfg: cfg,
+		storage: redis.NewClient(&redis.Options{
+			Addr:     cfg.Addr,
+			Password: cfg.Password,
+			DB:       cfg.DBNum,
+			Username: cfg.Username,
+		}),
 	}
-}
-
-type session struct {
-	sessionID      string
-	data           *dictpool.Dict
-	expiration     time.Duration
-	lastAccessTime int64
-}
-
-var sessionPool = &sync.Pool{
-	New: func() interface{} {
-		return new(session)
-	},
-}
-
-func acquireSession() *session {
-	return sessionPool.Get().(*session)
-}
-
-func releaseSession(item *session) {
-	item.data.Reset()
-	item.lastAccessTime = 0
-	item.expiration = 0
-
-	sessionPool.Put(item)
 }
 
 type User struct {
@@ -62,18 +43,22 @@ type User struct {
 }
 
 func (s *Service) Get(uid int64) (*User, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+	var user *User
+	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cacnel()
 
-	item, ok := s.storage.Get(strconv.FormatInt(uid, 10)).(*session)
-	if !ok {
-		return nil, ErrNotFound
+	val, err := s.storage.GetEx(ctx, keyPrefix+strconv.FormatInt(uid, 10), s.cfg.Expiration).Result()
+	if err == redis.Nil {
+		return user, ErrNotFound
 	}
-
-	return &User{
-		Sid: item.sessionID,
-		UID: item.data.Get("uid").(int64),
-	}, nil
+	if err != nil {
+		return user, err
+	}
+	user = &User{
+		Sid: val,
+		UID: uid,
+	}
+	return user, nil
 }
 
 func (s *Service) Save(u *User) error {
@@ -81,31 +66,25 @@ func (s *Service) Save(u *User) error {
 		log.Error().Msg("sessions service: user session id not set")
 		return ErrEmptySessionID
 	}
-	ss := acquireSession()
-	ss.sessionID = u.Sid
-	ss.lastAccessTime = time.Now().UnixNano()
-	ss.expiration = s.cfg.Expiration
-	ss.data = dictpool.AcquireDict()
-	ss.data.Set("uid", u.UID)
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cacnel()
 
-	s.storage.Set(strconv.FormatInt(u.UID, 10), ss)
+	err := s.storage.Set(ctx, keyPrefix+strconv.FormatInt(u.UID, 10), u.Sid, s.cfg.Expiration).Err()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (s *Service) Create(uid int64) string {
-	ss := acquireSession()
-	ss.sessionID = uuid.New().String()
-	ss.lastAccessTime = time.Now().UnixNano()
-	ss.expiration = s.cfg.Expiration
-	ss.data = dictpool.AcquireDict()
-	ss.data.Set("uid", uid)
-	s.lock.Lock()
-	defer s.lock.Unlock()
+func (s *Service) Create(uid int64) (string, error) {
+	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cacnel()
+	sid := uuid.New().String()
+	err := s.storage.Set(ctx, keyPrefix+strconv.FormatInt(uid, 10), sid, s.cfg.Expiration).Err()
+	if err != nil {
+		return sid, err
+	}
 
-	s.storage.Set(ss.sessionID, ss)
-
-	return ss.sessionID
+	return sid, nil
 }

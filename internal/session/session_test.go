@@ -20,7 +20,7 @@ func TestSessionService(t *testing.T) {
 	assert.Equal(t, int64(1000), u.UID)
 
 	u, err = svc.Get(1001)
-	assert.EqualError(t, ErrNotFound, err.Error())
+	assert.EqualError(t, err, ErrNotFound.Error())
 	assert.Nil(t, u)
 
 }

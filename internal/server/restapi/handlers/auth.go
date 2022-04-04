@@ -47,11 +47,19 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 
 	sid, err := a.sess.Get(user.UID)
 	if err == session.ErrNotFound {
-		user.Sid = a.sess.Create(user.UID)
+		user.Sid, err = a.sess.Create(user.UID)
+		if err != nil {
+			log.Error().Err(err).Msg("auth: create sid")
+			return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
+				Message: "",
+				Status:  http.StatusUnauthorized,
+				Type:    "Auth Error",
+			})
+		}
 		return auth.NewPostAuthOK().WithPayload(&models.AuthResponse{User: user})
 	}
 	if err != nil {
-		log.Error().Err(err).Msg("auth: get user session from session storage")
+		log.Error().Err(err).Msg("auth: get sid")
 		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
 			Message: "",
 			Status:  http.StatusUnauthorized,

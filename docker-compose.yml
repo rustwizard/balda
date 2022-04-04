@@ -16,6 +16,7 @@ services:
       PG_DATABASE: balda
       PG_PASSWORD: password
       PG_MAX_POOL_SIZE: 100
+      REDIS_ADDR: redis:6379
     command: ["server"]
 
   pg:
@@ -28,3 +29,8 @@ services:
         - POSTGRES_PASSWORD=password
         - POSTGRES_USER=balda
         - POSTGRES_DB=balda
+
+  redis:
+    image: redis:6.2-bullseye
+    ports:
+      - "127.0.0.1:6379:6379"
