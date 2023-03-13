@@ -1,3 +1,4 @@
+// Package session implements user sessions
 package session
 
 import (
@@ -62,9 +63,10 @@ func (s *Service) Get(uid int64) (*User, error) {
 
 func (s *Service) Save(u *User) error {
 	if u.Sid == "" {
-		log.Error().Msg("sessions service: user session id not set")
+		log.Error().Err(ErrEmptySessionID).Msg("sessions service: user session id not set")
 		return ErrEmptySessionID
 	}
+
 	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cacnel()
 
