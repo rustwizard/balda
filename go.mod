@@ -15,7 +15,7 @@ require (
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/redis/go-redis/v9 v9.0.2
 	github.com/rs/zerolog v1.28.0
-	github.com/rustwizard/cleargo v0.0.6
+	github.com/rustwizard/cleargo v0.0.7
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.1
