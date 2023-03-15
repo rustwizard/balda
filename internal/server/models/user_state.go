@@ -22,8 +22,12 @@ type UserState struct {
 	Exp int64 `json:"exp,omitempty"`
 
 	// Game's ID (if game_id == 0 then user in the lobby)
-	// Example: 545648798
+	// Example: 144
 	GameID int32 `json:"game_id,omitempty"`
+
+	// User's ID lives count in the system
+	// Example: 5
+	Lives int64 `json:"lives,omitempty"`
 
 	// Generated nickname in the system
 	// Example: John

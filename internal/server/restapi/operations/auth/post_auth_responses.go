@@ -16,7 +16,8 @@ import (
 // PostAuthOKCode is the HTTP code returned for type PostAuthOK
 const PostAuthOKCode int = 200
 
-/*PostAuthOK Response for auth request
+/*
+PostAuthOK Response for auth request
 
 swagger:response postAuthOK
 */
@@ -60,7 +61,8 @@ func (o *PostAuthOK) WriteResponse(rw http.ResponseWriter, producer runtime.Prod
 // PostAuthUnauthorizedCode is the HTTP code returned for type PostAuthUnauthorized
 const PostAuthUnauthorizedCode int = 401
 
-/*PostAuthUnauthorized Error when auth
+/*
+PostAuthUnauthorized Error when auth
 
 swagger:response postAuthUnauthorized
 */

@@ -16,7 +16,8 @@ import (
 // GetUsersStateUIDOKCode is the HTTP code returned for type GetUsersStateUIDOK
 const GetUsersStateUIDOKCode int = 200
 
-/*GetUsersStateUIDOK OK
+/*
+GetUsersStateUIDOK OK
 
 swagger:response getUsersStateUidOK
 */

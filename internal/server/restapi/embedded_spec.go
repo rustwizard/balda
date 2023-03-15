@@ -263,7 +263,13 @@ func init() {
           "description": "Game's ID (if game_id == 0 then user in the lobby)",
           "type": "integer",
           "format": "int32",
-          "example": "545648798"
+          "example": "144"
+        },
+        "lives": {
+          "description": "User's ID lives count in the system",
+          "type": "integer",
+          "format": "int64",
+          "example": "5"
         },
         "nickname": {
           "description": "Generated nickname in the system",
@@ -558,7 +564,13 @@ func init() {
           "description": "Game's ID (if game_id == 0 then user in the lobby)",
           "type": "integer",
           "format": "int32",
-          "example": "545648798"
+          "example": "144"
+        },
+        "lives": {
+          "description": "User's ID lives count in the system",
+          "type": "integer",
+          "format": "int64",
+          "example": "5"
         },
         "nickname": {
           "description": "Generated nickname in the system",

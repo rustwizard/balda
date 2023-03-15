@@ -29,10 +29,10 @@ func NewGetUsersStateUID(ctx *middleware.Context, handler GetUsersStateUIDHandle
 	return &GetUsersStateUID{Context: ctx, Handler: handler}
 }
 
-/* GetUsersStateUID swagger:route GET /users/state/{uid} getUsersStateUid
+/*
+	GetUsersStateUID swagger:route GET /users/state/{uid} getUsersStateUid
 
 GetUsersStateUID get users state UID API
-
 */
 type GetUsersStateUID struct {
 	Context *middleware.Context
