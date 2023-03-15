@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/rustwizard/balda/internal/flname"
+
 	"github.com/rustwizard/balda/internal/session"
 
 	"github.com/rs/zerolog/log"
@@ -46,8 +48,27 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 		VALUES($1, $2, $3, crypt($4, gen_salt('bf', 8))) RETURNING user_id, api_key`, params.Body.Firstname,
 		params.Body.Lastname, params.Body.Email, params.Body.Password).Scan(&uid, &apiKey)
 	if err != nil {
+		log.Error().Err(err).Msg("signup: user")
+		if err = tx.Rollback(ctx); err != nil {
+			log.Error().Err(err).Msg("signup: rollback")
+		}
 		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
-			Message: "",
+			Message: "user",
+			Status:  http.StatusBadRequest,
+			Type:    "SignUp Error",
+		})
+	}
+
+	_, err = tx.Exec(ctx, `INSERT INTO user_state(user_id, nickname, exp, flags, lives) 
+		VALUES($1, $2, $3, $4, $5)`, uid,
+		flname.GenNickname(), 0, 0, 5)
+	if err != nil {
+		log.Error().Err(err).Msg("signup: user state")
+		if err = tx.Rollback(ctx); err != nil {
+			log.Error().Err(err).Msg("signup: rollback")
+		}
+		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
+			Message: "user state",
 			Status:  http.StatusBadRequest,
 			Type:    "SignUp Error",
 		})
@@ -87,6 +108,7 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 			Type:    "SignUp Error",
 		})
 	}
+
 	return signup.NewPostSignupOK().WithPayload(&models.SignupResponse{User: &models.User{
 		Firstname: *params.Body.Firstname,
 		Key:       apiKey,
