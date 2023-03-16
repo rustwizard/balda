@@ -12,6 +12,7 @@ func TestSessionService(t *testing.T) {
 		Sid: "test_sid",
 		UID: 1000,
 	}
+
 	err := svc.Save(u)
 	assert.NoError(t, err)
 
@@ -22,5 +23,4 @@ func TestSessionService(t *testing.T) {
 	u, err = svc.Get(1001)
 	assert.EqualError(t, err, ErrNotFound.Error())
 	assert.Nil(t, u)
-
 }

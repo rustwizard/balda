@@ -29,10 +29,10 @@ func NewPostSignup(ctx *middleware.Context, handler PostSignupHandler) *PostSign
 	return &PostSignup{Context: ctx, Handler: handler}
 }
 
-/* PostSignup swagger:route POST /signup Signup postSignup
+/*
+	PostSignup swagger:route POST /signup Signup postSignup
 
 Sign-up request
-
 */
 type PostSignup struct {
 	Context *middleware.Context

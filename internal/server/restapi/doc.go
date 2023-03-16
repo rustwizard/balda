@@ -2,18 +2,18 @@
 
 // Package restapi Balda GameServer
 //
-//  Balda GameServer API methods and models<br> <h3>Headers</h3><br/> <table> <tr><td><b><i>X-API-Key</i></b></td><td>API key is a special token that the client needs to provide when making API calls.</td></tr> <tr><td><b><i>X-API-User</i></b></td><td>User's ID</td></tr> <tr><td><b><i>X-API-Session</i></b></td><td>Session ID</td></tr> </table>
-//  Schemes:
-//    http
-//  Host: 127.0.0.1:9666
-//  BasePath: /balda/api/v1
-//  Version: 1.0.0
+//	Balda GameServer API methods and models<br> <h3>Headers</h3><br/> <table> <tr><td><b><i>X-API-Key</i></b></td><td>API key is a special token that the client needs to provide when making API calls.</td></tr> <tr><td><b><i>X-API-User</i></b></td><td>User's ID</td></tr> <tr><td><b><i>X-API-Session</i></b></td><td>Session ID</td></tr> </table>
+//	Schemes:
+//	  http
+//	Host: 127.0.0.1:9666
+//	BasePath: /balda/api/v1
+//	Version: 1.0.0
 //
-//  Consumes:
-//    - application/json
+//	Consumes:
+//	  - application/json
 //
-//  Produces:
-//    - application/json
+//	Produces:
+//	  - application/json
 //
 // swagger:meta
 package restapi

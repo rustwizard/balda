@@ -29,10 +29,10 @@ func NewPostAuth(ctx *middleware.Context, handler PostAuthHandler) *PostAuth {
 	return &PostAuth{Context: ctx, Handler: handler}
 }
 
-/* PostAuth swagger:route POST /auth Auth postAuth
+/*
+	PostAuth swagger:route POST /auth Auth postAuth
 
 Auth request
-
 */
 type PostAuth struct {
 	Context *middleware.Context

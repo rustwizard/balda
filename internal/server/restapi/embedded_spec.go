@@ -111,6 +111,36 @@ func init() {
           }
         }
       }
+    },
+    "/users/state/{uid}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "User ID",
+            "name": "uid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/UserState"
+            }
+          },
+          "400": {
+            "description": "Error when get user state",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -222,7 +252,67 @@ func init() {
         "uid": {
           "description": "User's ID in the system",
           "type": "integer",
+          "format": "int64",
           "example": "545648798"
+        }
+      }
+    },
+    "UserState": {
+      "properties": {
+        "exp": {
+          "description": "User's ID exp points in the system",
+          "type": "integer",
+          "format": "int64",
+          "example": "545648798"
+        },
+        "flags": {
+          "description": "Some User's flags.",
+          "type": "integer",
+          "format": "int64",
+          "example": "99"
+        },
+        "game_id": {
+          "description": "Game's ID (if game_id == 0 then user in the lobby)",
+          "type": "integer",
+          "format": "int32",
+          "example": "144"
+        },
+        "lives": {
+          "description": "User's ID lives count in the system",
+          "type": "integer",
+          "format": "int64",
+          "example": "5"
+        },
+        "nickname": {
+          "description": "Generated nickname in the system",
+          "type": "string",
+          "example": "John"
+        },
+        "uid": {
+          "description": "User's ID in the system",
+          "type": "integer",
+          "format": "int64",
+          "example": "545648798"
+        }
+      }
+    },
+    "UserStateRequest": {
+      "required": [
+        "uid"
+      ],
+      "properties": {
+        "uid": {
+          "description": "User's ID",
+          "type": "integer",
+          "format": "int64",
+          "example": "100500"
+        }
+      }
+    },
+    "UserStateResponse": {
+      "properties": {
+        "user_state": {
+          "$ref": "#/definitions/UserState"
         }
       }
     }
@@ -334,6 +424,36 @@ func init() {
           }
         }
       }
+    },
+    "/users/state/{uid}": {
+      "get": {
+        "produces": [
+          "application/json"
+        ],
+        "parameters": [
+          {
+            "type": "integer",
+            "description": "User ID",
+            "name": "uid",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/UserState"
+            }
+          },
+          "400": {
+            "description": "Error when get user state",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
+          }
+        }
+      }
     }
   },
   "definitions": {
@@ -445,7 +565,67 @@ func init() {
         "uid": {
           "description": "User's ID in the system",
           "type": "integer",
+          "format": "int64",
           "example": "545648798"
+        }
+      }
+    },
+    "UserState": {
+      "properties": {
+        "exp": {
+          "description": "User's ID exp points in the system",
+          "type": "integer",
+          "format": "int64",
+          "example": "545648798"
+        },
+        "flags": {
+          "description": "Some User's flags.",
+          "type": "integer",
+          "format": "int64",
+          "example": "99"
+        },
+        "game_id": {
+          "description": "Game's ID (if game_id == 0 then user in the lobby)",
+          "type": "integer",
+          "format": "int32",
+          "example": "144"
+        },
+        "lives": {
+          "description": "User's ID lives count in the system",
+          "type": "integer",
+          "format": "int64",
+          "example": "5"
+        },
+        "nickname": {
+          "description": "Generated nickname in the system",
+          "type": "string",
+          "example": "John"
+        },
+        "uid": {
+          "description": "User's ID in the system",
+          "type": "integer",
+          "format": "int64",
+          "example": "545648798"
+        }
+      }
+    },
+    "UserStateRequest": {
+      "required": [
+        "uid"
+      ],
+      "properties": {
+        "uid": {
+          "description": "User's ID",
+          "type": "integer",
+          "format": "int64",
+          "example": "100500"
+        }
+      }
+    },
+    "UserStateResponse": {
+      "properties": {
+        "user_state": {
+          "$ref": "#/definitions/UserState"
         }
       }
     }

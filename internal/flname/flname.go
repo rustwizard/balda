@@ -39,3 +39,11 @@ func GenFLName() (string, string) {
 	adjective := lowercaseFirstLetter(randomAdjective())
 	return noun1 + adjective, noun2
 }
+
+func GenNickname() string {
+	rand.Seed(time.Now().UnixNano())
+	noun1 := uppercaseFirstLetter(randomNoun())
+	noun2 := uppercaseFirstLetter(randomNoun())
+	adjective := lowercaseFirstLetter(randomAdjective())
+	return noun1 + adjective + noun2
+}

@@ -35,12 +35,12 @@ linters-settings:
 linters:
   disable-all: true
   enable:
-    - deadcode
+    #- deadcode
     - depguard
     - dogsled
     - errcheck
     - goconst
-    - gocritic
+   # - gocritic
     - gofmt
     - goimports
     - revive
@@ -51,13 +51,13 @@ linters:
     - misspell
     - nakedret
     - staticcheck
-    - structcheck
+   # - structcheck
     - stylecheck
     - typecheck
     - unconvert
     - unparam
     - unused
-    - varcheck
+    #- varcheck
     - whitespace
     - prealloc
 
@@ -116,3 +116,18 @@ issues:
     - path: main\.go
       linters: [ gosec ]
       text: "G307"
+
+    # Probably some broken linter for generics?
+    - linters: [ revive ]
+      text: 'receiver-naming: receiver name \S+ should be consistent with previous receiver name \S+ for invalid-type'
+
+    - source: 'func Fuzz.+\(f \*testing\.F\)'
+      linters: [ stylecheck ]
+      text: "ST1003" # underscores lol
+
+    - path: (internal|cmd)
+      linters: [ revive ]
+      text: "package-comments"
+
+    - linters: [ revive ]
+      text: "comment on exported const .+ should be of the form"

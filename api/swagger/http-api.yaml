@@ -68,6 +68,26 @@ paths:
       tags:
       - Auth
 
+  /users/state/{uid}:
+    get:
+      produces:
+        - application/json
+      parameters:
+        - name: uid
+          in: path
+          description: User ID
+          type: integer
+          required: true
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/UserState'
+        400:
+          description: Error when get user state
+          schema:
+            "$ref": "#/definitions/ErrorResponse"
+
 definitions:
   ErrorResponse:
     properties:
@@ -117,6 +137,7 @@ definitions:
         description: User's ID in the system
         example: '545648798'
         type: integer
+        format: int64
       firstname:
         description: User's first name
         example: 'John'
@@ -150,6 +171,52 @@ definitions:
     properties:
       user:
         $ref: '#/definitions/User'
+
+  UserState:
+    properties:
+      uid:
+        description: User's ID in the system
+        example: '545648798'
+        type: integer
+        format: int64
+      nickname:
+        description: Generated nickname in the system
+        example: 'John'
+        type: string
+      exp:
+        description: User's ID exp points in the system
+        example: '545648798'
+        type: integer
+        format: int64
+      lives:
+        description: User's ID lives count in the system
+        example: '5'
+        type: integer
+        format: int64
+      game_id:
+        description: Game's ID (if game_id == 0 or absent then user in the lobby)
+        example: '144'
+        type: integer
+        format: int32
+      flags:
+        description: Some User's flags.
+        example: '99'
+        type: integer
+        format: int64
+
+  UserStateRequest:
+    required: [ uid ]
+    properties:
+      uid:
+        description: User's ID
+        example: '100500'
+        type: integer
+        format: int64
+
+  UserStateResponse:
+    properties:
+      user_state:
+        $ref: '#/definitions/UserState'
 
 securityDefinitions:
   # X-API-Key: abcdef12345

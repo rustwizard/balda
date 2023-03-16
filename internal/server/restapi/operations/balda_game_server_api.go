@@ -45,6 +45,9 @@ func NewBaldaGameServerAPI(spec *loads.Document) *BaldaGameServerAPI {
 
 		JSONProducer: runtime.JSONProducer(),
 
+		GetUsersStateUIDHandler: GetUsersStateUIDHandlerFunc(func(params GetUsersStateUIDParams) middleware.Responder {
+			return middleware.NotImplemented("operation GetUsersStateUID has not yet been implemented")
+		}),
 		AuthPostAuthHandler: auth.PostAuthHandlerFunc(func(params auth.PostAuthParams, principal interface{}) middleware.Responder {
 			return middleware.NotImplemented("operation auth.PostAuth has not yet been implemented")
 		}),
@@ -109,6 +112,8 @@ type BaldaGameServerAPI struct {
 	// APIAuthorizer provides access control (ACL/RBAC/ABAC) by providing access to the request and authenticated principal
 	APIAuthorizer runtime.Authorizer
 
+	// GetUsersStateUIDHandler sets the operation handler for the get users state UID operation
+	GetUsersStateUIDHandler GetUsersStateUIDHandler
 	// AuthPostAuthHandler sets the operation handler for the post auth operation
 	AuthPostAuthHandler auth.PostAuthHandler
 	// SignupPostSignupHandler sets the operation handler for the post signup operation
@@ -197,6 +202,9 @@ func (o *BaldaGameServerAPI) Validate() error {
 		unregistered = append(unregistered, "APIKeyAuth")
 	}
 
+	if o.GetUsersStateUIDHandler == nil {
+		unregistered = append(unregistered, "GetUsersStateUIDHandler")
+	}
 	if o.AuthPostAuthHandler == nil {
 		unregistered = append(unregistered, "auth.PostAuthHandler")
 	}
@@ -304,6 +312,10 @@ func (o *BaldaGameServerAPI) initHandlerCache() {
 		o.handlers = make(map[string]map[string]http.Handler)
 	}
 
+	if o.handlers["GET"] == nil {
+		o.handlers["GET"] = make(map[string]http.Handler)
+	}
+	o.handlers["GET"]["/users/state/{uid}"] = NewGetUsersStateUID(o.context, o.GetUsersStateUIDHandler)
 	if o.handlers["POST"] == nil {
 		o.handlers["POST"] = make(map[string]http.Handler)
 	}

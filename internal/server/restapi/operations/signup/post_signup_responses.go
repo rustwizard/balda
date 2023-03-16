@@ -16,7 +16,8 @@ import (
 // PostSignupOKCode is the HTTP code returned for type PostSignupOK
 const PostSignupOKCode int = 200
 
-/*PostSignupOK Response for signup request
+/*
+PostSignupOK Response for signup request
 
 swagger:response postSignupOK
 */
@@ -60,7 +61,8 @@ func (o *PostSignupOK) WriteResponse(rw http.ResponseWriter, producer runtime.Pr
 // PostSignupBadRequestCode is the HTTP code returned for type PostSignupBadRequest
 const PostSignupBadRequestCode int = 400
 
-/*PostSignupBadRequest Error when signup
+/*
+PostSignupBadRequest Error when signup
 
 swagger:response postSignupBadRequest
 */

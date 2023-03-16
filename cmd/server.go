@@ -60,6 +60,7 @@ var serverCmd = &cobra.Command{
 		// handlers
 		api.SignupPostSignupHandler = handlers.NewSignUp(db, sess)
 		api.AuthPostAuthHandler = handlers.NewAuth(db, sess)
+		api.GetUsersStateUIDHandler = handlers.NewUserState(db, sess)
 		api.APIKeyQueryParamAuth = func(token string) (interface{}, error) {
 			log.Info().Msg("KeyAuth handler called")
 			if token == cfg.XAPIToken {
