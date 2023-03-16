@@ -83,6 +83,10 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/UserState'
+        400:
+          description: Error when get user state
+          schema:
+            "$ref": "#/definitions/ErrorResponse"
 
 definitions:
   ErrorResponse:
@@ -190,10 +194,15 @@ definitions:
         type: integer
         format: int64
       game_id:
-        description: Game's ID (if game_id == 0 then user in the lobby)
+        description: Game's ID (if game_id == 0 or absent then user in the lobby)
         example: '144'
         type: integer
         format: int32
+      flags:
+        description: Some User's flags.
+        example: '99'
+        type: integer
+        format: int64
 
   UserStateRequest:
     required: [ uid ]

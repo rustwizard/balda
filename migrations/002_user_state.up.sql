@@ -5,7 +5,7 @@ create table if not exists user_state
             primary key,
     nickname        text,
     exp             bigint,
-    flags           int8,
+    flags           bigint,
     lives           bigint,
     created_at      timestamp with time zone default now()  not null,
     updated_at      timestamp with time zone default now()  not null

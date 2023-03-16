@@ -132,6 +132,12 @@ func init() {
             "schema": {
               "$ref": "#/definitions/UserState"
             }
+          },
+          "400": {
+            "description": "Error when get user state",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         }
       }
@@ -258,6 +264,12 @@ func init() {
           "type": "integer",
           "format": "int64",
           "example": "545648798"
+        },
+        "flags": {
+          "description": "Some User's flags.",
+          "type": "integer",
+          "format": "int64",
+          "example": "99"
         },
         "game_id": {
           "description": "Game's ID (if game_id == 0 then user in the lobby)",
@@ -433,6 +445,12 @@ func init() {
             "schema": {
               "$ref": "#/definitions/UserState"
             }
+          },
+          "400": {
+            "description": "Error when get user state",
+            "schema": {
+              "$ref": "#/definitions/ErrorResponse"
+            }
           }
         }
       }
@@ -559,6 +577,12 @@ func init() {
           "type": "integer",
           "format": "int64",
           "example": "545648798"
+        },
+        "flags": {
+          "description": "Some User's flags.",
+          "type": "integer",
+          "format": "int64",
+          "example": "99"
         },
         "game_id": {
           "description": "Game's ID (if game_id == 0 then user in the lobby)",

@@ -57,3 +57,48 @@ func (o *GetUsersStateUIDOK) WriteResponse(rw http.ResponseWriter, producer runt
 		}
 	}
 }
+
+// GetUsersStateUIDBadRequestCode is the HTTP code returned for type GetUsersStateUIDBadRequest
+const GetUsersStateUIDBadRequestCode int = 400
+
+/*
+GetUsersStateUIDBadRequest Error when get user state
+
+swagger:response getUsersStateUidBadRequest
+*/
+type GetUsersStateUIDBadRequest struct {
+
+	/*
+	  In: Body
+	*/
+	Payload *models.ErrorResponse `json:"body,omitempty"`
+}
+
+// NewGetUsersStateUIDBadRequest creates GetUsersStateUIDBadRequest with default headers values
+func NewGetUsersStateUIDBadRequest() *GetUsersStateUIDBadRequest {
+
+	return &GetUsersStateUIDBadRequest{}
+}
+
+// WithPayload adds the payload to the get users state Uid bad request response
+func (o *GetUsersStateUIDBadRequest) WithPayload(payload *models.ErrorResponse) *GetUsersStateUIDBadRequest {
+	o.Payload = payload
+	return o
+}
+
+// SetPayload sets the payload to the get users state Uid bad request response
+func (o *GetUsersStateUIDBadRequest) SetPayload(payload *models.ErrorResponse) {
+	o.Payload = payload
+}
+
+// WriteResponse to the client
+func (o *GetUsersStateUIDBadRequest) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
+
+	rw.WriteHeader(400)
+	if o.Payload != nil {
+		payload := o.Payload
+		if err := producer.Produce(rw, payload); err != nil {
+			panic(err) // let the recovery middleware deal with this
+		}
+	}
+}
