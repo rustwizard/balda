@@ -89,11 +89,6 @@ issues:
         - scopelint
         - lll
 
-    # Disable linters that are not needed for testing infra.
-    - path: internal/cht
-      linters:
-        - gosec
-
     - path: _test\.go
       text: "Combine"
       linters:
@@ -125,7 +120,7 @@ issues:
       linters: [ stylecheck ]
       text: "ST1003" # underscores lol
 
-    - path: (internal|cmd)
+    - path: (internal|server)
       linters: [ revive ]
       text: "package-comments"
 

@@ -25,7 +25,7 @@ type UserState struct {
 	// Example: 99
 	Flags int64 `json:"flags,omitempty"`
 
-	// Game's ID (if game_id == 0 then user in the lobby)
+	// Game's ID (if game_id == 0 or absent then user in the lobby)
 	// Example: 144
 	GameID int32 `json:"game_id,omitempty"`
 
