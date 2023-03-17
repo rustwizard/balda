@@ -78,7 +78,7 @@ var serverCmd = &cobra.Command{
 			}
 			log.Error().Msgf("access attempt with incorrect api key auth: %s", token)
 
-			return nil, errors.New("tapi key header: token error")
+			return nil, errors.New("api key header: token error")
 		}
 
 		api.UseSwaggerUI()

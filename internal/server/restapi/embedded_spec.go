@@ -272,7 +272,7 @@ func init() {
           "example": "99"
         },
         "game_id": {
-          "description": "Game's ID (if game_id == 0 then user in the lobby)",
+          "description": "Game's ID (if game_id == 0 or absent then user in the lobby)",
           "type": "integer",
           "format": "int32",
           "example": "144"
@@ -585,7 +585,7 @@ func init() {
           "example": "99"
         },
         "game_id": {
-          "description": "Game's ID (if game_id == 0 then user in the lobby)",
+          "description": "Game's ID (if game_id == 0 or absent then user in the lobby)",
           "type": "integer",
           "format": "int32",
           "example": "144"
