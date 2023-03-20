@@ -10,8 +10,13 @@ const (
 )
 
 const (
-	GameStatePAUSED  = 0
-	GameStateSTARTED = 1
+	StatePAUSED  = 0
+	StateSTARTED = 1
+)
+
+const (
+	PlacePlayerOne = 0
+	PlacePlayerTwo = 1
 )
 
 type Player struct {
@@ -43,11 +48,19 @@ type Game struct {
 }
 
 func NewGame(player *Player) *Game {
-	return &Game{
+	game := &Game{
 		GameUID: ulid.Make().String(),
-		Places:  nil,
-		State:   GameStatePAUSED,
+		Places:  make(map[int]Place),
+		State:   StatePAUSED,
 		Delay:   0,
 		Words:   [][]rune{},
 	}
+
+	game.Places[player.UserID] = Place{
+		PlaceID:    PlacePlayerOne,
+		PlaceState: PlaceStateIDLE,
+		Player:     *player,
+	}
+
+	return game
 }
