@@ -34,7 +34,7 @@ func TestGameJoin(t *testing.T) {
 	assert.NotEqual(t, g.UID, "")
 	assert.Equal(t, 10, g.Places[10].UserID)
 
-	err := g.GameJoin(g.UID, &game.Player{
+	err := g.Join(g.UID, &game.Player{
 		UserID: 11,
 		Exp:    11,
 		Score:  11,
@@ -43,7 +43,7 @@ func TestGameJoin(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 11, g.Places[11].UserID)
 
-	err = g.GameJoin(g.UID, &game.Player{
+	err = g.Join(g.UID, &game.Player{
 		UserID: 12,
 		Exp:    12,
 		Score:  12,

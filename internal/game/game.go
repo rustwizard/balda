@@ -70,7 +70,7 @@ func NewGame(player *Player) *Game {
 	return game
 }
 
-func (g *Game) GameJoin(GUID string, player *Player) error {
+func (g *Game) Join(GUID string, player *Player) error {
 	if g.UID != GUID {
 		return fmt.Errorf("game: join: wrong guid")
 	}
