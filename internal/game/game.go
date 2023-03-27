@@ -46,10 +46,10 @@ type Turn struct {
 type Game struct {
 	UID    string
 	Places map[int]Place
-	State  int      // StatePAUSED || StateSTARTED
-	Delay  int      // seconds when game will start. if == 0 then unknown when game will be started
-	Words  [][]rune // words on a table
-	Turn   Turn     // current turn configuration
+	State  int        // StatePAUSED || StateSTARTED
+	Delay  int        // seconds when game will start. if == 0 then unknown when game will be started
+	Words  [5][5]rune // words on a table
+	Turn   Turn       // current turn configuration
 }
 
 func NewGame(player *Player) *Game {
