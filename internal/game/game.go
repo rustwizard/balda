@@ -58,7 +58,7 @@ func NewGame(player *Player) *Game {
 		Places: make(map[int]Place),
 		State:  StatePAUSED,
 		Delay:  0,
-		Words:  [][]rune{},
+		// Words:  init when game started,
 	}
 
 	game.Places[player.UserID] = Place{
