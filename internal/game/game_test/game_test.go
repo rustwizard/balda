@@ -60,6 +60,7 @@ func TestGameStart(t *testing.T) {
 	err = g.Start("apple")
 	assert.NoError(t, err)
 	assert.Equal(t, game.StateSTARTED, g.State)
+	assert.Equal(t, "apple", g.Words.InitialWord())
 }
 
 func initGame(t *testing.T) *game.Game {
