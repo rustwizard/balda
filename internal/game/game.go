@@ -91,3 +91,15 @@ func (g *Game) Join(GUID string, player *Player) error {
 
 	return nil
 }
+
+func (g *Game) Start(w string) error {
+	g.State = StateSTARTED
+
+	lt, err := NewLettersTable(w)
+	if err != nil {
+		return fmt.Errorf("game: start: init word")
+	}
+	g.Words = lt
+
+	return nil
+}
