@@ -40,3 +40,11 @@ func NewLettersTable(w string) (*LettersTable, error) {
 
 	return lt, nil
 }
+
+func (lt *LettersTable) InitialWord() string {
+	var word string
+	for _, v := range lt.Table[3] {
+		word += v.Char
+	}
+	return word
+}
