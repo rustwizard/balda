@@ -3,7 +3,8 @@ package game
 
 import (
 	"fmt"
-	ulid "github.com/oklog/ulid/v2"
+
+	"github.com/oklog/ulid/v2"
 )
 
 const (
