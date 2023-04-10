@@ -4,6 +4,7 @@ import (
 	"embed"
 	"encoding/json"
 	"fmt"
+	"github.com/rustwizard/balda/internal/rnd"
 	"io"
 	"unicode/utf8"
 )
@@ -53,4 +54,9 @@ func NewDictionary() (*Dictionary, error) {
 	}
 
 	return dict, nil
+}
+
+func (d *Dictionary) RandomFiveLetterWord() string {
+	idx, _ := rnd.Int(len(d.FiveLetters))
+	return d.FiveLetters[idx]
 }

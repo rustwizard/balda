@@ -13,3 +13,10 @@ func TestNewDictionary(t *testing.T) {
 	assert.NotNil(t, dict)
 	assert.Equal(t, 5, utf8.RuneCountInString(dict.FiveLetters[0]))
 }
+
+func TestDictionary_RandomFiveLetterWord(t *testing.T) {
+	dict, err := game.NewDictionary()
+	assert.NoError(t, err)
+	assert.NotNil(t, dict)
+	assert.Equal(t, 5, utf8.RuneCountInString(dict.RandomFiveLetterWord()))
+}
