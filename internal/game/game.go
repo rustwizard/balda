@@ -3,6 +3,7 @@ package game
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/oklog/ulid/v2"
 )
@@ -45,12 +46,13 @@ type Turn struct {
 }
 
 type Game struct {
-	UID    string
-	Places map[int]Place
-	State  int           // StatePAUSED || StateSTARTED
-	Delay  int           // seconds when game will start. if == 0 then unknown when game will be started
-	Words  *LettersTable // words on a table
-	Turn   Turn          // current turn configuration
+	UID     string
+	Places  map[int]Place
+	State   int           // StatePAUSED || StateSTARTED
+	Delay   int           // seconds when game will start. if == 0 then unknown when game will be started
+	Words   *LettersTable // words on a table
+	Turn    Turn          // current turn configuration
+	StartTS time.Time     // timestamp when game was started
 }
 
 func NewGame(player *Player) *Game {
@@ -94,6 +96,7 @@ func (g *Game) Join(GUID string, player *Player) error {
 }
 
 func (g *Game) Start(w string) error {
+	g.StartTS = time.Now()
 	g.State = StateSTARTED
 
 	lt, err := NewLettersTable(w)
