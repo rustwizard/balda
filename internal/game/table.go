@@ -6,7 +6,6 @@ import (
 )
 
 const (
-	LettersMax        = 25
 	InitWordLengthMax = 5
 )
 
@@ -47,4 +46,12 @@ func (lt *LettersTable) InitialWord() string {
 		word += v.Char
 	}
 	return word
+}
+
+func (lt *LettersTable) IsTakenPlaceForLetter(l Letter) bool {
+	char := lt.Table[l.RowID][l.ColID]
+	if char != nil {
+		return true
+	}
+	return false
 }

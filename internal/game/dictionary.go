@@ -17,6 +17,8 @@ type Dictionary struct {
 	FiveLetters map[int]string
 }
 
+var Dict *Dictionary
+
 func NewDictionary() (*Dictionary, error) {
 	dict := &Dictionary{
 		Definition:  make(map[string]string),
@@ -59,4 +61,13 @@ func NewDictionary() (*Dictionary, error) {
 func (d *Dictionary) RandomFiveLetterWord() string {
 	idx, _ := rnd.Int(len(d.FiveLetters))
 	return d.FiveLetters[idx]
+}
+
+func init() {
+	dict, err := NewDictionary()
+	if err != nil {
+		panic(err)
+	}
+
+	Dict = dict
 }

@@ -35,20 +35,6 @@ const timeTotal = 60 * time.Second // total time in seconds for player turn
 
 const maxTimeoutTurns = 3
 
-type Player struct {
-	UserID            int
-	Exp               int
-	Score             int
-	Words             []string
-	TimeoutTurnsCount int
-}
-
-type Place struct {
-	PlaceID    int
-	PlaceState int
-	Player
-}
-
 type Turn struct {
 	PlaceID   int
 	TimeTotal time.Duration // time in seconds for the player's turn
@@ -58,7 +44,7 @@ type Turn struct {
 type Game struct {
 	mu       sync.RWMutex
 	UID      string
-	Places   map[int]*Place
+	Places   Places
 	State    int           // StatePAUSED || StateSTARTED
 	fsmState int           // StateWaitTurn
 	Delay    int           // seconds when game will start. if == 0 then unknown when game will be started
@@ -167,7 +153,7 @@ Loop:
 			userID := g.userIDByPlaceID(g.Turn.PlaceID)
 			g.Places[userID].TimeoutTurnsCount++
 			if g.Places[userID].TimeoutTurnsCount >= maxTimeoutTurns {
-				g.fsmState = StatePlaceKick
+				g.setFSMState(StatePlaceKick)
 			} else {
 				g.nextTurn()
 			}
@@ -214,4 +200,58 @@ func (g *Game) setFSMState(state int) {
 	defer g.mu.Unlock()
 
 	g.fsmState = state
+}
+
+func (g *Game) GameTurn(userID int, l Letter, word []Letter) error {
+	place, ok := g.Places[userID]
+	if !ok {
+		return fmt.Errorf("game: there is no such user in the game")
+	}
+
+	if g.State != StateSTARTED {
+		return fmt.Errorf("game: not started")
+	}
+
+	if g.Turn.PlaceID != place.PlaceID {
+		return fmt.Errorf("game: not user's turn")
+	}
+
+	if len(word) <= 2 {
+		return fmt.Errorf("game: word is not selected")
+	}
+
+	g.Places[userID].PlaceState = PlaceStateSEND
+	// TODO: send event to client to change place state
+
+	if g.Words.IsTakenPlaceForLetter(l) {
+		return fmt.Errorf("game: no turn: char place already taken")
+	}
+
+	if g.Places.IsTakenWord(word) {
+		return fmt.Errorf("game: no turn: word already taken")
+	}
+
+	if !g.checkWordExistence(word) {
+		return fmt.Errorf("game: no turn: there is no such word in the dictionary")
+	}
+
+	// TODO: place word on the table and change turn to another player
+
+	return nil
+}
+
+func (g *Game) checkWordExistence(word []Letter) bool {
+	w := makeWord(word)
+	if _, ok := Dict.Definition[w]; !ok {
+		return false
+	}
+	return true
+}
+
+func makeWord(word []Letter) string {
+	var w string
+	for _, v := range word {
+		w += v.Char
+	}
+	return w
 }
