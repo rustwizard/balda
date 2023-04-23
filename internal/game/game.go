@@ -4,6 +4,7 @@ package game
 import (
 	"fmt"
 	"github.com/rs/zerolog/log"
+	"sync"
 	"time"
 
 	"github.com/oklog/ulid/v2"
@@ -55,6 +56,7 @@ type Turn struct {
 }
 
 type Game struct {
+	mu       sync.RWMutex
 	UID      string
 	Places   map[int]*Place
 	State    int           // StatePAUSED || StateSTARTED
@@ -67,6 +69,7 @@ type Game struct {
 
 func NewGame(player *Player) *Game {
 	game := &Game{
+		mu:     sync.RWMutex{},
 		UID:    ulid.Make().String(),
 		Places: make(map[int]*Place),
 		State:  StatePAUSED,
