@@ -16,6 +16,7 @@ type Place struct {
 
 type Places map[int]*Place
 
+// TODO: write tests
 func (p Places) IsTakenWord(word []Letter) bool {
 	w := makeWord(word)
 	for _, player := range p {

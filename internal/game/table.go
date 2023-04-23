@@ -48,6 +48,7 @@ func (lt *LettersTable) InitialWord() string {
 	return word
 }
 
+// TODO: write tests
 func (lt *LettersTable) IsTakenPlaceForLetter(l Letter) bool {
 	char := lt.Table[l.RowID][l.ColID]
 	if char != nil {
