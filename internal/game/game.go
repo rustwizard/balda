@@ -189,10 +189,10 @@ func (g *Game) userIDByPlaceID(placeID int) int {
 }
 
 func (g *Game) nextTurn() {
-	if g.fsmState == StateWaitTurn {
-		g.fsmState = StateNextTurn
+	if g.getFSMState() == StateWaitTurn {
+		g.setFSMState(StateNextTurn)
 	} else {
-		g.fsmState = StateWaitTurn
+		g.setFSMState(StateWaitTurn)
 	}
 
 	if g.Turn.PlaceID == PlacePlayerOne {
@@ -200,4 +200,18 @@ func (g *Game) nextTurn() {
 	} else {
 		g.Turn.PlaceID = PlacePlayerOne
 	}
+}
+
+func (g *Game) getFSMState() int {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+
+	return g.fsmState
+}
+
+func (g *Game) setFSMState(state int) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	g.fsmState = state
 }
