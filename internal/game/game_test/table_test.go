@@ -24,3 +24,22 @@ func TestInitialWord(t *testing.T) {
 	assert.Equal(t, uint8(3), letters[0].RowID)
 	assert.Equal(t, "ффффф", lt.InitialWord())
 }
+
+func TestPutLetterOnTable(t *testing.T) {
+	lt, err := game.NewLettersTable("zzzzz")
+	assert.NoError(t, err)
+
+	err = lt.PutLetterOnTable(&game.Letter{
+		RowID: 3,
+		ColID: 0,
+		Char:  "t",
+	})
+	assert.Error(t, err, "should return error that place is already taken")
+
+	err = lt.PutLetterOnTable(&game.Letter{
+		RowID: 0,
+		ColID: 0,
+		Char:  "t",
+	})
+	assert.NoError(t, err)
+}

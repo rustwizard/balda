@@ -202,7 +202,7 @@ func (g *Game) setFSMState(state int) {
 	g.fsmState = state
 }
 
-func (g *Game) GameTurn(userID int, l Letter, word []Letter) error {
+func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 	place, ok := g.Places[userID]
 	if !ok {
 		return fmt.Errorf("game: there is no such user in the game")
@@ -223,10 +223,6 @@ func (g *Game) GameTurn(userID int, l Letter, word []Letter) error {
 	g.Places[userID].PlaceState = PlaceStateSEND
 	// TODO: send event to client to change place state
 
-	if g.Words.IsTakenPlaceForLetter(l) {
-		return fmt.Errorf("game: no turn: char place already taken")
-	}
-
 	if g.Places.IsTakenWord(word) {
 		return fmt.Errorf("game: no turn: word already taken")
 	}
@@ -235,7 +231,11 @@ func (g *Game) GameTurn(userID int, l Letter, word []Letter) error {
 		return fmt.Errorf("game: no turn: there is no such word in the dictionary")
 	}
 
-	// TODO: place word on the table and change turn to another player
+	if err := g.Words.PutLetterOnTable(l); err != nil {
+		return fmt.Errorf("game: no turn: %w", err)
+	}
+
+	// TODO: add word to the user and change turn to another player
 
 	return nil
 }
