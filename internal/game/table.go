@@ -49,10 +49,18 @@ func (lt *LettersTable) InitialWord() string {
 }
 
 // TODO: write tests
-func (lt *LettersTable) IsTakenPlaceForLetter(l Letter) bool {
+func (lt *LettersTable) IsTakenPlaceForLetter(l *Letter) bool {
 	char := lt.Table[l.RowID][l.ColID]
 	if char != nil {
 		return true
 	}
 	return false
+}
+
+func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
+	if lt.IsTakenPlaceForLetter(l) {
+		return errors.New("table: letter place is taken")
+	}
+	lt.Table[l.RowID][l.ColID] = l
+	return nil
 }
