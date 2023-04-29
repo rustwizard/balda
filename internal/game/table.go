@@ -9,7 +9,11 @@ const (
 	InitWordLengthMax = 5
 )
 
-var ErrInitWordLength = errors.New("game: table: init word max length")
+var (
+	ErrInitWordLength   = errors.New("table: init word max length")
+	ErrLetterPlaceTaken = errors.New("table: letter place is taken")
+	ErrWrongLetterPlace = errors.New("table: wrong place for letter")
+)
 
 type Letter struct {
 	RowID uint8 // row index of the 5x5 matrix
@@ -58,10 +62,32 @@ func (lt *LettersTable) isPlaceForLetterTaken(l *Letter) bool {
 
 func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
 	if lt.isPlaceForLetterTaken(l) {
-		// TODO: move err to var and export
-		return errors.New("table: letter place is taken")
+		return ErrLetterPlaceTaken
 	}
-	// TODO: check that there is another letters in circle of where the letter is been placed
+
+	switch l.RowID {
+	case 0, 1:
+		if !lt.downChar() {
+			return ErrWrongLetterPlace
+		}
+	case 3, 4:
+		if !lt.upperChar() {
+			return ErrWrongLetterPlace
+		}
+	default:
+		return ErrLetterPlaceTaken
+
+	}
 	lt.Table[l.RowID][l.ColID] = l
 	return nil
+}
+
+// TODO: impl
+func (lt *LettersTable) downChar() bool {
+	return true
+}
+
+// TODO: impl
+func (lt *LettersTable) upperChar() bool {
+	return true
 }

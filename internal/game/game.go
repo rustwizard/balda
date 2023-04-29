@@ -235,7 +235,7 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 		return fmt.Errorf("game: no turn: %w", err)
 	}
 
-	// TODO: add word to the user and change turn to another player
+	// TODO: add word to the player and change turn to another player
 
 	return nil
 }
