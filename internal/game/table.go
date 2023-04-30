@@ -33,8 +33,8 @@ func NewLettersTable(w string) (*LettersTable, error) {
 
 	i := 0
 	for _, v := range w {
-		lt.Table[3][i] = &Letter{
-			RowID: 3,
+		lt.Table[2][i] = &Letter{
+			RowID: 2,
 			ColID: uint8(i),
 			Char:  string(v),
 		}
@@ -61,6 +61,10 @@ func (lt *LettersTable) isPlaceForLetterTaken(l *Letter) bool {
 }
 
 func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
+	if l.RowID >= 5 || l.ColID >= 5 {
+		return ErrWrongLetterPlace
+	}
+
 	if lt.isPlaceForLetterTaken(l) {
 		return ErrLetterPlaceTaken
 	}
@@ -74,9 +78,6 @@ func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
 		if lt.upperCharEmpty(l) {
 			return ErrWrongLetterPlace
 		}
-	default:
-		return ErrLetterPlaceTaken
-
 	}
 
 	lt.Table[l.RowID][l.ColID] = l
@@ -95,7 +96,7 @@ func (lt *LettersTable) downCharEmpty(l *Letter) bool {
 func (lt *LettersTable) upperCharEmpty(l *Letter) bool {
 	char := lt.Table[l.RowID-1][l.ColID]
 	if char != nil {
-		return true
+		return false
 	}
 
 	return true

@@ -34,12 +34,46 @@ func TestPutLetterOnTable(t *testing.T) {
 		ColID: 0,
 		Char:  "t",
 	})
-	assert.Error(t, err, "should return error that place is already taken")
+	assert.NoError(t, err)
 
 	err = lt.PutLetterOnTable(&game.Letter{
 		RowID: 0,
 		ColID: 0,
 		Char:  "t",
 	})
-	assert.NoError(t, err)
+	assert.Error(t, err)
+	assert.Equal(t, err, game.ErrWrongLetterPlace)
+
+	err = lt.PutLetterOnTable(&game.Letter{
+		RowID: 4,
+		ColID: 1,
+		Char:  "t",
+	})
+	assert.Error(t, err)
+	assert.Equal(t, err, game.ErrWrongLetterPlace)
+
+	err = lt.PutLetterOnTable(&game.Letter{
+		RowID: 3,
+		ColID: 0,
+		Char:  "t",
+	})
+	assert.Error(t, err)
+	assert.Equal(t, err, game.ErrLetterPlaceTaken)
+
+	err = lt.PutLetterOnTable(&game.Letter{
+		RowID: 5,
+		ColID: 5,
+		Char:  "t",
+	})
+	assert.Error(t, err)
+	assert.Equal(t, err, game.ErrWrongLetterPlace)
+
+	err = lt.PutLetterOnTable(&game.Letter{
+		RowID: 0,
+		ColID: 3,
+		Char:  "t",
+	})
+	assert.Error(t, err)
+	assert.Equal(t, err, game.ErrWrongLetterPlace)
+
 }
