@@ -67,11 +67,11 @@ func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
 
 	switch l.RowID {
 	case 0, 1:
-		if !lt.downChar() {
+		if !lt.downChar(l) {
 			return ErrWrongLetterPlace
 		}
 	case 3, 4:
-		if !lt.upperChar() {
+		if !lt.upperChar(l) {
 			return ErrWrongLetterPlace
 		}
 	default:
@@ -82,12 +82,19 @@ func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
 	return nil
 }
 
-// TODO: impl
-func (lt *LettersTable) downChar() bool {
-	return true
+func (lt *LettersTable) downChar(l *Letter) bool {
+	char := lt.Table[l.RowID+1][l.ColID]
+	if char != nil {
+		return true
+	}
+	return false
 }
 
-// TODO: impl
-func (lt *LettersTable) upperChar() bool {
+func (lt *LettersTable) upperChar(l *Letter) bool {
+	char := lt.Table[l.RowID-1][l.ColID]
+	if char != nil {
+		return true
+	}
+
 	return true
 }
