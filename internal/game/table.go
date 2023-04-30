@@ -67,30 +67,32 @@ func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
 
 	switch l.RowID {
 	case 0, 1:
-		if !lt.downChar(l) {
+		if lt.downCharEmpty(l) {
 			return ErrWrongLetterPlace
 		}
 	case 3, 4:
-		if !lt.upperChar(l) {
+		if lt.upperCharEmpty(l) {
 			return ErrWrongLetterPlace
 		}
 	default:
 		return ErrLetterPlaceTaken
 
 	}
+
 	lt.Table[l.RowID][l.ColID] = l
+
 	return nil
 }
 
-func (lt *LettersTable) downChar(l *Letter) bool {
+func (lt *LettersTable) downCharEmpty(l *Letter) bool {
 	char := lt.Table[l.RowID+1][l.ColID]
 	if char != nil {
-		return true
+		return false
 	}
-	return false
+	return true
 }
 
-func (lt *LettersTable) upperChar(l *Letter) bool {
+func (lt *LettersTable) upperCharEmpty(l *Letter) bool {
 	char := lt.Table[l.RowID-1][l.ColID]
 	if char != nil {
 		return true
