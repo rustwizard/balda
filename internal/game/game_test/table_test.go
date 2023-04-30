@@ -69,11 +69,10 @@ func TestPutLetterOnTable(t *testing.T) {
 	assert.Equal(t, err, game.ErrWrongLetterPlace)
 
 	err = lt.PutLetterOnTable(&game.Letter{
-		RowID: 0,
-		ColID: 3,
+		RowID: 1,
+		ColID: 0,
 		Char:  "t",
 	})
-	assert.Error(t, err)
-	assert.Equal(t, err, game.ErrWrongLetterPlace)
+	assert.NoError(t, err)
 
 }
