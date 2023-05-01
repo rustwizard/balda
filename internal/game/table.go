@@ -98,6 +98,5 @@ func (lt *LettersTable) upperCharEmpty(l *Letter) bool {
 	if char != nil {
 		return false
 	}
-
 	return true
 }

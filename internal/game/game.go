@@ -249,7 +249,6 @@ func (g *Game) checkWordExistence(word []Letter) bool {
 	return true
 }
 
-// TODO: write tests
 func makeWord(word []Letter) string {
 	var w string
 	for _, v := range word {
