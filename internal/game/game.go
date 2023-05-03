@@ -227,7 +227,7 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 		return fmt.Errorf("game: no turn: word already taken")
 	}
 
-	if !g.checkWordExistence(word) {
+	if !g.СheckWordExistence(word) {
 		return fmt.Errorf("game: no turn: there is no such word in the dictionary")
 	}
 
@@ -240,8 +240,7 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 	return nil
 }
 
-// TODO: write tests
-func (g *Game) checkWordExistence(word []Letter) bool {
+func (g *Game) СheckWordExistence(word []Letter) bool {
 	w := makeWord(word)
 	if _, ok := Dict.Definition[w]; !ok {
 		return false

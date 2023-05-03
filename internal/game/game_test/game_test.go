@@ -63,6 +63,15 @@ func TestGameStart(t *testing.T) {
 	assert.Equal(t, "apple", g.Words.InitialWord())
 }
 
+func TestGameCheckWordExistence(t *testing.T) {
+	g := initGame(t)
+	word := []game.Letter{{Char: "л"}, {Char: "е"}, {Char: "т"}, {Char: "о"}}
+	assert.True(t, g.СheckWordExistence(word))
+
+	word = []game.Letter{{Char: "z"}, {Char: "t"}, {Char: "b"}, {Char: "t"}}
+	assert.False(t, g.СheckWordExistence(word))
+}
+
 func initGame(t *testing.T) *game.Game {
 	player := &game.Player{
 		UserID: 10,
