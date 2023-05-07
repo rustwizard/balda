@@ -16,11 +16,10 @@ type Place struct {
 
 type Places map[int]*Place
 
-func (p Places) IsTakenWord(word []Letter) bool {
-	w := makeWord(word)
+func (p Places) IsTakenWord(word string) bool {
 	for _, player := range p {
 		for _, pword := range player.Words {
-			if pword == w {
+			if pword == word {
 				return true
 			}
 		}

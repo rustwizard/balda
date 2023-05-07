@@ -2,6 +2,7 @@
 package game
 
 import (
+	"context"
 	"fmt"
 	"github.com/rs/zerolog/log"
 	"sync"
@@ -94,9 +95,8 @@ func (g *Game) Join(GUID string, player *Player) error {
 	return nil
 }
 
-func (g *Game) Start(w string) error {
+func (g *Game) Start(ctx context.Context, w string) error {
 	g.StartTS = time.Now()
-	g.State = StateSTARTED
 
 	lt, err := NewLettersTable(w)
 	if err != nil {
@@ -109,7 +109,9 @@ func (g *Game) Start(w string) error {
 		TimeRest:  timeTotal,
 	}
 
-	g.mainLoop()
+	g.State = StateSTARTED
+
+	g.mainLoop(ctx)
 
 	return nil
 }
@@ -123,19 +125,30 @@ func (g *Game) firstTurnPlaceID() int {
 	return 0
 }
 
-func (g *Game) mainLoop() {
+func (g *Game) mainLoop(ctx context.Context) {
 	g.fsmState = StateWaitTurn
 	log.Debug().Msg("game: main loop started")
 Loop:
 	for {
-		switch g.fsmState {
-		case StateWaitTurn:
-			g.waitTurn()
-		case StateNextTurn:
-			g.waitTurn()
-		case StatePlaceKick:
-			log.Debug().Msg("kick the place")
-			break Loop
+		select {
+		case <-ctx.Done():
+			log.Error().Err(ctx.Err()).Msg("game: main loop")
+		default:
+		}
+
+		select {
+		case <-ctx.Done():
+			log.Error().Err(ctx.Err()).Msg("game: main loop")
+		default:
+			switch g.fsmState {
+			case StateWaitTurn:
+				g.waitTurn()
+			case StateNextTurn:
+				g.waitTurn()
+			case StatePlaceKick:
+				log.Debug().Msg("kick the place")
+				break Loop
+			}
 		}
 	}
 	log.Debug().Msg("game: main loop ended")
@@ -189,20 +202,17 @@ func (g *Game) nextTurn() {
 }
 
 func (g *Game) getFSMState() int {
-	g.mu.RLock()
-	defer g.mu.RUnlock()
-
 	return g.fsmState
 }
 
 func (g *Game) setFSMState(state int) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-
 	g.fsmState = state
 }
 
 func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
 	place, ok := g.Places[userID]
 	if !ok {
 		return fmt.Errorf("game: there is no such user in the game")
@@ -221,13 +231,15 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 	}
 
 	g.Places[userID].PlaceState = PlaceStateSEND
-	// TODO: send event to client to change place state
 
-	if g.Places.IsTakenWord(word) {
+	// TODO: make a method to check there is no gaps between letters in the word
+
+	w := MakeWord(word)
+	if g.Places.IsTakenWord(w) {
 		return fmt.Errorf("game: no turn: word already taken")
 	}
 
-	if !g.СheckWordExistence(word) {
+	if !g.СheckWordExistence(w) {
 		return fmt.Errorf("game: no turn: there is no such word in the dictionary")
 	}
 
@@ -235,20 +247,22 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 		return fmt.Errorf("game: no turn: %w", err)
 	}
 
-	// TODO: add word to the player and change turn to another player
+	g.Places[userID].Words = append(g.Places[userID].Words, w)
+	g.nextTurn()
+
+	// TODO: send events to clients
 
 	return nil
 }
 
-func (g *Game) СheckWordExistence(word []Letter) bool {
-	w := makeWord(word)
-	if _, ok := Dict.Definition[w]; !ok {
+func (g *Game) СheckWordExistence(word string) bool {
+	if _, ok := Dict.Definition[word]; !ok {
 		return false
 	}
 	return true
 }
 
-func makeWord(word []Letter) string {
+func MakeWord(word []Letter) string {
 	var w string
 	for _, v := range word {
 		w += v.Char
