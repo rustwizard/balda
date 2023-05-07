@@ -44,7 +44,7 @@ func TestIsTakenWord(t *testing.T) {
 		Char:  "m",
 	}}
 
-	assert.True(t, places.IsTakenWord(word))
+	assert.True(t, places.IsTakenWord(game.MakeWord(word)))
 
 	word = []game.Letter{{
 		RowID: 0,
@@ -60,5 +60,5 @@ func TestIsTakenWord(t *testing.T) {
 		Char:  "w",
 	}}
 
-	assert.False(t, places.IsTakenWord(word))
+	assert.False(t, places.IsTakenWord(game.MakeWord(word)))
 }
