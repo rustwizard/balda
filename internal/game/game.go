@@ -232,6 +232,8 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 
 	g.Places[userID].PlaceState = PlaceStateSEND
 
+	// TODO: make a method to check there is no gaps between letters in the word
+
 	w := MakeWord(word)
 	if g.Places.IsTakenWord(w) {
 		return fmt.Errorf("game: no turn: word already taken")
