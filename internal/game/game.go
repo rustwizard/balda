@@ -274,3 +274,8 @@ func MakeWord(word []Letter) string {
 func GapsBetweenLetters(word []Letter) bool {
 	return true
 }
+
+// TODO: impl
+func (g *Game) GameTurnSkip(userID int) error {
+	return nil
+}
