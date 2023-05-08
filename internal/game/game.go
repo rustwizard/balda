@@ -269,3 +269,8 @@ func MakeWord(word []Letter) string {
 	}
 	return w
 }
+
+// TODO: impl
+func GapsBetweenLetters(word []Letter) bool {
+	return true
+}
