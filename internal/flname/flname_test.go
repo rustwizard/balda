@@ -7,7 +7,9 @@ import (
 )
 
 func TestGenFLName(t *testing.T) {
-	firstName, secondName := GenFLName()
-	assert.NotEmpty(t, firstName, secondName)
-	t.Logf("firstName: %s, secondName: %s", firstName, secondName)
+	for i := 0; i < 3; i++ {
+		firstName, secondName := GenFLName()
+		assert.NotEmpty(t, firstName, secondName)
+		t.Logf("firstName: %s, secondName: %s", firstName, secondName)
+	}
 }
