@@ -4,9 +4,10 @@ package game
 import (
 	"context"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/oklog/ulid/v2"
 )
@@ -127,7 +128,7 @@ func (g *Game) firstTurnPlaceID() int {
 
 func (g *Game) mainLoop(ctx context.Context) {
 	g.fsmState = StateWaitTurn
-	log.Debug().Msg("game: main loop started")
+	log.Debug().Msg("game: main loop: start")
 Loop:
 	for {
 		select {
@@ -146,12 +147,12 @@ Loop:
 			case StateNextTurn:
 				g.waitTurn()
 			case StatePlaceKick:
-				log.Debug().Msg("kick the place")
+				log.Debug().Msgf("game: main loop: placeID: %d was kicked due to inactivity", g.Turn.PlaceID)
 				break Loop
 			}
 		}
 	}
-	log.Debug().Msg("game: main loop ended")
+	log.Debug().Msg("game: main loop: end")
 }
 
 func (g *Game) waitTurn() {
@@ -172,7 +173,7 @@ Loop:
 			}
 			break Loop
 		default:
-			log.Debug().Msgf("placeID: %d: wait for turn", g.Turn.PlaceID)
+			log.Debug().Msgf("game: main loop: placeID: %d: wait turn", g.Turn.PlaceID)
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -187,6 +188,17 @@ func (g *Game) userIDByPlaceID(placeID int) int {
 	return 0
 }
 
+func (g *Game) placeIDByUserID(userID int) (int, error) {
+	var placeID int
+	place, ok := g.Places[userID]
+	if !ok {
+		return placeID, fmt.Errorf("there is no such user in the game")
+	}
+	placeID = place.PlaceID
+
+	return placeID, nil
+}
+
 func (g *Game) nextTurn() {
 	if g.getFSMState() == StateWaitTurn {
 		g.setFSMState(StateNextTurn)
@@ -199,6 +211,8 @@ func (g *Game) nextTurn() {
 	} else {
 		g.Turn.PlaceID = PlacePlayerOne
 	}
+
+	log.Debug().Msgf("game: main loop: next turn: placeID: %d", g.Turn.PlaceID)
 }
 
 func (g *Game) getFSMState() int {
@@ -213,17 +227,13 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	place, ok := g.Places[userID]
-	if !ok {
-		return fmt.Errorf("game: there is no such user in the game")
+	placeID, err := g.placeIDByUserID(userID)
+	if err != nil {
+		return fmt.Errorf("game turn: check place id: %v", err)
 	}
 
-	if g.State != StateSTARTED {
-		return fmt.Errorf("game: not started")
-	}
-
-	if g.Turn.PlaceID != place.PlaceID {
-		return fmt.Errorf("game: not user's turn")
+	if err = g.checkGame(placeID); err != nil {
+		return fmt.Errorf("game turn: check game: %v", err)
 	}
 
 	if len(word) <= 2 {
@@ -246,7 +256,7 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 	if err := g.Words.PutLetterOnTable(l); err != nil {
 		return fmt.Errorf("game: no turn: %w", err)
 	}
-
+	log.Debug().Msgf("game: main loop: placeID: %d put the word on the table", placeID)
 	g.Places[userID].Words = append(g.Places[userID].Words, w)
 	g.nextTurn()
 
@@ -268,4 +278,42 @@ func MakeWord(word []Letter) string {
 		w += v.Char
 	}
 	return w
+}
+
+// TODO: impl
+func GapsBetweenLetters(word []Letter) bool {
+	return true
+}
+
+// TODO: impl
+func (g *Game) GameTurnSkip(userID int) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	placeID, err := g.placeIDByUserID(userID)
+	if err != nil {
+		return fmt.Errorf("game turn skip: check place id: %v", err)
+	}
+
+	if err = g.checkGame(placeID); err != nil {
+		return fmt.Errorf("game turn skip: check game: %v", err)
+	}
+
+	g.Places[userID].PlaceState = PlaceStateSKIP
+	log.Debug().Msgf("game: main loop: skip turn: placeID: %d skipped the turn", placeID)
+	g.nextTurn()
+
+	return nil
+}
+
+func (g *Game) checkGame(placeID int) error {
+	if g.State != StateSTARTED {
+		return fmt.Errorf("game not started")
+	}
+
+	if g.Turn.PlaceID != placeID {
+		return fmt.Errorf("not user's turn")
+	}
+
+	return nil
 }
