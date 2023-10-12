@@ -4,9 +4,10 @@ package game
 import (
 	"context"
 	"fmt"
-	"github.com/rs/zerolog/log"
 	"sync"
 	"time"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/oklog/ulid/v2"
 )
@@ -127,7 +128,7 @@ func (g *Game) firstTurnPlaceID() int {
 
 func (g *Game) mainLoop(ctx context.Context) {
 	g.fsmState = StateWaitTurn
-	log.Debug().Msg("game: main loop started")
+	log.Debug().Msg("game: main loop: start")
 Loop:
 	for {
 		select {
@@ -146,12 +147,12 @@ Loop:
 			case StateNextTurn:
 				g.waitTurn()
 			case StatePlaceKick:
-				log.Debug().Msg("kick the place")
+				log.Debug().Msgf("game: main loop: placeID: %d was kicked due to inactivity", g.Turn.PlaceID)
 				break Loop
 			}
 		}
 	}
-	log.Debug().Msg("game: main loop ended")
+	log.Debug().Msg("game: main loop: end")
 }
 
 func (g *Game) waitTurn() {
@@ -172,7 +173,7 @@ Loop:
 			}
 			break Loop
 		default:
-			log.Debug().Msgf("placeID: %d: wait for turn", g.Turn.PlaceID)
+			log.Debug().Msgf("game: main loop: placeID: %d: wait turn", g.Turn.PlaceID)
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -246,7 +247,7 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 	if err := g.Words.PutLetterOnTable(l); err != nil {
 		return fmt.Errorf("game: no turn: %w", err)
 	}
-
+	log.Debug().Msgf("game: main loop: placeID: %d put the word on the table", place.PlaceID)
 	g.Places[userID].Words = append(g.Places[userID].Words, w)
 	g.nextTurn()
 
