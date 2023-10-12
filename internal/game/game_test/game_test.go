@@ -2,11 +2,13 @@ package game_test
 
 import (
 	"context"
-	game "github.com/rustwizard/balda/internal/game"
-	"github.com/stretchr/testify/assert"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+
+	game "github.com/rustwizard/balda/internal/game"
 )
 
 func TestGameCreate(t *testing.T) {
@@ -179,4 +181,38 @@ func TestGameTurn(t *testing.T) {
 
 	wg.Wait()
 
+}
+
+func TestGameSkipTurn(t *testing.T) {
+	g := initGame(t)
+	ctx := context.Background()
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+
+	var err error
+	go func(wg *sync.WaitGroup) {
+		err = g.Start(ctx, "аббат")
+		assert.NoError(t, err)
+		assert.Equal(t, game.StateSTARTED, g.State)
+		assert.Equal(t, "аббат", g.Words.InitialWord())
+		wg.Done()
+	}(wg)
+
+	// wait 1 sec and do the turn
+	time.Sleep(1 * time.Second)
+
+	err = g.GameTurn(10, &game.Letter{
+		RowID: 1,
+		ColID: 0,
+		Char:  "р",
+	}, []game.Letter{{Char: "р"}, {Char: "а"}, {Char: "б"}})
+	assert.NoError(t, err)
+
+	// wait 1 sec and do the turn
+	time.Sleep(2 * time.Second)
+	err = g.GameTurnSkip(11)
+	assert.NoError(t, err)
+
+	wg.Wait()
 }
