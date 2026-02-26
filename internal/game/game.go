@@ -145,7 +145,7 @@ Loop:
 			case StateWaitTurn:
 				g.waitTurn()
 			case StateNextTurn:
-				g.waitTurn()
+				g.nextTurn()
 			case StatePlaceKick:
 				log.Debug().Msgf("game: main loop: placeID: %d was kicked due to inactivity", g.Turn.PlaceID)
 				break Loop
@@ -159,6 +159,7 @@ func (g *Game) waitTurn() {
 	log.Debug().Msgf("game: main loop: waiting when player with placeID: %d do the turn", g.Turn.PlaceID)
 	timer := time.NewTimer(5 * time.Second)
 	defer timer.Stop()
+
 Loop:
 	for {
 		select {
@@ -173,8 +174,14 @@ Loop:
 			}
 			break Loop
 		default:
-			log.Debug().Msgf("game: main loop: placeID: %d: wait turn", g.Turn.PlaceID)
-			time.Sleep(1 * time.Second)
+			userID := g.userIDByPlaceID(g.Turn.PlaceID)
+			if g.Places[userID].PlaceState != PlaceStateIDLE {
+				g.Places[userID].PlaceState = PlaceStateIDLE
+				log.Debug().Msgf("game: main loop: placeID: %d: did the turn", g.Turn.PlaceID)
+				return
+			}
+			//log.Debug().Msgf("game: main loop: placeID: %d: wait turn", g.Turn.PlaceID)
+			//time.Sleep(1 * time.Second)
 		}
 	}
 }
@@ -211,8 +218,9 @@ func (g *Game) nextTurn() {
 	} else {
 		g.Turn.PlaceID = PlacePlayerOne
 	}
-
-	log.Debug().Msgf("game: main loop: next turn: placeID: %d", g.Turn.PlaceID)
+	uid := g.userIDByPlaceID(g.Turn.PlaceID)
+	state := g.Places[uid].PlaceState
+	log.Debug().Msgf("game: main loop: next turn: placeID: %d, PlaceState: %d", g.Turn.PlaceID, state)
 }
 
 func (g *Game) getFSMState() int {
@@ -240,8 +248,6 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 		return fmt.Errorf("game: word is not selected")
 	}
 
-	g.Places[userID].PlaceState = PlaceStateSEND
-
 	// TODO: make a method to check there is no gaps between letters in the word
 
 	w := MakeWord(word)
@@ -258,6 +264,7 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 	}
 	log.Debug().Msgf("game: main loop: placeID: %d put the word on the table", placeID)
 	g.Places[userID].Words = append(g.Places[userID].Words, w)
+	g.Places[userID].PlaceState = PlaceStateSEND
 	g.nextTurn()
 
 	// TODO: send events to clients
@@ -299,8 +306,8 @@ func (g *Game) GameTurnSkip(userID int) error {
 		return fmt.Errorf("game turn skip: check game: %v", err)
 	}
 
-	g.Places[userID].PlaceState = PlaceStateSKIP
 	log.Debug().Msgf("game: main loop: skip turn: placeID: %d skipped the turn", placeID)
+	g.Places[userID].PlaceState = PlaceStateSKIP
 	g.nextTurn()
 
 	return nil
