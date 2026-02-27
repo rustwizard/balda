@@ -21,9 +21,9 @@ The player with the most words when the game ends wins.
 | Language | Go 1.26 |
 | REST API | [go-swagger](https://github.com/go-swagger/go-swagger) (code-generated from OpenAPI spec) |
 | CLI | [cobra](https://github.com/spf13/cobra) |
-| Database | PostgreSQL 15 (pgx/v5 driver) |
-| Runtime image | Debian 13 (trixie-slim) |
-| Session store | Redis 6.2 |
+| Database | PostgreSQL 16 (pgx/v5 driver) |
+| Runtime image | Debian trixie-slim |
+| Session store | Redis 8 |
 | Migrations | [golang-migrate](https://github.com/golang-migrate/migrate) |
 | Logging | [zerolog](https://github.com/rs/zerolog) |
 | IDs | ULID (games), UUID (sessions) |
@@ -75,11 +75,13 @@ Authentication uses an `X-API-Key` header (or `api_key` query parameter).
 
 // Response
 {
-  "uid": 1,
-  "firstname": "Ivan",
-  "lastname": "Petrov",
-  "sid": "<session-uuid>",
-  "key": "<api-key-uuid>"
+  "user": {
+    "uid": 1,
+    "firstname": "Ivan",
+    "lastname": "Petrov",
+    "sid": "<session-uuid>",
+    "key": "<api-key-uuid>"
+  }
 }
 ```
 
@@ -92,7 +94,16 @@ Authentication uses an `X-API-Key` header (or `api_key` query parameter).
   "password": "secret"
 }
 
-// Response: same User object as signup
+// Response
+{
+  "user": {
+    "uid": 1,
+    "firstname": "Ivan",
+    "lastname": "Petrov",
+    "sid": "<session-uuid>",
+    "key": "<api-key-uuid>"
+  }
+}
 ```
 
 ### GET /users/state/{uid}
