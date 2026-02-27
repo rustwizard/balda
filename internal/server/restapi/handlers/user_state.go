@@ -2,12 +2,12 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/jackc/pgx/v5"
-	"github.com/rs/zerolog/log"
 	"github.com/rustwizard/balda/internal/server/models"
 	"github.com/rustwizard/balda/internal/server/restapi/operations"
 	"github.com/rustwizard/balda/internal/session"
@@ -31,7 +31,7 @@ func (u UserState) Handle(params operations.GetUsersStateUIDParams) middleware.R
 		}
 		return nil
 	}); err != nil {
-		log.Error().Err(err).Msg("user state: fetch user state from db")
+		slog.Error("user state: fetch user state from db", slog.Any("error", err))
 		return operations.NewGetUsersStateUIDBadRequest().WithPayload(&models.ErrorResponse{
 			Message: "",
 			Status:  http.StatusBadRequest,

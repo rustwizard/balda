@@ -12,8 +12,5 @@ create table if not exists user_state
 );
 
 alter table user_state
-    owner to balda;
-
-alter table user_state
     add constraint user_state_users_user_id_fk
         foreign key (user_id) references users;

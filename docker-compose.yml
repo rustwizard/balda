@@ -13,23 +13,35 @@ services:
       PG_HOST: pg
       PG_USER: balda
       PG_DATABASE: balda
-      PG_PASSWORD: password
+      PG_PASSWORD: balda
       PG_MAX_POOL_SIZE: 100
       REDIS_ADDR: redis:6379
+      MIGRATION_CONN_STRING: postgres://balda:balda@pg:5432/balda?sslmode=disable
     command: ["server"]
+    depends_on:
+      pg:
+        condition: service_healthy
 
   pg:
     image: postgres:16-trixie
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
-      - /opt/pg_data_balda:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
     environment:
-        - POSTGRES_PASSWORD=postgres
-        - POSTGRES_USER=postgres
+        - POSTGRES_PASSWORD=balda
+        - POSTGRES_USER=balda
         - POSTGRES_DB=balda
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U balda -d balda"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:8-trixie
     ports:
       - "127.0.0.1:6379:6379"
+
+volumes:
+  pg_data:

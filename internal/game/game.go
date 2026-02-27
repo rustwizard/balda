@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/rs/zerolog/log"
+	"log/slog"
 
 	"github.com/oklog/ulid/v2"
 )
@@ -128,18 +128,18 @@ func (g *Game) firstTurnPlaceID() int {
 
 func (g *Game) mainLoop(ctx context.Context) {
 	g.fsmState = StateWaitTurn
-	log.Debug().Msg("game: main loop: start")
+	slog.Debug("game: main loop: start")
 Loop:
 	for {
 		select {
 		case <-ctx.Done():
-			log.Error().Err(ctx.Err()).Msg("game: main loop")
+			slog.Error("game: main loop", slog.Any("error", ctx.Err()))
 		default:
 		}
 
 		select {
 		case <-ctx.Done():
-			log.Error().Err(ctx.Err()).Msg("game: main loop")
+			slog.Error("game: main loop", slog.Any("error", ctx.Err()))
 		default:
 			switch g.fsmState {
 			case StateWaitTurn:
@@ -147,16 +147,16 @@ Loop:
 			case StateNextTurn:
 				g.nextTurn()
 			case StatePlaceKick:
-				log.Debug().Msgf("game: main loop: placeID: %d was kicked due to inactivity", g.Turn.PlaceID)
+				slog.Debug("game: main loop: placeID was kicked due to inactivity", slog.Int("placeID", g.Turn.PlaceID))
 				break Loop
 			}
 		}
 	}
-	log.Debug().Msg("game: main loop: end")
+	slog.Debug("game: main loop: end")
 }
 
 func (g *Game) waitTurn() {
-	log.Debug().Msgf("game: main loop: waiting when player with placeID: %d do the turn", g.Turn.PlaceID)
+	slog.Debug("game: main loop: waiting when player do the turn", slog.Int("placeID", g.Turn.PlaceID))
 	timer := time.NewTimer(5 * time.Second)
 	defer timer.Stop()
 
@@ -164,7 +164,7 @@ Loop:
 	for {
 		select {
 		case <-timer.C:
-			log.Debug().Msgf("game: main loop: timeout: player with placeID: %d", g.Turn.PlaceID)
+			slog.Debug("game: main loop: timeout", slog.Int("placeID", g.Turn.PlaceID))
 			userID := g.userIDByPlaceID(g.Turn.PlaceID)
 			g.Places[userID].TimeoutTurnsCount++
 			if g.Places[userID].TimeoutTurnsCount >= maxTimeoutTurns {
@@ -177,7 +177,7 @@ Loop:
 			userID := g.userIDByPlaceID(g.Turn.PlaceID)
 			if g.Places[userID].PlaceState != PlaceStateIDLE {
 				g.Places[userID].PlaceState = PlaceStateIDLE
-				log.Debug().Msgf("game: main loop: placeID: %d: did the turn", g.Turn.PlaceID)
+				slog.Debug("game: main loop: did the turn", slog.Int("placeID", g.Turn.PlaceID))
 				return
 			}
 			//log.Debug().Msgf("game: main loop: placeID: %d: wait turn", g.Turn.PlaceID)
@@ -220,7 +220,7 @@ func (g *Game) nextTurn() {
 	}
 	uid := g.userIDByPlaceID(g.Turn.PlaceID)
 	state := g.Places[uid].PlaceState
-	log.Debug().Msgf("game: main loop: next turn: placeID: %d, PlaceState: %d", g.Turn.PlaceID, state)
+	slog.Debug("game: main loop: next turn", slog.Int("placeID", g.Turn.PlaceID), slog.Int("PlaceState", state))
 }
 
 func (g *Game) getFSMState() int {
@@ -262,7 +262,7 @@ func (g *Game) GameTurn(userID int, l *Letter, word []Letter) error {
 	if err := g.Words.PutLetterOnTable(l); err != nil {
 		return fmt.Errorf("game: no turn: %w", err)
 	}
-	log.Debug().Msgf("game: main loop: placeID: %d put the word on the table", placeID)
+	slog.Debug("game: main loop: put the word on the table", slog.Int("placeID", placeID))
 	g.Places[userID].Words = append(g.Places[userID].Words, w)
 	g.Places[userID].PlaceState = PlaceStateSEND
 	g.nextTurn()
@@ -306,7 +306,7 @@ func (g *Game) GameTurnSkip(userID int) error {
 		return fmt.Errorf("game turn skip: check game: %v", err)
 	}
 
-	log.Debug().Msgf("game: main loop: skip turn: placeID: %d skipped the turn", placeID)
+	slog.Debug("game: main loop: skip turn", slog.Int("placeID", placeID))
 	g.Places[userID].PlaceState = PlaceStateSKIP
 	g.nextTurn()
 

@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/rs/zerolog/log"
+	"log/slog"
 )
 
 const keyPrefix = "sessions:"
@@ -63,7 +63,7 @@ func (s *Service) Get(uid int64) (*User, error) {
 
 func (s *Service) Save(u *User) error {
 	if u.Sid == "" {
-		log.Error().Err(ErrEmptySessionID).Msg("sessions service: user session id not set")
+		slog.Error("sessions service: user session id not set", slog.Any("error", ErrEmptySessionID))
 		return ErrEmptySessionID
 	}
 

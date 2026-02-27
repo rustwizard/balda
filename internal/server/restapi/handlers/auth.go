@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/go-openapi/runtime/middleware"
-	"github.com/rs/zerolog/log"
 	"github.com/rustwizard/balda/internal/server/models"
 	"github.com/rustwizard/balda/internal/server/restapi/operations/auth"
 	"github.com/rustwizard/balda/internal/session"
@@ -19,25 +19,25 @@ type Auth struct {
 }
 
 func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Responder {
-	log.Info().Msg("auth handler called")
+	slog.Info("auth handler called")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	user := &models.User{}
-	err := a.db.Pool.QueryRow(ctx, `SELECT user_id, first_name, last_name FROM users WHERE email = $1 AND 
-						hash_password = crypt($2, hash_password)
-									`, params.Body.Email, params.Body.Password).
+	err := a.db.Pool.QueryRow(ctx, `SELECT user_id, first_name, last_name FROM users WHERE email = $1 AND
+					hash_password = crypt($2, hash_password)
+								`, params.Body.Email, params.Body.Password).
 		Scan(&user.UID, &user.Firstname, &user.Lastname)
 	if err != nil {
 		if user.UID == 0 {
-			log.Error().Err(err).Msg("auth: wrong email/password")
+			slog.Error("auth: wrong email/password", slog.Any("error", err))
 			return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
 				Message: "",
 				Status:  http.StatusUnauthorized,
 				Type:    "Auth Error",
 			})
 		}
-		log.Error().Err(err).Msg("auth: fetch user from db")
+		slog.Error("auth: fetch user from db", slog.Any("error", err))
 		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
 			Message: "",
 			Status:  http.StatusUnauthorized,
@@ -49,7 +49,7 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 	if err == session.ErrNotFound {
 		user.Sid, err = a.sess.Create(user.UID)
 		if err != nil {
-			log.Error().Err(err).Msg("auth: create sid")
+			slog.Error("auth: create sid", slog.Any("error", err))
 			return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
 				Message: "",
 				Status:  http.StatusUnauthorized,
@@ -59,7 +59,7 @@ func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Respo
 		return auth.NewPostAuthOK().WithPayload(&models.AuthResponse{User: user})
 	}
 	if err != nil {
-		log.Error().Err(err).Msg("auth: get sid")
+		slog.Error("auth: get sid", slog.Any("error", err))
 		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
 			Message: "",
 			Status:  http.StatusUnauthorized,
