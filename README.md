@@ -24,8 +24,8 @@ The player with the most words when the game ends wins.
 | Database | PostgreSQL 16 (pgx/v5 driver) |
 | Runtime image | Debian trixie-slim |
 | Session store | Redis 8 |
-| Migrations | [golang-migrate](https://github.com/golang-migrate/migrate) |
-| Logging | [zerolog](https://github.com/rs/zerolog) |
+| Migrations | [tern](https://github.com/jackc/tern) (embedded SQL, runs on server start) |
+| Logging | `log/slog` (standard library) |
 | IDs | ULID (games), UUID (sessions) |
 
 ## Project Structure
@@ -55,6 +55,8 @@ balda/
 Base path: `/balda/api/v1`
 
 Authentication uses an `X-API-Key` header (or `api_key` query parameter).
+
+Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -211,12 +213,9 @@ This starts PostgreSQL, Redis, and the game server on port `9666`.
 # Build
 make build
 
-# Run migrations
-./bin/balda migrate up \
-  --pg.host localhost --pg.port 5432 \
-  --pg.user balda --pg.database balda --pg.password password
+# Start server (migrations run automatically on startup)
+export MIGRATION_CONN_STRING="postgres://balda:password@localhost:5432/balda"
 
-# Start server
 ./bin/balda server \
   --server.addr 0.0.0.0 \
   --server.port 9666 \
@@ -227,6 +226,8 @@ make build
 ```
 
 All flags can also be set via environment variables (e.g., `SERVER_ADDR`, `PG_HOST`, `REDIS_ADDR`).
+
+> **Note:** `MIGRATION_CONN_STRING` must be set before starting the server. Migrations are applied automatically at startup using [tern](https://github.com/jackc/tern).
 
 ### Regenerate API Code
 
@@ -249,12 +250,19 @@ make test
 | `--server.addr` | `127.0.0.1` | Bind address |
 | `--server.port` | `9666` | HTTP port |
 | `--server.x_api_token` | | API key for requests |
-| `--pg.host` | `localhost` | PostgreSQL host |
+| `--pg.host` | `127.0.0.1` | PostgreSQL host |
 | `--pg.port` | `5432` | PostgreSQL port |
 | `--pg.user` | | PostgreSQL user |
 | `--pg.database` | | PostgreSQL database |
 | `--pg.password` | | PostgreSQL password |
+| `--pg.max_pool_size` | `0` | PostgreSQL max connection pool size |
+| `--pg.ssl` | `disable` | PostgreSQL SSL mode |
 | `--redis.addr` | `127.0.0.1:6379` | Redis address |
+| `--redis.username` | | Redis username |
+| `--redis.password` | | Redis password |
+| `--redis.db_num` | `0` | Redis database number |
+| `--redis.expiration` | `30s` | Session expiration duration |
+| `MIGRATION_CONN_STRING` | | PostgreSQL DSN for migrations (env var) |
 
 ## License
 
