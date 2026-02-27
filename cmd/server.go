@@ -17,7 +17,7 @@ import (
 	"github.com/rustwizard/balda/internal/server/restapi/operations"
 	"github.com/spf13/cobra"
 
-	"github.com/rustwizard/cleargo/flags"
+	"github.com/rustwizard/cleargo/infra/flags"
 )
 
 var cfg Config

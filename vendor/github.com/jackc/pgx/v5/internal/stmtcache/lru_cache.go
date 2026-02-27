@@ -12,14 +12,16 @@ type LRUCache struct {
 	m            map[string]*list.Element
 	l            *list.List
 	invalidStmts []*pgconn.StatementDescription
+	invalidSet   map[string]struct{}
 }
 
 // NewLRUCache creates a new LRUCache. cap is the maximum size of the cache.
 func NewLRUCache(cap int) *LRUCache {
 	return &LRUCache{
-		cap: cap,
-		m:   make(map[string]*list.Element),
-		l:   list.New(),
+		cap:        cap,
+		m:          make(map[string]*list.Element),
+		l:          list.New(),
+		invalidSet: make(map[string]struct{}),
 	}
 }
 
@@ -31,16 +33,21 @@ func (c *LRUCache) Get(key string) *pgconn.StatementDescription {
 	}
 
 	return nil
-
 }
 
-// Put stores sd in the cache. Put panics if sd.SQL is "". Put does nothing if sd.SQL already exists in the cache.
+// Put stores sd in the cache. Put panics if sd.SQL is "". Put does nothing if sd.SQL already exists in the cache or
+// sd.SQL has been invalidated and HandleInvalidated has not been called yet.
 func (c *LRUCache) Put(sd *pgconn.StatementDescription) {
 	if sd.SQL == "" {
 		panic("cannot store statement description with empty SQL")
 	}
 
 	if _, present := c.m[sd.SQL]; present {
+		return
+	}
+
+	// The statement may have been invalidated but not yet handled. Do not readd it to the cache.
+	if _, invalidated := c.invalidSet[sd.SQL]; invalidated {
 		return
 	}
 
@@ -56,7 +63,9 @@ func (c *LRUCache) Put(sd *pgconn.StatementDescription) {
 func (c *LRUCache) Invalidate(sql string) {
 	if el, ok := c.m[sql]; ok {
 		delete(c.m, sql)
-		c.invalidStmts = append(c.invalidStmts, el.Value.(*pgconn.StatementDescription))
+		sd := el.Value.(*pgconn.StatementDescription)
+		c.invalidStmts = append(c.invalidStmts, sd)
+		c.invalidSet[sql] = struct{}{}
 		c.l.Remove(el)
 	}
 }
@@ -65,7 +74,9 @@ func (c *LRUCache) Invalidate(sql string) {
 func (c *LRUCache) InvalidateAll() {
 	el := c.l.Front()
 	for el != nil {
-		c.invalidStmts = append(c.invalidStmts, el.Value.(*pgconn.StatementDescription))
+		sd := el.Value.(*pgconn.StatementDescription)
+		c.invalidStmts = append(c.invalidStmts, sd)
+		c.invalidSet[sd.SQL] = struct{}{}
 		el = el.Next()
 	}
 
@@ -73,10 +84,17 @@ func (c *LRUCache) InvalidateAll() {
 	c.l = list.New()
 }
 
-func (c *LRUCache) HandleInvalidated() []*pgconn.StatementDescription {
-	invalidStmts := c.invalidStmts
+// GetInvalidated returns a slice of all statement descriptions invalidated since the last call to RemoveInvalidated.
+func (c *LRUCache) GetInvalidated() []*pgconn.StatementDescription {
+	return c.invalidStmts
+}
+
+// RemoveInvalidated removes all invalidated statement descriptions. No other calls to Cache must be made between a
+// call to GetInvalidated and RemoveInvalidated or RemoveInvalidated may remove statement descriptions that were
+// never seen by the call to GetInvalidated.
+func (c *LRUCache) RemoveInvalidated() {
 	c.invalidStmts = nil
-	return invalidStmts
+	c.invalidSet = make(map[string]struct{})
 }
 
 // Len returns the number of cached prepared statement descriptions.
@@ -93,6 +111,7 @@ func (c *LRUCache) invalidateOldest() {
 	oldest := c.l.Back()
 	sd := oldest.Value.(*pgconn.StatementDescription)
 	c.invalidStmts = append(c.invalidStmts, sd)
+	c.invalidSet[sd.SQL] = struct{}{}
 	delete(c.m, sd.SQL)
 	c.l.Remove(oldest)
 }

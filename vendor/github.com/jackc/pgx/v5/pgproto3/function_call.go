@@ -2,6 +2,8 @@ package pgproto3
 
 import (
 	"encoding/binary"
+	"errors"
+	"math"
 
 	"github.com/jackc/pgx/v5/internal/pgio"
 )
@@ -31,7 +33,7 @@ func (dst *FunctionCall) Decode(src []byte) error {
 	nArgumentCodes := int(binary.BigEndian.Uint16(src[rp:]))
 	rp += 2
 	argumentCodes := make([]uint16, nArgumentCodes)
-	for i := 0; i < nArgumentCodes; i++ {
+	for i := range nArgumentCodes {
 		// The argument format codes. Each must presently be zero (text) or one (binary).
 		ac := binary.BigEndian.Uint16(src[rp:])
 		if ac != 0 && ac != 1 {
@@ -46,7 +48,7 @@ func (dst *FunctionCall) Decode(src []byte) error {
 	nArguments := int(binary.BigEndian.Uint16(src[rp:]))
 	rp += 2
 	arguments := make([][]byte, nArguments)
-	for i := 0; i < nArguments; i++ {
+	for i := range nArguments {
 		// The length of the argument value, in bytes (this count does not include itself). Can be zero.
 		// As a special case, -1 indicates a NULL argument value. No value bytes follow in the NULL case.
 		argumentLength := int(binary.BigEndian.Uint32(src[rp:]))
@@ -71,14 +73,20 @@ func (dst *FunctionCall) Decode(src []byte) error {
 }
 
 // Encode encodes src into dst. dst will include the 1 byte message type identifier and the 4 byte message length.
-func (src *FunctionCall) Encode(dst []byte) []byte {
-	dst = append(dst, 'F')
-	sp := len(dst)
-	dst = pgio.AppendUint32(dst, 0) // Unknown length, set it at the end
+func (src *FunctionCall) Encode(dst []byte) ([]byte, error) {
+	dst, sp := beginMessage(dst, 'F')
 	dst = pgio.AppendUint32(dst, src.Function)
+
+	if len(src.ArgFormatCodes) > math.MaxUint16 {
+		return nil, errors.New("too many arg format codes")
+	}
 	dst = pgio.AppendUint16(dst, uint16(len(src.ArgFormatCodes)))
 	for _, argFormatCode := range src.ArgFormatCodes {
 		dst = pgio.AppendUint16(dst, argFormatCode)
+	}
+
+	if len(src.Arguments) > math.MaxUint16 {
+		return nil, errors.New("too many arguments")
 	}
 	dst = pgio.AppendUint16(dst, uint16(len(src.Arguments)))
 	for _, argument := range src.Arguments {
@@ -90,6 +98,5 @@ func (src *FunctionCall) Encode(dst []byte) []byte {
 		}
 	}
 	dst = pgio.AppendUint16(dst, src.ResultFormatCode)
-	pgio.SetInt32(dst[sp:], int32(len(dst[sp:])))
-	return dst
+	return finishMessage(dst, sp)
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 
-	"github.com/rustwizard/cleargo/flags"
+	"github.com/rustwizard/cleargo/infra/flags"
 
 	_ "github.com/golang-migrate/migrate/v4/database/pgx"
 	_ "github.com/golang-migrate/migrate/v4/source/file" // register migrate driver

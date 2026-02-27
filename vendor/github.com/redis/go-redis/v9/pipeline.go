@@ -2,15 +2,16 @@ package redis
 
 import (
 	"context"
+	"errors"
 )
 
 type pipelineExecer func(context.Context, []Cmder) error
 
-// Pipeliner is an mechanism to realise Redis Pipeline technique.
+// Pipeliner is a mechanism to realise Redis Pipeline technique.
 //
 // Pipelining is a technique to extremely speed up processing by packing
 // operations to batches, send them at once to Redis and read a replies in a
-// singe step.
+// single step.
 // See https://redis.io/topics/pipelining
 //
 // Pay attention, that Pipeline is not a transaction, so you can get unexpected
@@ -21,11 +22,28 @@ type pipelineExecer func(context.Context, []Cmder) error
 // depends of your batch size and/or use TxPipeline.
 type Pipeliner interface {
 	StatefulCmdable
+
+	// Len obtains the number of commands in the pipeline that have not yet been executed.
 	Len() int
+
+	// Do is an API for executing any command.
+	// If a certain Redis command is not yet supported, you can use Do to execute it.
 	Do(ctx context.Context, args ...interface{}) *Cmd
+
+	// Process queues the cmd for later execution.
 	Process(ctx context.Context, cmd Cmder) error
+
+	// BatchProcess adds multiple commands to be executed into the pipeline buffer.
+	BatchProcess(ctx context.Context, cmd ...Cmder) error
+
+	// Discard discards all commands in the pipeline buffer that have not yet been executed.
 	Discard()
+
+	// Exec sends all the commands buffered in the pipeline to the redis server.
 	Exec(ctx context.Context) ([]Cmder, error)
+
+	// Cmds returns the list of queued commands.
+	Cmds() []Cmder
 }
 
 var _ Pipeliner = (*Pipeline)(nil)
@@ -54,13 +72,22 @@ func (c *Pipeline) Len() int {
 // Do queues the custom command for later execution.
 func (c *Pipeline) Do(ctx context.Context, args ...interface{}) *Cmd {
 	cmd := NewCmd(ctx, args...)
+	if len(args) == 0 {
+		cmd.SetErr(errors.New("redis: please enter the command to be executed"))
+		return cmd
+	}
 	_ = c.Process(ctx, cmd)
 	return cmd
 }
 
 // Process queues the cmd for later execution.
 func (c *Pipeline) Process(ctx context.Context, cmd Cmder) error {
-	c.cmds = append(c.cmds, cmd)
+	return c.BatchProcess(ctx, cmd)
+}
+
+// BatchProcess queues multiple cmds for later execution.
+func (c *Pipeline) BatchProcess(ctx context.Context, cmd ...Cmder) error {
+	c.cmds = append(c.cmds, cmd...)
 	return nil
 }
 
@@ -102,4 +129,8 @@ func (c *Pipeline) TxPipelined(ctx context.Context, fn func(Pipeliner) error) ([
 
 func (c *Pipeline) TxPipeline() Pipeliner {
 	return c
+}
+
+func (c *Pipeline) Cmds() []Cmder {
+	return c.cmds
 }
