@@ -1,11 +1,9 @@
 package cmd
 
 import (
+	"log/slog"
 	"os"
 
-	"github.com/rustwizard/balda/cmd/migrate"
-
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -22,12 +20,11 @@ var rootCmd = &cobra.Command{
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Error().Err(err).Msg("got an error when running Balda API service")
+		slog.Error("got an error when running Balda API service", slog.Any("error", err))
 		os.Exit(1)
 	}
 }
 
 func init() {
 	rootCmd.AddCommand(serverCmd)
-	rootCmd.AddCommand(migrate.MigrateRootCmd)
 }

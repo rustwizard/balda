@@ -2,14 +2,13 @@ package handlers
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
 	"github.com/rustwizard/balda/internal/flname"
 
 	"github.com/rustwizard/balda/internal/session"
-
-	"github.com/rs/zerolog/log"
 
 	"github.com/go-openapi/runtime/middleware"
 	"github.com/google/uuid"
@@ -28,7 +27,7 @@ func NewSignUp(db *pg.DB, sess *session.Service) *SignUp {
 }
 
 func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
-	log.Info().Msg("signup handler called")
+	slog.Info("signup handler called")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -44,13 +43,13 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 
 	var uid int64
 	var apiKey string
-	err = tx.QueryRow(ctx, `INSERT INTO users(first_name, last_name, email, hash_password) 
+	err = tx.QueryRow(ctx, `INSERT INTO users(first_name, last_name, email, hash_password)
 		VALUES($1, $2, $3, crypt($4, gen_salt('bf', 8))) RETURNING user_id, api_key`, params.Body.Firstname,
 		params.Body.Lastname, params.Body.Email, params.Body.Password).Scan(&uid, &apiKey)
 	if err != nil {
-		log.Error().Err(err).Msg("signup: user")
+		slog.Error("signup: user", slog.Any("error", err))
 		if err = tx.Rollback(ctx); err != nil {
-			log.Error().Err(err).Msg("signup: rollback")
+			slog.Error("signup: rollback", slog.Any("error", err))
 		}
 		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
 			Message: "user",
@@ -59,13 +58,13 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 		})
 	}
 
-	_, err = tx.Exec(ctx, `INSERT INTO user_state(user_id, nickname, exp, flags, lives) 
+	_, err = tx.Exec(ctx, `INSERT INTO user_state(user_id, nickname, exp, flags, lives)
 		VALUES($1, $2, $3, $4, $5)`, uid,
 		flname.GenNickname(), 0, 0, 5)
 	if err != nil {
-		log.Error().Err(err).Msg("signup: user state")
+		slog.Error("signup: user state", slog.Any("error", err))
 		if err = tx.Rollback(ctx); err != nil {
-			log.Error().Err(err).Msg("signup: rollback")
+			slog.Error("signup: rollback", slog.Any("error", err))
 		}
 		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
 			Message: "user state",
@@ -77,7 +76,7 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 	err = tx.Commit(ctx)
 	if err != nil {
 		if err = tx.Rollback(ctx); err != nil {
-			log.Error().Err(err).Msg("signup: rollback")
+			slog.Error("signup: rollback", slog.Any("error", err))
 		}
 		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
 			Message: "",
@@ -88,7 +87,7 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 
 	sid, err := uuid.NewRandom()
 	if err != nil {
-		log.Error().Err(err).Msg("signup: gen session id")
+		slog.Error("signup: gen session id", slog.Any("error", err))
 		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
 			Message: "",
 			Status:  http.StatusBadRequest,
@@ -101,7 +100,7 @@ func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
 		UID: uid,
 	})
 	if err != nil {
-		log.Error().Err(err).Msg("signup: gen session id")
+		slog.Error("signup: gen session id", slog.Any("error", err))
 		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
 			Message: "",
 			Status:  http.StatusBadRequest,

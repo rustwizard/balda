@@ -13,9 +13,6 @@ create table if not exists users
     updated_at    timestamp with time zone default now()             not null
 );
 
-alter table users
-    owner to balda;
-
 create unique index users_email_uindex
     on users (email);
 

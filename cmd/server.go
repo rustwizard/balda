@@ -3,10 +3,13 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/rustwizard/balda/internal/session"
+	"github.com/rustwizard/balda/migrations"
 
-	"github.com/rs/zerolog/log"
+	"log/slog"
+
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/cleargo/db/pg"
 
@@ -41,6 +44,14 @@ var serverCmd = &cobra.Command{
 			return fmt.Errorf("load swagger spec: %v", err)
 		}
 
+		dbVersion, err := migrations.Migrate(10 * time.Second)
+		if err != nil {
+			slog.Error("failed to migrate database", slog.Any("error", err))
+			return fmt.Errorf("failed to migrate database: %v", err)
+		}
+
+		slog.Info("database migration success", slog.Int("db_version", dbVersion))
+
 		db := pg.NewDB()
 		err = db.Connect(&pg.Config{
 			Host:         cfg.Pg.Host,
@@ -62,21 +73,21 @@ var serverCmd = &cobra.Command{
 		api.AuthPostAuthHandler = handlers.NewAuth(db, sess)
 		api.GetUsersStateUIDHandler = handlers.NewUserState(db, sess)
 		api.APIKeyQueryParamAuth = func(token string) (interface{}, error) {
-			log.Info().Msg("KeyAuth handler called")
+			slog.Info("KeyAuth handler called")
 			if token == cfg.XAPIToken {
 				return true, nil
 			}
-			log.Error().Msgf("access attempt with incorrect api key auth: %s", token)
+			slog.Error("access attempt with incorrect api key auth", slog.String("token", token))
 
 			return nil, errors.New("api key param: token error")
 		}
 
 		api.APIKeyHeaderAuth = func(token string) (interface{}, error) {
-			log.Info().Msg("KeyAuth handler called")
+			slog.Info("KeyAuth handler called")
 			if token == cfg.XAPIToken {
 				return true, nil
 			}
-			log.Error().Msgf("access attempt with incorrect api key auth: %s", token)
+			slog.Error("access attempt with incorrect api key auth", slog.String("token", token))
 
 			return nil, errors.New("api key header: token error")
 		}
@@ -89,7 +100,7 @@ var serverCmd = &cobra.Command{
 		defer func(server *restapi.Server) {
 			err := server.Shutdown()
 			if err != nil {
-				log.Err(err).Msg("server shutdown")
+				slog.Error("server shutdown", slog.Any("error", err))
 			}
 		}(server)
 
