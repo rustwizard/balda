@@ -1,33 +1,38 @@
 //go:build go1.9
-// +build go1.9
 
 package pgx
 
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-	"go.uber.org/atomic"
 	"io"
-	"io/ioutil"
 	nurl "net/url"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database"
 	"github.com/golang-migrate/migrate/v4/database/multistmt"
-	multierror "github.com/hashicorp/go-multierror"
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgerrcode"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/lib/pq"
+)
+
+const (
+	LockStrategyAdvisory = "advisory"
+	LockStrategyTable    = "table"
 )
 
 func init() {
 	db := Postgres{}
 	database.Register("pgx", &db)
+	database.Register("pgx4", &db)
 }
 
 var (
@@ -35,6 +40,8 @@ var (
 
 	DefaultMigrationsTable       = "schema_migrations"
 	DefaultMultiStatementMaxSize = 10 * 1 << 20 // 10 MB
+	DefaultLockTable             = "schema_lock"
+	DefaultLockStrategy          = LockStrategyAdvisory
 )
 
 var (
@@ -48,6 +55,8 @@ type Config struct {
 	MigrationsTable       string
 	DatabaseName          string
 	SchemaName            string
+	LockTable             string
+	LockStrategy          string
 	migrationsSchemaName  string
 	migrationsTableName   string
 	StatementTimeout      time.Duration
@@ -107,6 +116,14 @@ func WithInstance(instance *sql.DB, config *Config) (database.Driver, error) {
 		config.MigrationsTable = DefaultMigrationsTable
 	}
 
+	if len(config.LockTable) == 0 {
+		config.LockTable = DefaultLockTable
+	}
+
+	if len(config.LockStrategy) == 0 {
+		config.LockStrategy = DefaultLockStrategy
+	}
+
 	config.migrationsSchemaName = config.SchemaName
 	config.migrationsTableName = config.MigrationsTable
 	if config.MigrationsTableQuoted {
@@ -132,6 +149,10 @@ func WithInstance(instance *sql.DB, config *Config) (database.Driver, error) {
 		config: config,
 	}
 
+	if err := px.ensureLockTable(); err != nil {
+		return nil, err
+	}
+
 	if err := px.ensureVersionTable(); err != nil {
 		return nil, err
 	}
@@ -150,7 +171,7 @@ func (p *Postgres) Open(url string) (database.Driver, error) {
 	// i.e. pgx://user:password@host:port/db => postgres://user:password@host:port/db
 	purl.Scheme = "postgres"
 
-	db, err := sql.Open("pgx", migrate.FilterCustomQuery(purl).String())
+	db, err := sql.Open("pgx/v4", migrate.FilterCustomQuery(purl).String())
 	if err != nil {
 		return nil, err
 	}
@@ -195,6 +216,9 @@ func (p *Postgres) Open(url string) (database.Driver, error) {
 		}
 	}
 
+	lockStrategy := purl.Query().Get("x-lock-strategy")
+	lockTable := purl.Query().Get("x-lock-table")
+
 	px, err := WithInstance(db, &Config{
 		DatabaseName:          purl.Path,
 		MigrationsTable:       migrationsTable,
@@ -202,6 +226,8 @@ func (p *Postgres) Open(url string) (database.Driver, error) {
 		StatementTimeout:      time.Duration(statementTimeout) * time.Millisecond,
 		MultiStatementEnabled: multiStatementEnabled,
 		MultiStatementMaxSize: multiStatementMaxSize,
+		LockStrategy:          lockStrategy,
+		LockTable:             lockTable,
 	})
 
 	if err != nil {
@@ -220,36 +246,116 @@ func (p *Postgres) Close() error {
 	return nil
 }
 
-// https://www.postgresql.org/docs/9.6/static/explicit-locking.html#ADVISORY-LOCKS
 func (p *Postgres) Lock() error {
 	return database.CasRestoreOnErr(&p.isLocked, false, true, database.ErrLocked, func() error {
-		aid, err := database.GenerateAdvisoryLockId(p.config.DatabaseName, p.config.migrationsSchemaName, p.config.migrationsTableName)
-		if err != nil {
-			return err
+		switch p.config.LockStrategy {
+		case LockStrategyAdvisory:
+			return p.applyAdvisoryLock()
+		case LockStrategyTable:
+			return p.applyTableLock()
+		default:
+			return fmt.Errorf("unknown lock strategy \"%s\"", p.config.LockStrategy)
 		}
-
-		// This will wait indefinitely until the lock can be acquired.
-		query := `SELECT pg_advisory_lock($1)`
-		if _, err := p.conn.ExecContext(context.Background(), query, aid); err != nil {
-			return &database.Error{OrigErr: err, Err: "try lock failed", Query: []byte(query)}
-		}
-		return nil
 	})
 }
 
 func (p *Postgres) Unlock() error {
 	return database.CasRestoreOnErr(&p.isLocked, true, false, database.ErrNotLocked, func() error {
-		aid, err := database.GenerateAdvisoryLockId(p.config.DatabaseName, p.config.migrationsSchemaName, p.config.migrationsTableName)
-		if err != nil {
-			return err
+		switch p.config.LockStrategy {
+		case LockStrategyAdvisory:
+			return p.releaseAdvisoryLock()
+		case LockStrategyTable:
+			return p.releaseTableLock()
+		default:
+			return fmt.Errorf("unknown lock strategy \"%s\"", p.config.LockStrategy)
 		}
-
-		query := `SELECT pg_advisory_unlock($1)`
-		if _, err := p.conn.ExecContext(context.Background(), query, aid); err != nil {
-			return &database.Error{OrigErr: err, Query: []byte(query)}
-		}
-		return nil
 	})
+}
+
+// https://www.postgresql.org/docs/9.6/static/explicit-locking.html#ADVISORY-LOCKS
+func (p *Postgres) applyAdvisoryLock() error {
+	aid, err := database.GenerateAdvisoryLockId(p.config.DatabaseName, p.config.migrationsSchemaName, p.config.migrationsTableName)
+	if err != nil {
+		return err
+	}
+
+	// This will wait indefinitely until the lock can be acquired.
+	query := `SELECT pg_advisory_lock($1)`
+	if _, err := p.conn.ExecContext(context.Background(), query, aid); err != nil {
+		return &database.Error{OrigErr: err, Err: "try lock failed", Query: []byte(query)}
+	}
+	return nil
+}
+
+func (p *Postgres) applyTableLock() error {
+	tx, err := p.conn.BeginTx(context.Background(), &sql.TxOptions{})
+	if err != nil {
+		return &database.Error{OrigErr: err, Err: "transaction start failed"}
+	}
+	defer func() {
+		errRollback := tx.Rollback()
+		if errRollback != nil {
+			err = errors.Join(err, errRollback)
+		}
+	}()
+
+	aid, err := database.GenerateAdvisoryLockId(p.config.DatabaseName)
+	if err != nil {
+		return err
+	}
+
+	query := "SELECT * FROM " + pq.QuoteIdentifier(p.config.LockTable) + " WHERE lock_id = $1"
+	rows, err := tx.Query(query, aid)
+	if err != nil {
+		return database.Error{OrigErr: err, Err: "failed to fetch migration lock", Query: []byte(query)}
+	}
+
+	defer func() {
+		if errClose := rows.Close(); errClose != nil {
+			err = errors.Join(err, errClose)
+		}
+	}()
+
+	// If row exists at all, lock is present
+	locked := rows.Next()
+	if locked {
+		return database.ErrLocked
+	}
+
+	query = "INSERT INTO " + pq.QuoteIdentifier(p.config.LockTable) + " (lock_id) VALUES ($1)"
+	if _, err := tx.Exec(query, aid); err != nil {
+		return database.Error{OrigErr: err, Err: "failed to set migration lock", Query: []byte(query)}
+	}
+
+	return tx.Commit()
+}
+
+func (p *Postgres) releaseAdvisoryLock() error {
+	aid, err := database.GenerateAdvisoryLockId(p.config.DatabaseName, p.config.migrationsSchemaName, p.config.migrationsTableName)
+	if err != nil {
+		return err
+	}
+
+	query := `SELECT pg_advisory_unlock($1)`
+	if _, err := p.conn.ExecContext(context.Background(), query, aid); err != nil {
+		return &database.Error{OrigErr: err, Query: []byte(query)}
+	}
+
+	return nil
+}
+
+func (p *Postgres) releaseTableLock() error {
+	aid, err := database.GenerateAdvisoryLockId(p.config.DatabaseName)
+	if err != nil {
+		return err
+	}
+
+	query := "DELETE FROM " + pq.QuoteIdentifier(p.config.LockTable) + " WHERE lock_id = $1"
+	if _, err := p.db.Exec(query, aid); err != nil {
+		return database.Error{OrigErr: err, Err: "failed to release migration lock", Query: []byte(query)}
+	}
+
+	return nil
 }
 
 func (p *Postgres) Run(migration io.Reader) error {
@@ -265,7 +371,7 @@ func (p *Postgres) Run(migration io.Reader) error {
 		}
 		return err
 	}
-	migr, err := ioutil.ReadAll(migration)
+	migr, err := io.ReadAll(migration)
 	if err != nil {
 		return err
 	}
@@ -348,7 +454,7 @@ func (p *Postgres) SetVersion(version int, dirty bool) error {
 	query := `TRUNCATE ` + quoteIdentifier(p.config.migrationsSchemaName) + `.` + quoteIdentifier(p.config.migrationsTableName)
 	if _, err := tx.Exec(query); err != nil {
 		if errRollback := tx.Rollback(); errRollback != nil {
-			err = multierror.Append(err, errRollback)
+			err = errors.Join(err, errRollback)
 		}
 		return &database.Error{OrigErr: err, Query: []byte(query)}
 	}
@@ -360,7 +466,7 @@ func (p *Postgres) SetVersion(version int, dirty bool) error {
 		query = `INSERT INTO ` + quoteIdentifier(p.config.migrationsSchemaName) + `.` + quoteIdentifier(p.config.migrationsTableName) + ` (version, dirty) VALUES ($1, $2)`
 		if _, err := tx.Exec(query, version, dirty); err != nil {
 			if errRollback := tx.Rollback(); errRollback != nil {
-				err = multierror.Append(err, errRollback)
+				err = errors.Join(err, errRollback)
 			}
 			return &database.Error{OrigErr: err, Query: []byte(query)}
 		}
@@ -402,7 +508,7 @@ func (p *Postgres) Drop() (err error) {
 	}
 	defer func() {
 		if errClose := tables.Close(); errClose != nil {
-			err = multierror.Append(err, errClose)
+			err = errors.Join(err, errClose)
 		}
 	}()
 
@@ -413,6 +519,12 @@ func (p *Postgres) Drop() (err error) {
 		if err := tables.Scan(&tableName); err != nil {
 			return err
 		}
+
+		// do not drop lock table
+		if tableName == p.config.LockTable && p.config.LockStrategy == LockStrategyTable {
+			continue
+		}
+
 		if len(tableName) > 0 {
 			tableNames = append(tableNames, tableName)
 		}
@@ -444,11 +556,7 @@ func (p *Postgres) ensureVersionTable() (err error) {
 
 	defer func() {
 		if e := p.Unlock(); e != nil {
-			if err == nil {
-				err = e
-			} else {
-				err = multierror.Append(err, e)
-			}
+			err = errors.Join(err, e)
 		}
 	}()
 
@@ -471,6 +579,28 @@ func (p *Postgres) ensureVersionTable() (err error) {
 
 	query = `CREATE TABLE IF NOT EXISTS ` + quoteIdentifier(p.config.migrationsSchemaName) + `.` + quoteIdentifier(p.config.migrationsTableName) + ` (version bigint not null primary key, dirty boolean not null)`
 	if _, err = p.conn.ExecContext(context.Background(), query); err != nil {
+		return &database.Error{OrigErr: err, Query: []byte(query)}
+	}
+
+	return nil
+}
+
+func (p *Postgres) ensureLockTable() error {
+	if p.config.LockStrategy != LockStrategyTable {
+		return nil
+	}
+
+	var count int
+	query := `SELECT COUNT(1) FROM information_schema.tables WHERE table_name = $1 AND table_schema = (SELECT current_schema()) LIMIT 1`
+	if err := p.db.QueryRow(query, p.config.LockTable).Scan(&count); err != nil {
+		return &database.Error{OrigErr: err, Query: []byte(query)}
+	}
+	if count == 1 {
+		return nil
+	}
+
+	query = `CREATE TABLE ` + pq.QuoteIdentifier(p.config.LockTable) + ` (lock_id BIGINT NOT NULL PRIMARY KEY)`
+	if _, err := p.db.Exec(query); err != nil {
 		return &database.Error{OrigErr: err, Query: []byte(query)}
 	}
 

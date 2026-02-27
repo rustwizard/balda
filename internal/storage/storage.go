@@ -1,11 +1,11 @@
 package storage
 
 import (
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
-	"github.com/rustwizard/cleargo/db/pg"
 )
 
 type Balda struct {
-	db  *pg.DB
+	db  *pgxpool.Pool
 	rdb *redis.Client
 }
