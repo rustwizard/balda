@@ -1,11 +1,12 @@
 package game
 
 type Player struct {
-	UserID            int
-	Exp               int
-	Score             int
-	Words             []string
-	TimeoutTurnsCount int
+	ID                  string
+	Exp                 int
+	Score               int
+	Words               []string
+	ConsecutiveTimeouts int
+	Kicked              bool
 }
 
 type Place struct {
