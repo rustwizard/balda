@@ -160,9 +160,24 @@ Submitted words must:
 
 ### State Machine
 
+Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over an internal channel.
+
 ```
-PAUSED → STARTED → WaitTurn ↔ NextTurn → PlaceKick (game over)
+┌─────────────────────┬────────────────────┬─────────────────────┐
+│ State               │ Event              │ Next State          │
+├─────────────────────┼────────────────────┼─────────────────────┤
+│ WaitingForMove      │ MoveSubmitted      │ WaitingForMove      │
+│ WaitingForMove      │ TurnSkipped        │ WaitingForMove      │
+│ WaitingForMove      │ TurnTimeout        │ PlayerTimedOut      │
+├─────────────────────┼────────────────────┼─────────────────────┤
+│ PlayerTimedOut      │ AckTimeout         │ WaitingForMove      │
+│ PlayerTimedOut      │ Kick               │ GameOver            │
+└─────────────────────┴────────────────────┴─────────────────────┘
 ```
+
+- On each turn start, a 60-second timer fires `TurnTimeout` automatically.
+- `MoveSubmitted` and `TurnSkipped` reset the player's consecutive-timeout counter and advance to the next player.
+- `TurnTimeout` increments the counter and notifies via `Notifier`. On the third consecutive timeout the game auto-queues `Kick`, transitioning to `GameOver`.
 
 ## Database Schema
 
