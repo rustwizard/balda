@@ -22,7 +22,7 @@ jobs:
         run: go build ./...
 
       - name: Test
-        run: go generate ./... && go test -v $(go list ./... | grep -v integration)
+        run: go test -v $(go list ./... | grep -v integration)
 
       - name: Docker build
         run: docker build -f build/Dockerfile .
