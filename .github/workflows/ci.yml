@@ -22,7 +22,7 @@ jobs:
         run: go install github.com/go-swagger/go-swagger/cmd/swagger@latest
 
       - name: Generate
-        run: go generate ./...
+        run: make code-gen
 
       - name: Build
         run: go build ./...
