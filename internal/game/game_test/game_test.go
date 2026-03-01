@@ -5,6 +5,7 @@ import (
 
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // ─── MakeWord ───────────────────────────────────────────────────────────────
@@ -39,12 +40,14 @@ func TestGapsBetweenLetters_AlwaysTrue(t *testing.T) {
 func TestCheckWordExistence_WordInDictionary(t *testing.T) {
 	// Dict is populated via init(); grab any known 5-letter word.
 	word := game.Dict.RandomFiveLetterWord()
-	g := game.NewGame(nil, nil)
+	g, err := game.NewGame(nil, nil)
+	require.NoError(t, err)
 	assert.True(t, g.СheckWordExistence(word))
 }
 
 func TestCheckWordExistence_WordNotInDictionary(t *testing.T) {
-	g := game.NewGame(nil, nil)
+	g, err := game.NewGame(nil, nil)
+	require.NoError(t, err)
 	assert.False(t, g.СheckWordExistence("zzzzzznotaword"))
 }
 

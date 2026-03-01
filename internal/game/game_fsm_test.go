@@ -75,9 +75,11 @@ func makePlayers(ids ...string) []*Player {
 // makeTestGame creates a Game in WaitingForMove state with a long-lived timer
 // so dispatch tests don't accidentally fire the real turn timer.
 // Callers must defer g.cancelTimer() to prevent goroutine leaks.
-func makeTestGame(n *mockNotifier, ids ...string) *Game {
+func makeTestGame(t testing.TB, n *mockNotifier, ids ...string) *Game {
+	t.Helper()
 	players := makePlayers(ids...)
-	g := NewGame(players, n)
+	g, err := NewGame(players, n)
+	require.NoError(t, err)
 	g.state = StateWaitingForMove
 	g.turn = &Turn{
 		PlayerID: players[0].ID,
@@ -90,7 +92,7 @@ func makeTestGame(n *mockNotifier, ids ...string) *Game {
 
 func TestDispatch_MoveSubmitted_AdvancesTurn(t *testing.T) {
 	n := &mockNotifier{}
-	g := makeTestGame(n, "p1", "p2")
+	g := makeTestGame(t, n, "p1", "p2")
 	defer g.cancelTimer()
 
 	g.dispatch(EventMoveSubmitted)
@@ -102,7 +104,7 @@ func TestDispatch_MoveSubmitted_AdvancesTurn(t *testing.T) {
 
 func TestDispatch_MoveSubmitted_ResetsConsecutiveTimeouts(t *testing.T) {
 	n := &mockNotifier{}
-	g := makeTestGame(n, "p1", "p2")
+	g := makeTestGame(t, n, "p1", "p2")
 	g.players[0].ConsecutiveTimeouts = 2
 	defer g.cancelTimer()
 
@@ -113,7 +115,7 @@ func TestDispatch_MoveSubmitted_ResetsConsecutiveTimeouts(t *testing.T) {
 
 func TestDispatch_TurnSkipped_AdvancesTurn(t *testing.T) {
 	n := &mockNotifier{}
-	g := makeTestGame(n, "p1", "p2")
+	g := makeTestGame(t, n, "p1", "p2")
 	defer g.cancelTimer()
 
 	g.dispatch(EventTurnSkipped)
@@ -125,7 +127,7 @@ func TestDispatch_TurnSkipped_AdvancesTurn(t *testing.T) {
 
 func TestDispatch_TurnSkipped_ResetsConsecutiveTimeouts(t *testing.T) {
 	n := &mockNotifier{}
-	g := makeTestGame(n, "p1", "p2")
+	g := makeTestGame(t, n, "p1", "p2")
 	g.players[0].ConsecutiveTimeouts = 1
 	defer g.cancelTimer()
 
@@ -136,7 +138,7 @@ func TestDispatch_TurnSkipped_ResetsConsecutiveTimeouts(t *testing.T) {
 
 func TestDispatch_TurnTimeout_TransitionsToPlayerTimedOut(t *testing.T) {
 	n := &mockNotifier{}
-	g := makeTestGame(n, "p1", "p2")
+	g := makeTestGame(t, n, "p1", "p2")
 	defer g.cancelTimer()
 
 	g.dispatch(EventTurnTimeout)
@@ -152,7 +154,7 @@ func TestDispatch_TurnTimeout_TransitionsToPlayerTimedOut(t *testing.T) {
 
 func TestDispatch_TurnTimeout_ThirdTimeout_WillKick(t *testing.T) {
 	n := &mockNotifier{}
-	g := makeTestGame(n, "p1", "p2")
+	g := makeTestGame(t, n, "p1", "p2")
 	g.players[0].ConsecutiveTimeouts = MaxConsecutiveTimeouts - 1
 	defer g.cancelTimer()
 
@@ -174,7 +176,7 @@ func TestDispatch_TurnTimeout_ThirdTimeout_WillKick(t *testing.T) {
 
 func TestDispatch_AckTimeout_AdvancesTurn(t *testing.T) {
 	n := &mockNotifier{}
-	g := makeTestGame(n, "p1", "p2")
+	g := makeTestGame(t, n, "p1", "p2")
 	g.state = StatePlayerTimedOut
 	defer g.cancelTimer()
 
@@ -187,7 +189,7 @@ func TestDispatch_AckTimeout_AdvancesTurn(t *testing.T) {
 
 func TestDispatch_Kick_TransitionsToGameOver(t *testing.T) {
 	n := &mockNotifier{}
-	g := makeTestGame(n, "p1", "p2")
+	g := makeTestGame(t, n, "p1", "p2")
 	g.state = StatePlayerTimedOut
 	defer g.cancelTimer()
 
@@ -201,7 +203,7 @@ func TestDispatch_Kick_TransitionsToGameOver(t *testing.T) {
 
 func TestDispatch_IgnoredEvent_DoesNotChangeState(t *testing.T) {
 	n := &mockNotifier{}
-	g := makeTestGame(n, "p1", "p2")
+	g := makeTestGame(t, n, "p1", "p2")
 	defer g.cancelTimer()
 
 	// EventAckTimeout is not valid in StateWaitingForMove.
@@ -214,7 +216,7 @@ func TestDispatch_IgnoredEvent_DoesNotChangeState(t *testing.T) {
 
 func TestDispatch_TurnWraparound(t *testing.T) {
 	n := &mockNotifier{}
-	g := makeTestGame(n, "p1", "p2")
+	g := makeTestGame(t, n, "p1", "p2")
 	g.current = 1
 	g.turn.PlayerID = "p2"
 	defer g.cancelTimer()
@@ -229,7 +231,8 @@ func TestDispatch_TurnWraparound(t *testing.T) {
 
 func TestGame_Run_StartsFirstTurn(t *testing.T) {
 	n := &mockNotifier{}
-	g := NewGame(makePlayers("p1", "p2"), n)
+	g, err := NewGame(makePlayers("p1", "p2"), n)
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -245,7 +248,8 @@ func TestGame_Run_StartsFirstTurn(t *testing.T) {
 
 func TestGame_Run_MoveSubmittedAdvancesTurn(t *testing.T) {
 	n := &mockNotifier{}
-	g := NewGame(makePlayers("p1", "p2"), n)
+	g, err := NewGame(makePlayers("p1", "p2"), n)
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -265,7 +269,8 @@ func TestGame_Run_MoveSubmittedAdvancesTurn(t *testing.T) {
 
 func TestGame_Run_TurnSkippedAdvancesTurn(t *testing.T) {
 	n := &mockNotifier{}
-	g := NewGame(makePlayers("p1", "p2"), n)
+	g, err := NewGame(makePlayers("p1", "p2"), n)
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -285,7 +290,8 @@ func TestGame_Run_TurnSkippedAdvancesTurn(t *testing.T) {
 
 func TestGame_Run_TimeoutThenAckAdvancesTurn(t *testing.T) {
 	n := &mockNotifier{}
-	g := NewGame(makePlayers("p1", "p2"), n)
+	g, err := NewGame(makePlayers("p1", "p2"), n)
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -314,7 +320,8 @@ func TestGame_Run_TimeoutThenAckAdvancesTurn(t *testing.T) {
 func TestGame_Run_ThreeTimeoutsAutoKick(t *testing.T) {
 	n := &mockNotifier{}
 	players := makePlayers("p1")
-	g := NewGame(players, n)
+	g, err := NewGame(players, n)
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -357,7 +364,8 @@ func TestGame_Run_ThreeTimeoutsAutoKick(t *testing.T) {
 func TestGame_Run_ExplicitKickEndsGame(t *testing.T) {
 	n := &mockNotifier{}
 	players := makePlayers("p1", "p2")
-	g := NewGame(players, n)
+	g, err := NewGame(players, n)
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -391,7 +399,8 @@ func TestGame_Run_ExplicitKickEndsGame(t *testing.T) {
 
 func TestGame_Run_ContextCancellationStopsGame(t *testing.T) {
 	n := &mockNotifier{}
-	g := NewGame(makePlayers("p1", "p2"), n)
+	g, err := NewGame(makePlayers("p1", "p2"), n)
+	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
