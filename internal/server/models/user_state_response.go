@@ -72,6 +72,11 @@ func (m *UserStateResponse) ContextValidate(ctx context.Context, formats strfmt.
 func (m *UserStateResponse) contextValidateUserState(ctx context.Context, formats strfmt.Registry) error {
 
 	if m.UserState != nil {
+
+		if swag.IsZero(m.UserState) { // not required
+			return nil
+		}
+
 		if err := m.UserState.ContextValidate(ctx, formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("user_state")

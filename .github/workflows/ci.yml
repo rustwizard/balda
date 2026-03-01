@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install swagger
+        run: go install github.com/go-swagger/go-swagger/cmd/swagger@latest
+
+      - name: Generate
+        run: make code-gen
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test -v $(go list ./... | grep -v integration)
+
+      - name: Docker build
+        run: docker build -f build/Dockerfile .
