@@ -14,7 +14,6 @@ require (
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/jackc/tern/v2 v2.3.5
 	github.com/jessevdk/go-flags v1.6.1
-	github.com/oklog/ulid/v2 v2.1.1
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/rs/zerolog v1.34.0 // indirect
 	github.com/rustwizard/cleargo v0.0.8
