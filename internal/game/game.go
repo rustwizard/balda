@@ -29,6 +29,7 @@ type Game struct {
 	mu       sync.Mutex
 	state    GameState
 	players  []*Player
+	board    *LettersTable
 	current  int
 	turn     *Turn
 	eventCh  chan TurnEvent
@@ -56,13 +57,18 @@ func GapsBetweenLetters(word []Letter) bool {
 	return true
 }
 
-func NewGame(players []*Player, n Notifier) *Game {
+func NewGame(players []*Player, n Notifier) (*Game, error) {
+	board, err := NewLettersTable(Dict.RandomFiveLetterWord())
+	if err != nil {
+		return nil, err
+	}
 	return &Game{
 		players:  players,
 		eventCh:  make(chan TurnEvent, 4), // buffered: timer + auto-kick can queue simultaneously
 		done:     make(chan struct{}),
+		board:    board,
 		notifier: n,
-	}
+	}, nil
 }
 
 func (g *Game) Run(ctx context.Context) {
