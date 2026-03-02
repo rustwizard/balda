@@ -4,115 +4,94 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
-	"github.com/rustwizard/balda/internal/flname"
-
-	"github.com/rustwizard/balda/internal/session"
-
-	"github.com/go-openapi/runtime/middleware"
 	"github.com/google/uuid"
-	"github.com/rustwizard/balda/internal/server/models"
-	"github.com/rustwizard/balda/internal/server/restapi/operations/signup"
-	"github.com/rustwizard/cleargo/db/pg"
+	"github.com/rustwizard/balda/internal/flname"
+	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
+	"github.com/rustwizard/balda/internal/session"
 )
 
-type SignUp struct {
-	db   *pg.DB
-	sess *session.Service
-}
-
-func NewSignUp(db *pg.DB, sess *session.Service) *SignUp {
-	return &SignUp{db: db, sess: sess}
-}
-
-func (s *SignUp) Handle(params signup.PostSignupParams) middleware.Responder {
+// Signup implements baldaapi.Handler.
+func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (baldaapi.SignupRes, error) {
 	slog.Info("signup handler called")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	tx, err := s.db.Pool.Begin(ctx)
+	tx, err := h.pool.Begin(ctx)
 	if err != nil {
-		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
-			Message: "",
-			Status:  http.StatusBadRequest,
-			Type:    "SignUp Error",
-		})
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusBadRequest),
+			Type:    baldaapi.NewOptString("SignUp Error"),
+		}, nil
 	}
 
 	var uid int64
 	var apiKey string
 	err = tx.QueryRow(ctx, `INSERT INTO users(first_name, last_name, email, hash_password)
-		VALUES($1, $2, $3, crypt($4, gen_salt('bf', 8))) RETURNING user_id, api_key`, params.Body.Firstname,
-		params.Body.Lastname, params.Body.Email, params.Body.Password).Scan(&uid, &apiKey)
+		VALUES($1, $2, $3, crypt($4, gen_salt('bf', 8))) RETURNING user_id, api_key`,
+		req.Firstname, req.Lastname, req.Email, req.Password).Scan(&uid, &apiKey)
 	if err != nil {
 		slog.Error("signup: user", slog.Any("error", err))
 		if err = tx.Rollback(ctx); err != nil {
 			slog.Error("signup: rollback", slog.Any("error", err))
 		}
-		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
-			Message: "user",
-			Status:  http.StatusBadRequest,
-			Type:    "SignUp Error",
-		})
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString("user"),
+			Status:  baldaapi.NewOptInt(http.StatusBadRequest),
+			Type:    baldaapi.NewOptString("SignUp Error"),
+		}, nil
 	}
 
 	_, err = tx.Exec(ctx, `INSERT INTO user_state(user_id, nickname, exp, flags, lives)
-		VALUES($1, $2, $3, $4, $5)`, uid,
-		flname.GenNickname(), 0, 0, 5)
+		VALUES($1, $2, $3, $4, $5)`, uid, flname.GenNickname(), 0, 0, 5)
 	if err != nil {
 		slog.Error("signup: user state", slog.Any("error", err))
 		if err = tx.Rollback(ctx); err != nil {
 			slog.Error("signup: rollback", slog.Any("error", err))
 		}
-		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
-			Message: "user state",
-			Status:  http.StatusBadRequest,
-			Type:    "SignUp Error",
-		})
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString("user state"),
+			Status:  baldaapi.NewOptInt(http.StatusBadRequest),
+			Type:    baldaapi.NewOptString("SignUp Error"),
+		}, nil
 	}
 
-	err = tx.Commit(ctx)
-	if err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		if err = tx.Rollback(ctx); err != nil {
 			slog.Error("signup: rollback", slog.Any("error", err))
 		}
-		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
-			Message: "",
-			Status:  http.StatusBadRequest,
-			Type:    "SignUp Error",
-		})
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusBadRequest),
+			Type:    baldaapi.NewOptString("SignUp Error"),
+		}, nil
 	}
 
 	sid, err := uuid.NewRandom()
 	if err != nil {
 		slog.Error("signup: gen session id", slog.Any("error", err))
-		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
-			Message: "",
-			Status:  http.StatusBadRequest,
-			Type:    "SignUp Error",
-		})
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusBadRequest),
+			Type:    baldaapi.NewOptString("SignUp Error"),
+		}, nil
 	}
 
-	err = s.sess.Save(&session.User{
-		Sid: sid.String(),
-		UID: uid,
-	})
-	if err != nil {
-		slog.Error("signup: gen session id", slog.Any("error", err))
-		return signup.NewPostSignupBadRequest().WithPayload(&models.ErrorResponse{
-			Message: "",
-			Status:  http.StatusBadRequest,
-			Type:    "SignUp Error",
-		})
+	if err = h.sess.Save(&session.User{Sid: sid.String(), UID: uid}); err != nil {
+		slog.Error("signup: save session", slog.Any("error", err))
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusBadRequest),
+			Type:    baldaapi.NewOptString("SignUp Error"),
+		}, nil
 	}
 
-	return signup.NewPostSignupOK().WithPayload(&models.SignupResponse{User: &models.User{
-		Firstname: *params.Body.Firstname,
-		Key:       apiKey,
-		Lastname:  *params.Body.Lastname,
-		Sid:       sid.String(),
-		UID:       uid,
-	}})
+	return &baldaapi.SignupResponse{
+		User: baldaapi.NewOptUser(baldaapi.User{
+			UID:       baldaapi.NewOptInt64(uid),
+			Firstname: baldaapi.NewOptString(req.Firstname),
+			Lastname:  baldaapi.NewOptString(req.Lastname),
+			Sid:       baldaapi.NewOptString(sid.String()),
+			Key:       baldaapi.NewOptString(apiKey),
+		}),
+	}, nil
 }

@@ -15,7 +15,8 @@ build:
 
 code-gen:
 	@echo -e $(GREEN_COLOR)[generating models and server...]$(DEFAULT_COLOR)
-	@swagger generate server -f api/swagger/http-api.yaml -s internal/server/restapi --exclude-main -m internal/server/models
+	@go generate ./internal/server/ogen/...
+	@go mod vendor
 
 test:
 	@echo -e $(GREEN_COLOR)[running tests]$(DEFAULT_COLOR)
