@@ -4,72 +4,63 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
-	"github.com/go-openapi/runtime/middleware"
-	"github.com/rustwizard/balda/internal/server/models"
-	"github.com/rustwizard/balda/internal/server/restapi/operations/auth"
+	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/session"
-	"github.com/rustwizard/cleargo/db/pg"
 )
 
-type Auth struct {
-	db   *pg.DB
-	sess *session.Service
-}
-
-func (a Auth) Handle(params auth.PostAuthParams, i interface{}) middleware.Responder {
+// Auth implements baldaapi.Handler.
+func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaapi.AuthRes, error) {
 	slog.Info("auth handler called")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	user := &models.User{}
-	err := a.db.Pool.QueryRow(ctx, `SELECT user_id, first_name, last_name FROM users WHERE email = $1 AND
+	var uid int64
+	var firstname, lastname string
+	err := h.db.Pool.QueryRow(ctx, `SELECT user_id, first_name, last_name FROM users WHERE email = $1 AND
 					hash_password = crypt($2, hash_password)
-								`, params.Body.Email, params.Body.Password).
-		Scan(&user.UID, &user.Firstname, &user.Lastname)
+								`, req.Email, req.Password).
+		Scan(&uid, &firstname, &lastname)
 	if err != nil {
-		if user.UID == 0 {
+		if uid == 0 {
 			slog.Error("auth: wrong email/password", slog.Any("error", err))
-			return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
-				Message: "",
-				Status:  http.StatusUnauthorized,
-				Type:    "Auth Error",
-			})
+		} else {
+			slog.Error("auth: fetch user from db", slog.Any("error", err))
 		}
-		slog.Error("auth: fetch user from db", slog.Any("error", err))
-		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
-			Message: "",
-			Status:  http.StatusUnauthorized,
-			Type:    "Auth Error",
-		})
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
+			Type:    baldaapi.NewOptString("Auth Error"),
+		}, nil
 	}
 
-	sid, err := a.sess.Get(user.UID)
+	user := baldaapi.User{
+		UID:       baldaapi.NewOptInt64(uid),
+		Firstname: baldaapi.NewOptString(firstname),
+		Lastname:  baldaapi.NewOptString(lastname),
+	}
+
+	sid, err := h.sess.Get(uid)
 	if err == session.ErrNotFound {
-		user.Sid, err = a.sess.Create(user.UID)
+		sidStr, err := h.sess.Create(uid)
 		if err != nil {
 			slog.Error("auth: create sid", slog.Any("error", err))
-			return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
-				Message: "",
-				Status:  http.StatusUnauthorized,
-				Type:    "Auth Error",
-			})
+			return &baldaapi.ErrorResponse{
+				Message: baldaapi.NewOptString(""),
+				Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
+				Type:    baldaapi.NewOptString("Auth Error"),
+			}, nil
 		}
-		return auth.NewPostAuthOK().WithPayload(&models.AuthResponse{User: user})
+		user.Sid = baldaapi.NewOptString(sidStr)
+		return &baldaapi.AuthResponse{User: baldaapi.NewOptUser(user)}, nil
 	}
 	if err != nil {
 		slog.Error("auth: get sid", slog.Any("error", err))
-		return auth.NewPostAuthUnauthorized().WithPayload(&models.ErrorResponse{
-			Message: "",
-			Status:  http.StatusUnauthorized,
-			Type:    "Auth Error",
-		})
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
+			Type:    baldaapi.NewOptString("Auth Error"),
+		}, nil
 	}
-	user.Sid = sid.Sid
-	return auth.NewPostAuthOK().WithPayload(&models.AuthResponse{User: user})
-}
 
-func NewAuth(db *pg.DB, sess *session.Service) *Auth {
-	return &Auth{db: db, sess: sess}
+	user.Sid = baldaapi.NewOptString(sid.Sid)
+	return &baldaapi.AuthResponse{User: baldaapi.NewOptUser(user)}, nil
 }

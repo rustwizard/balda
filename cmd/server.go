@@ -1,27 +1,49 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
-	"github.com/rustwizard/balda/internal/session"
-	"github.com/rustwizard/balda/migrations"
-
-	"log/slog"
-
+	"github.com/rustwizard/balda/api/openapi"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/cleargo/db/pg"
 
 	"github.com/spf13/pflag"
 
-	"github.com/go-openapi/loads"
-	"github.com/rustwizard/balda/internal/server/restapi"
-	"github.com/rustwizard/balda/internal/server/restapi/operations"
+	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
+	"github.com/rustwizard/balda/internal/session"
+	"github.com/rustwizard/balda/migrations"
 	"github.com/spf13/cobra"
+
+	"log/slog"
 
 	"github.com/rustwizard/cleargo/infra/flags"
 )
+
+const docsHTML = `<!DOCTYPE html>
+<html>
+<head>
+  <title>Balda GameServer API</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+window.onload = function() {
+  SwaggerUIBundle({
+    url: "/balda/api/v1/docs/openapi.yaml",
+    dom_id: '#swagger-ui',
+    presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+    layout: "BaseLayout"
+  })
+}
+</script>
+</body>
+</html>`
 
 var cfg Config
 
@@ -39,10 +61,6 @@ var serverCmd = &cobra.Command{
 	Short: "Balda Game Server",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		flags.BindEnv(cmd)
-		swaggerSpec, err := loads.Embedded(restapi.SwaggerJSON, restapi.FlatSwaggerJSON)
-		if err != nil {
-			return fmt.Errorf("load swagger spec: %v", err)
-		}
 
 		dbVersion, err := migrations.Migrate(10 * time.Second)
 		if err != nil {
@@ -65,48 +83,29 @@ var serverCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("connect to pg: %v", err)
 		}
-		// sessions service
+
 		sess := session.NewService(cfg.Session)
-		api := operations.NewBaldaGameServerAPI(swaggerSpec)
-		// handlers
-		api.SignupPostSignupHandler = handlers.NewSignUp(db, sess)
-		api.AuthPostAuthHandler = handlers.NewAuth(db, sess)
-		api.GetUsersStateUIDHandler = handlers.NewUserState(db, sess)
-		api.APIKeyQueryParamAuth = func(token string) (interface{}, error) {
-			slog.Info("KeyAuth handler called")
-			if token == cfg.XAPIToken {
-				return true, nil
-			}
-			slog.Error("access attempt with incorrect api key auth", slog.String("token", token))
+		h := handlers.New(db, sess, cfg.XAPIToken)
 
-			return nil, errors.New("api key param: token error")
+		srv, err := baldaapi.NewServer(h, h, baldaapi.WithPathPrefix("/balda/api/v1"))
+		if err != nil {
+			return fmt.Errorf("create ogen server: %v", err)
 		}
 
-		api.APIKeyHeaderAuth = func(token string) (interface{}, error) {
-			slog.Info("KeyAuth handler called")
-			if token == cfg.XAPIToken {
-				return true, nil
-			}
-			slog.Error("access attempt with incorrect api key auth", slog.String("token", token))
+		mux := http.NewServeMux()
+		mux.HandleFunc("/balda/api/v1/docs/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/yaml")
+			w.Write(openapi.Spec)
+		})
+		mux.HandleFunc("/balda/api/v1/docs", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			fmt.Fprint(w, docsHTML)
+		})
+		mux.Handle("/", srv)
 
-			return nil, errors.New("api key header: token error")
-		}
-
-		api.UseSwaggerUI()
-
-		server := restapi.NewServer(api)
-		server.Port = cfg.ServerPort
-		server.Host = cfg.ServerAddr
-		defer func(server *restapi.Server) {
-			err := server.Shutdown()
-			if err != nil {
-				slog.Error("server shutdown", slog.Any("error", err))
-			}
-		}(server)
-
-		server.ConfigureAPI()
-
-		if err := server.Serve(); err != nil {
+		addr := fmt.Sprintf("%s:%d", cfg.ServerAddr, cfg.ServerPort)
+		slog.Info("starting server", slog.String("addr", addr))
+		if err := http.ListenAndServe(addr, mux); err != nil {
 			return fmt.Errorf("server serve: %v", err)
 		}
 

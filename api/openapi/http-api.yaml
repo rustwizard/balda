@@ -1,0 +1,237 @@
+openapi: "3.0.3"
+info:
+  title: Balda GameServer
+  description: |
+    Balda GameServer API methods and models
+
+    ### Headers
+    | Header | Description |
+    |--------|-------------|
+    | **X-API-Key** | API key is a special token that the client needs to provide when making API calls. |
+    | **X-API-User** | User's ID |
+    | **X-API-Session** | Session ID |
+  version: 1.0.0
+
+servers:
+  - url: http://127.0.0.1:9666/balda/api/v1
+
+paths:
+  /signup:
+    post:
+      operationId: signup
+      summary: Sign-up request
+      tags:
+        - Signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignupRequest'
+      responses:
+        '200':
+          description: Response for signup request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SignupResponse'
+        '400':
+          description: Error when signup
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth:
+    post:
+      operationId: auth
+      summary: Auth request
+      tags:
+        - Auth
+      security:
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+      responses:
+        '200':
+          description: Response for auth request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Error when auth
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /users/state/{uid}:
+    get:
+      operationId: getUsersStateUID
+      summary: Get user state
+      parameters:
+        - name: uid
+          in: path
+          description: User ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserState'
+        '400':
+          description: Error when get user state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    APIKeyHeader:
+      type: apiKey
+      in: header
+      name: X-API-Key
+    APIKeyQueryParam:
+      type: apiKey
+      in: query
+      name: api_key
+
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          description: the HTTP response code
+          example: 401
+          type: integer
+        message:
+          description: a human-readable explanation of the error
+          example: Bad Authentication data.
+          type: string
+        type:
+          description: Type of the error message
+          example: OAuthException
+          type: string
+
+    SignupRequest:
+      type: object
+      required:
+        - firstname
+        - lastname
+        - email
+        - password
+      properties:
+        firstname:
+          description: User's first name
+          example: John
+          type: string
+        lastname:
+          description: User's last name
+          example: Smith
+          type: string
+        email:
+          description: User's email
+          example: js@example.org
+          type: string
+          format: email
+        password:
+          description: User's password
+          example: some_password
+          type: string
+
+    SignupResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    User:
+      type: object
+      properties:
+        uid:
+          description: User's ID in the system
+          example: 545648798
+          type: integer
+          format: int64
+        firstname:
+          description: User's first name
+          example: John
+          type: string
+        lastname:
+          description: User's last name
+          example: Smith
+          type: string
+        sid:
+          description: User's session ID
+          example: 6c160004-35c8-45b1-a4da-0ab67076afde
+          type: string
+        key:
+          description: User's API Key that the client needs to provide when making API calls.
+          example: some_api_key
+          type: string
+
+    AuthRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          description: User's email
+          example: js@example.org
+          type: string
+        password:
+          description: User's password
+          example: some_password
+          type: string
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+
+    UserState:
+      type: object
+      properties:
+        uid:
+          description: User's ID in the system
+          example: 545648798
+          type: integer
+          format: int64
+        nickname:
+          description: Generated nickname in the system
+          example: John
+          type: string
+        exp:
+          description: User's exp points in the system
+          example: 545648798
+          type: integer
+          format: int64
+        lives:
+          description: User's lives count in the system
+          example: 5
+          type: integer
+          format: int64
+        game_id:
+          description: Game's ID (if game_id == 0 or absent then user in the lobby)
+          example: 144
+          type: integer
+          format: int32
+        flags:
+          description: Some User's flags.
+          example: 99
+          type: integer
+          format: int64

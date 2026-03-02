@@ -4,47 +4,37 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
-	"github.com/go-openapi/runtime/middleware"
 	"github.com/jackc/pgx/v5"
-	"github.com/rustwizard/balda/internal/server/models"
-	"github.com/rustwizard/balda/internal/server/restapi/operations"
-	"github.com/rustwizard/balda/internal/session"
-	"github.com/rustwizard/cleargo/db/pg"
+	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 )
 
-type UserState struct {
-	db   *pg.DB
-	sess *session.Service
-}
+// GetUsersStateUID implements baldaapi.Handler.
+func (h *Handlers) GetUsersStateUID(ctx context.Context, params baldaapi.GetUsersStateUIDParams) (baldaapi.GetUsersStateUIDRes, error) {
+	var nickname string
+	var exp, flags, lives int64
+	var gameID int32
 
-func (u UserState) Handle(params operations.GetUsersStateUIDParams) middleware.Responder {
-	userState := models.UserState{}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := pgx.BeginTxFunc(ctx, u.db.Pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `SELECT nickname, exp, flags, lives  FROM user_state WHERE user_id = $1`, params.UID).
-			Scan(&userState.Nickname, &userState.Exp, &userState.Flags, &userState.Lives); err != nil {
-			return err
-		}
-		return nil
+	if err := pgx.BeginTxFunc(ctx, h.db.Pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT nickname, exp, flags, lives FROM user_state WHERE user_id = $1`, params.UID).
+			Scan(&nickname, &exp, &flags, &lives)
 	}); err != nil {
 		slog.Error("user state: fetch user state from db", slog.Any("error", err))
-		return operations.NewGetUsersStateUIDBadRequest().WithPayload(&models.ErrorResponse{
-			Message: "",
-			Status:  http.StatusBadRequest,
-			Type:    "UserState Error",
-		})
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusBadRequest),
+			Type:    baldaapi.NewOptString("UserState Error"),
+		}, nil
 	}
 
-	userState.UID = params.UID
 	// TODO: check if user in the game and set gameID
+	_ = gameID
 
-	return operations.NewGetUsersStateUIDOK().WithPayload(&userState)
-}
-
-func NewUserState(db *pg.DB, sess *session.Service) *UserState {
-	return &UserState{db: db, sess: sess}
+	return &baldaapi.UserState{
+		UID:      baldaapi.NewOptInt64(params.UID),
+		Nickname: baldaapi.NewOptString(nickname),
+		Exp:      baldaapi.NewOptInt64(exp),
+		Flags:    baldaapi.NewOptInt64(flags),
+		Lives:    baldaapi.NewOptInt64(lives),
+	}, nil
 }
