@@ -52,9 +52,29 @@ func MakeWord(word []Letter) string {
 	return w
 }
 
-// TODO: impl
+// GapsBetweenLetters reports whether there are gaps between consecutive letters
+// in the word path. Each consecutive pair must occupy board-adjacent cells
+// (sharing an edge horizontally or vertically; Manhattan distance == 1).
+// Returns true when the path is discontinuous (invalid word placement).
 func GapsBetweenLetters(word []Letter) bool {
-	return true
+	if len(word) < 2 {
+		return true
+	}
+	for i := 1; i < len(word); i++ {
+		prev, curr := word[i-1], word[i]
+		rowDiff := int(curr.RowID) - int(prev.RowID)
+		colDiff := int(curr.ColID) - int(prev.ColID)
+		if rowDiff < 0 {
+			rowDiff = -rowDiff
+		}
+		if colDiff < 0 {
+			colDiff = -colDiff
+		}
+		if rowDiff+colDiff != 1 {
+			return true
+		}
+	}
+	return false
 }
 
 func NewGame(players []*Player, n Notifier) (*Game, error) {
