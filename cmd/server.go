@@ -1,14 +1,14 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rustwizard/balda/api/openapi"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
-	"github.com/rustwizard/cleargo/db/pg"
-
 	"github.com/spf13/pflag"
 
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
@@ -47,10 +47,20 @@ window.onload = function() {
 
 var cfg Config
 
+type PgConfig struct {
+	Host         string
+	Port         int
+	User         string
+	Password     string
+	DatabaseName string
+	MaxPoolSize  int
+	SSL          string
+}
+
 type Config struct {
 	ServerAddr string
 	ServerPort int
-	Pg         pg.Config
+	Pg         PgConfig
 	Session    session.Config
 	XAPIToken  string
 }
@@ -70,22 +80,18 @@ var serverCmd = &cobra.Command{
 
 		slog.Info("database migration success", slog.Int("db_version", dbVersion))
 
-		db := pg.NewDB()
-		err = db.Connect(&pg.Config{
-			Host:         cfg.Pg.Host,
-			Port:         cfg.Pg.Port,
-			User:         cfg.Pg.User,
-			Password:     cfg.Pg.Password,
-			DatabaseName: cfg.Pg.DatabaseName,
-			MaxPoolSize:  cfg.Pg.MaxPoolSize,
-			SSL:          cfg.Pg.SSL,
-		})
+		connStr := fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s&pool_max_conns=%d",
+			cfg.Pg.User, cfg.Pg.Password, cfg.Pg.Host, cfg.Pg.Port,
+			cfg.Pg.DatabaseName, cfg.Pg.SSL, cfg.Pg.MaxPoolSize,
+		)
+		pool, err := pgxpool.New(context.Background(), connStr)
 		if err != nil {
 			return fmt.Errorf("connect to pg: %v", err)
 		}
+		defer pool.Close()
 
 		sess := session.NewService(cfg.Session)
-		h := handlers.New(db, sess, cfg.XAPIToken)
+		h := handlers.New(pool, sess, cfg.XAPIToken)
 
 		srv, err := baldaapi.NewServer(h, h, baldaapi.WithPathPrefix("/balda/api/v1"))
 		if err != nil {
@@ -126,7 +132,7 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	f.StringVar(&c.Pg.User, "pg.user", "", "postgres user")
 	f.StringVar(&c.Pg.DatabaseName, "pg.database", "", "postgres database")
 	f.StringVar(&c.Pg.Password, "pg.password", "", "postgres password")
-	f.IntVar(&c.Pg.MaxPoolSize, "pg.max_pool_size", 0, "postgres max pool size")
+	f.IntVar(&c.Pg.MaxPoolSize, "pg.max_pool_size", 10, "postgres max pool size")
 	f.StringVar(&c.Pg.SSL, "pg.ssl", "disable", "postgres ssl")
 	f.StringVar(&c.XAPIToken, prefix+"x_api_token", "", "x-api-token for header or query param")
 	return f

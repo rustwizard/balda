@@ -15,7 +15,7 @@ func (h *Handlers) GetUsersStateUID(ctx context.Context, params baldaapi.GetUser
 	var exp, flags, lives int64
 	var gameID int32
 
-	if err := pgx.BeginTxFunc(ctx, h.db.Pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
+	if err := pgx.BeginTxFunc(ctx, h.pool, pgx.TxOptions{}, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT nickname, exp, flags, lives FROM user_state WHERE user_id = $1`, params.UID).
 			Scan(&nickname, &exp, &flags, &lives)
 	}); err != nil {

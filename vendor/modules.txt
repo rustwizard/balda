@@ -157,7 +157,6 @@ github.com/jackc/pgx/v5/pgconn/internal/bgreader
 github.com/jackc/pgx/v5/pgproto3
 github.com/jackc/pgx/v5/pgtype
 github.com/jackc/pgx/v5/pgxpool
-github.com/jackc/pgx/v5/tracelog
 # github.com/jackc/puddle/v2 v2.2.2
 ## explicit; go 1.19
 github.com/jackc/puddle/v2
@@ -277,14 +276,8 @@ github.com/redis/go-redis/v9/internal/routing
 github.com/redis/go-redis/v9/internal/util
 github.com/redis/go-redis/v9/maintnotifications
 github.com/redis/go-redis/v9/push
-# github.com/rs/zerolog v1.34.0
-## explicit; go 1.15
-github.com/rs/zerolog
-github.com/rs/zerolog/internal/cbor
-github.com/rs/zerolog/internal/json
 # github.com/rustwizard/cleargo v0.0.8
 ## explicit; go 1.20
-github.com/rustwizard/cleargo/db/pg
 github.com/rustwizard/cleargo/infra/flags
 # github.com/segmentio/asm v1.2.1
 ## explicit; go 1.18
