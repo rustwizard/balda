@@ -19,7 +19,7 @@ The player with the most words when the game ends wins.
 | Layer | Technology |
 |-------|-----------|
 | Language | Go 1.26 |
-| REST API | [go-swagger](https://github.com/go-swagger/go-swagger) (code-generated from OpenAPI spec) |
+| REST API | [ogen](https://github.com/ogen-go/ogen) (code-generated from OpenAPI 3.0 spec) |
 | CLI | [cobra](https://github.com/spf13/cobra) |
 | Database | PostgreSQL 16 (pgx/v5 driver) |
 | Runtime image | Debian trixie-slim |
@@ -36,15 +36,16 @@ balda/
 ├── internal/
 │   ├── game/             # Core game logic, FSM, letter table, dictionary
 │   ├── server/
-│   │   ├── restapi/      # go-swagger generated infrastructure
-│   │   ├── handlers/     # HTTP request handlers
-│   │   └── models/       # Data transfer objects
+│   │   ├── ogen/         # ogen-generated server code (do not edit)
+│   │   └── restapi/
+│   │       └── handlers/ # HTTP request handlers
 │   ├── session/          # Redis-backed session management
 │   ├── storage/          # Storage abstraction
 │   ├── flname/           # Auto-generated player nicknames
 │   └── rnd/              # RNG utilities
-├── api/swagger/          # OpenAPI specification
+├── api/openapi/          # OpenAPI 3.0 specification
 ├── migrations/           # SQL migration files
+├── tests/                # Integration tests (testcontainers)
 ├── main.go
 ├── Makefile
 └── docker-compose.yml
@@ -250,13 +251,15 @@ All flags can also be set via environment variables (e.g., `SERVER_ADDR`, `PG_HO
 make code-gen
 ```
 
-This regenerates Go server stubs from [api/swagger/http-api.yaml](api/swagger/http-api.yaml).
+This regenerates the typed Go server code from [api/openapi/http-api.yaml](api/openapi/http-api.yaml) using [ogen](https://github.com/ogen-go/ogen) and vendors the result.
 
 ### Run Tests
 
 ```bash
 make test
 ```
+
+Integration tests in `tests/` spin up ephemeral PostgreSQL and Redis containers via [testcontainers-go](https://golang.testcontainers.org/) — Docker must be running. Handler test coverage is ~70%.
 
 ## Configuration Reference
 
@@ -270,7 +273,7 @@ make test
 | `--pg.user` | | PostgreSQL user |
 | `--pg.database` | | PostgreSQL database |
 | `--pg.password` | | PostgreSQL password |
-| `--pg.max_pool_size` | `0` | PostgreSQL max connection pool size |
+| `--pg.max_pool_size` | `10` | PostgreSQL max connection pool size |
 | `--pg.ssl` | `disable` | PostgreSQL SSL mode |
 | `--redis.addr` | `127.0.0.1:6379` | Redis address |
 | `--redis.username` | | Redis username |
