@@ -57,6 +57,9 @@ func MakeWord(word []Letter) string {
 // (sharing an edge horizontally or vertically; Manhattan distance == 1).
 // Returns true when the path is discontinuous (invalid word placement).
 func GapsBetweenLetters(word []Letter) bool {
+	if len(word) < 2 {
+		return true
+	}
 	for i := 1; i < len(word); i++ {
 		prev, curr := word[i-1], word[i]
 		rowDiff := int(curr.RowID) - int(prev.RowID)

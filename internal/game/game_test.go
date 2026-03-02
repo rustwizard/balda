@@ -11,12 +11,12 @@ func TestGapsBetweenLetters(t *testing.T) {
 		{
 			name: "empty word",
 			word: []Letter{},
-			want: false,
+			want: true,
 		},
 		{
 			name: "single letter",
 			word: []Letter{{RowID: 2, ColID: 2, Char: "а"}},
-			want: false,
+			want: true,
 		},
 		{
 			name: "two adjacent letters horizontally",
