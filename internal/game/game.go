@@ -24,6 +24,14 @@ const (
 	MaxConsecutiveTimeouts = 3
 )
 
+// Option configures a Game at construction time.
+type Option func(*Game)
+
+// WithTurnDuration overrides the per-turn timer duration.
+func WithTurnDuration(d time.Duration) Option {
+	return func(g *Game) { g.turnDuration = d }
+}
+
 type Turn struct {
 	PlayerID  string
 	StartedAt time.Time
@@ -37,15 +45,16 @@ type Notifier interface {
 }
 
 type Game struct {
-	mu       sync.Mutex
-	state    GameState
-	players  []*Player
-	board    *LettersTable
-	current  int
-	turn     *Turn
-	eventCh  chan TurnEvent
-	done     chan struct{}
-	notifier Notifier
+	mu           sync.Mutex
+	state        GameState
+	players      []*Player
+	board        *LettersTable
+	current      int
+	turn         *Turn
+	eventCh      chan TurnEvent
+	done         chan struct{}
+	notifier     Notifier
+	turnDuration time.Duration // 0 means use TurnDuration constant
 }
 
 func (g *Game) СheckWordExistence(word string) bool {
@@ -88,18 +97,22 @@ func GapsBetweenLetters(word []Letter) bool {
 	return false
 }
 
-func NewGame(players []*Player, n Notifier) (*Game, error) {
+func NewGame(players []*Player, n Notifier, opts ...Option) (*Game, error) {
 	board, err := NewLettersTable(Dict.RandomFiveLetterWord())
 	if err != nil {
 		return nil, err
 	}
-	return &Game{
+	g := &Game{
 		players:  players,
 		eventCh:  make(chan TurnEvent, 4), // buffered: timer + auto-kick can queue simultaneously
 		done:     make(chan struct{}),
 		board:    board,
 		notifier: n,
-	}, nil
+	}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g, nil
 }
 
 func (g *Game) Run(ctx context.Context) {
@@ -189,11 +202,15 @@ func (g *Game) advanceTurn() {
 }
 
 func (g *Game) startTurn() {
+	d := g.turnDuration
+	if d == 0 {
+		d = TurnDuration
+	}
 	p := g.currentPlayer()
 	g.turn = &Turn{
 		PlayerID:  p.ID,
 		StartedAt: time.Now(),
-		timer: time.AfterFunc(TurnDuration, func() {
+		timer: time.AfterFunc(d, func() {
 			select {
 			case g.eventCh <- EventTurnTimeout:
 			case <-g.done:
@@ -269,6 +286,67 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 	case <-g.done:
 	}
 	return nil
+}
+
+// NewGameWithWord creates a Game with a specific initial board word instead of a random one.
+func NewGameWithWord(players []*Player, initWord string, n Notifier, opts ...Option) (*Game, error) {
+	board, err := NewLettersTable(initWord)
+	if err != nil {
+		return nil, err
+	}
+	g := &Game{
+		players:  players,
+		eventCh:  make(chan TurnEvent, 4),
+		done:     make(chan struct{}),
+		board:    board,
+		notifier: n,
+	}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g, nil
+}
+
+// Board returns the game's letter board.
+func (g *Game) Board() *LettersTable {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.board
+}
+
+// Skip signals that playerID passes their turn without placing a letter.
+func (g *Game) Skip(playerID string) error {
+	g.mu.Lock()
+	if g.state != StateWaitingForMove {
+		g.mu.Unlock()
+		return ErrWrongState
+	}
+	if g.currentPlayer().ID != playerID {
+		g.mu.Unlock()
+		return ErrNotYourTurn
+	}
+	g.mu.Unlock()
+	select {
+	case g.eventCh <- EventTurnSkipped:
+	case <-g.done:
+	}
+	return nil
+}
+
+// AckTimeout acknowledges a timeout notification; the game resumes with the next player's turn.
+func (g *Game) AckTimeout() {
+	select {
+	case g.eventCh <- EventAckTimeout:
+	case <-g.done:
+	}
+}
+
+// Kick forcibly removes the current player and ends the game.
+func (g *Game) Kick() {
+	select {
+	case g.eventCh <- EventKick:
+	case <-g.done:
+	}
 }
 
 func (g *Game) shutdown() {
