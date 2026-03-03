@@ -207,3 +207,20 @@ func (g *Game) shutdown() {
 		close(g.done)
 	}
 }
+
+func (g *Game) AddWordToCurrentPlayer(word string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.currentPlayer().Words = append(g.currentPlayer().Words, word)
+}
+
+func (g *Game) IsTakenWord(word string) bool {
+	for _, player := range g.players {
+		for _, pword := range player.Words {
+			if pword == word {
+				return true
+			}
+		}
+	}
+	return false
+}

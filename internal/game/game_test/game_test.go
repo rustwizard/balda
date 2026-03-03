@@ -51,34 +51,64 @@ func TestCheckWordExistence_WordNotInDictionary(t *testing.T) {
 	assert.False(t, g.СheckWordExistence("zzzzzznotaword"))
 }
 
-// ─── Places.IsTakenWord ─────────────────────────────────────────────────────
+// ─── Game.AddWordToCurrentPlayer ────────────────────────────────────────────
 
-func TestPlaces_IsTakenWord_Empty(t *testing.T) {
-	places := game.Places{}
-	assert.False(t, places.IsTakenWord("кот"))
+func TestGame_AddWordToCurrentPlayer_AddsToFirstPlayer(t *testing.T) {
+	players := []*game.Player{{ID: "p1"}, {ID: "p2"}}
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	g.AddWordToCurrentPlayer("кот")
+
+	assert.Equal(t, []string{"кот"}, players[0].Words)
+	assert.Empty(t, players[1].Words)
 }
 
-func TestPlaces_IsTakenWord_WordExists(t *testing.T) {
-	places := game.Places{
-		1: &game.Place{Player: game.Player{Words: []string{"кот", "дом"}}},
-	}
-	assert.True(t, places.IsTakenWord("кот"))
-	assert.True(t, places.IsTakenWord("дом"))
+func TestGame_AddWordToCurrentPlayer_MultipleWords(t *testing.T) {
+	players := []*game.Player{{ID: "p1"}}
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	g.AddWordToCurrentPlayer("кот")
+	g.AddWordToCurrentPlayer("дом")
+
+	assert.Equal(t, []string{"кот", "дом"}, players[0].Words)
 }
 
-func TestPlaces_IsTakenWord_WordNotPresent(t *testing.T) {
-	places := game.Places{
-		1: &game.Place{Player: game.Player{Words: []string{"кот"}}},
-	}
-	assert.False(t, places.IsTakenWord("лес"))
+// ─── Game.IsTakenWord ────────────────────────────────────────────────────────
+
+func TestGame_IsTakenWord_NoPlayers(t *testing.T) {
+	g, err := game.NewGame(nil, nil)
+	require.NoError(t, err)
+	assert.False(t, g.IsTakenWord("кот"))
 }
 
-func TestPlaces_IsTakenWord_MultiplePlayersFirstHasWord(t *testing.T) {
-	places := game.Places{
-		1: &game.Place{Player: game.Player{Words: []string{"кот"}}},
-		2: &game.Place{Player: game.Player{Words: []string{"дом"}}},
+func TestGame_IsTakenWord_WordFound(t *testing.T) {
+	players := []*game.Player{{ID: "p1", Words: []string{"кот", "дом"}}}
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	assert.True(t, g.IsTakenWord("кот"))
+	assert.True(t, g.IsTakenWord("дом"))
+}
+
+func TestGame_IsTakenWord_WordNotPresent(t *testing.T) {
+	players := []*game.Player{{ID: "p1", Words: []string{"кот"}}}
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	assert.False(t, g.IsTakenWord("лес"))
+}
+
+func TestGame_IsTakenWord_AcrossMultiplePlayers(t *testing.T) {
+	players := []*game.Player{
+		{ID: "p1", Words: []string{"кот"}},
+		{ID: "p2", Words: []string{"дом"}},
 	}
-	assert.True(t, places.IsTakenWord("кот"))
-	assert.True(t, places.IsTakenWord("дом"))
-	assert.False(t, places.IsTakenWord("лес"))
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	assert.True(t, g.IsTakenWord("кот"))
+	assert.True(t, g.IsTakenWord("дом"))
+	assert.False(t, g.IsTakenWord("лес"))
 }
