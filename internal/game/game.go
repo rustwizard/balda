@@ -375,3 +375,9 @@ func (g *Game) IsTakenWord(word string) bool {
 	}
 	return false
 }
+
+// Done returns a channel that is closed when the game has finished running.
+// Safe to call concurrently. Follows the same idiom as context.Context.Done().
+func (g *Game) Done() <-chan struct{} {
+	return g.done
+}
