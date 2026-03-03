@@ -3,9 +3,20 @@ package game
 
 import (
 	"context"
-	"log"
+	"errors"
+	"log/slog"
+	"slices"
 	"sync"
 	"time"
+)
+
+var (
+	ErrNotYourTurn         = errors.New("game: not your turn")
+	ErrWrongState          = errors.New("game: wrong state for this action")
+	ErrWordHasGaps         = errors.New("game: word path has gaps between letters")
+	ErrNewLetterNotInWord  = errors.New("game: new letter must be included in the word")
+	ErrWordAlreadyUsed     = errors.New("game: word already used")
+	ErrWordNotInDictionary = errors.New("game: word not found in dictionary")
 )
 
 const (
@@ -118,7 +129,7 @@ func (g *Game) Run(ctx context.Context) {
 func (g *Game) dispatch(ev TurnEvent) {
 	t, ok := fsmTable[g.state][ev]
 	if !ok {
-		log.Printf("ignored event %v in state %v", ev, g.state)
+		slog.Info("game dispatch", slog.Any("ignored event", ev), "state", g.state)
 		return
 	}
 	t.action(g)      // action runs first; may queue follow-up events
@@ -196,6 +207,68 @@ func (g *Game) cancelTimer() {
 	if g.turn != nil && g.turn.timer != nil {
 		g.turn.timer.Stop()
 	}
+}
+
+// SubmitWord validates and applies a player's move: places newLetter on the
+// board and records the word formed by the given sequence of board letters.
+// The sequence must include the new letter, be connected (adjacent cells),
+// be present in the dictionary, and not have been played before.
+// On success the turn passes to the next player.
+func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) error {
+	g.mu.Lock()
+
+	if g.state != StateWaitingForMove {
+		g.mu.Unlock()
+		return ErrWrongState
+	}
+	if g.currentPlayer().ID != playerID {
+		g.mu.Unlock()
+		return ErrNotYourTurn
+	}
+	if GapsBetweenLetters(word) {
+		g.mu.Unlock()
+		return ErrWordHasGaps
+	}
+
+	newLetterUsed := false
+	for _, l := range word {
+		if l.RowID == newLetter.RowID && l.ColID == newLetter.ColID {
+			newLetterUsed = true
+			break
+		}
+	}
+	if !newLetterUsed {
+		g.mu.Unlock()
+		return ErrNewLetterNotInWord
+	}
+
+	wordStr := MakeWord(word)
+	for _, p := range g.players {
+		if slices.Contains(p.Words, wordStr) {
+			g.mu.Unlock()
+			return ErrWordAlreadyUsed
+		}
+	}
+	if !g.СheckWordExistence(wordStr) {
+		g.mu.Unlock()
+		return ErrWordNotInDictionary
+	}
+	if err := g.board.PutLetterOnTable(newLetter); err != nil {
+		g.mu.Unlock()
+		return err
+	}
+
+	p := g.currentPlayer()
+	p.Words = append(p.Words, wordStr)
+	p.Score += len(word)
+
+	g.mu.Unlock()
+
+	select {
+	case g.eventCh <- EventMoveSubmitted:
+	case <-g.done:
+	}
+	return nil
 }
 
 func (g *Game) shutdown() {
