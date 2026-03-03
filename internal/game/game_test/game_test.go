@@ -51,34 +51,163 @@ func TestCheckWordExistence_WordNotInDictionary(t *testing.T) {
 	assert.False(t, g.СheckWordExistence("zzzzzznotaword"))
 }
 
-// ─── Places.IsTakenWord ─────────────────────────────────────────────────────
+// ─── Game.AddWordToCurrentPlayer ────────────────────────────────────────────
 
-func TestPlaces_IsTakenWord_Empty(t *testing.T) {
-	places := game.Places{}
-	assert.False(t, places.IsTakenWord("кот"))
+func TestGame_AddWordToCurrentPlayer_AddsToFirstPlayer(t *testing.T) {
+	players := []*game.Player{{ID: "p1"}, {ID: "p2"}}
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	g.AddWordToCurrentPlayer("кот")
+
+	assert.Equal(t, []string{"кот"}, players[0].Words)
+	assert.Empty(t, players[1].Words)
 }
 
-func TestPlaces_IsTakenWord_WordExists(t *testing.T) {
-	places := game.Places{
-		1: &game.Place{Player: game.Player{Words: []string{"кот", "дом"}}},
-	}
-	assert.True(t, places.IsTakenWord("кот"))
-	assert.True(t, places.IsTakenWord("дом"))
+func TestGame_AddWordToCurrentPlayer_MultipleWords(t *testing.T) {
+	players := []*game.Player{{ID: "p1"}}
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	g.AddWordToCurrentPlayer("кот")
+	g.AddWordToCurrentPlayer("дом")
+
+	assert.Equal(t, []string{"кот", "дом"}, players[0].Words)
 }
 
-func TestPlaces_IsTakenWord_WordNotPresent(t *testing.T) {
-	places := game.Places{
-		1: &game.Place{Player: game.Player{Words: []string{"кот"}}},
-	}
-	assert.False(t, places.IsTakenWord("лес"))
+// ─── Game.IsTakenWord ────────────────────────────────────────────────────────
+
+func TestGame_IsTakenWord_NoPlayers(t *testing.T) {
+	g, err := game.NewGame(nil, nil)
+	require.NoError(t, err)
+	assert.False(t, g.IsTakenWord("кот"))
 }
 
-func TestPlaces_IsTakenWord_MultiplePlayersFirstHasWord(t *testing.T) {
-	places := game.Places{
-		1: &game.Place{Player: game.Player{Words: []string{"кот"}}},
-		2: &game.Place{Player: game.Player{Words: []string{"дом"}}},
+func TestGame_IsTakenWord_WordFound(t *testing.T) {
+	players := []*game.Player{{ID: "p1", Words: []string{"кот", "дом"}}}
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	assert.True(t, g.IsTakenWord("кот"))
+	assert.True(t, g.IsTakenWord("дом"))
+}
+
+func TestGame_IsTakenWord_WordNotPresent(t *testing.T) {
+	players := []*game.Player{{ID: "p1", Words: []string{"кот"}}}
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	assert.False(t, g.IsTakenWord("лес"))
+}
+
+func TestGame_IsTakenWord_AcrossMultiplePlayers(t *testing.T) {
+	players := []*game.Player{
+		{ID: "p1", Words: []string{"кот"}},
+		{ID: "p2", Words: []string{"дом"}},
 	}
-	assert.True(t, places.IsTakenWord("кот"))
-	assert.True(t, places.IsTakenWord("дом"))
-	assert.False(t, places.IsTakenWord("лес"))
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	assert.True(t, g.IsTakenWord("кот"))
+	assert.True(t, g.IsTakenWord("дом"))
+	assert.False(t, g.IsTakenWord("лес"))
+}
+
+func TestGapsBetweenLetters(t *testing.T) {
+	tests := []struct {
+		name string
+		word []game.Letter
+		want bool
+	}{
+		{
+			name: "empty word",
+			word: []game.Letter{},
+			want: true,
+		},
+		{
+			name: "single letter",
+			word: []game.Letter{{RowID: 2, ColID: 2, Char: "а"}},
+			want: true,
+		},
+		{
+			name: "two adjacent letters horizontally",
+			word: []game.Letter{
+				{RowID: 2, ColID: 1, Char: "б"},
+				{RowID: 2, ColID: 2, Char: "а"},
+			},
+			want: false,
+		},
+		{
+			name: "two adjacent letters vertically",
+			word: []game.Letter{
+				{RowID: 1, ColID: 2, Char: "б"},
+				{RowID: 2, ColID: 2, Char: "а"},
+			},
+			want: false,
+		},
+		{
+			name: "horizontal word no gaps",
+			word: []game.Letter{
+				{RowID: 2, ColID: 0, Char: "с"},
+				{RowID: 2, ColID: 1, Char: "л"},
+				{RowID: 2, ColID: 2, Char: "о"},
+				{RowID: 2, ColID: 3, Char: "в"},
+				{RowID: 2, ColID: 4, Char: "о"},
+			},
+			want: false,
+		},
+		{
+			name: "vertical word no gaps",
+			word: []game.Letter{
+				{RowID: 0, ColID: 2, Char: "с"},
+				{RowID: 1, ColID: 2, Char: "т"},
+				{RowID: 2, ColID: 2, Char: "о"},
+				{RowID: 3, ColID: 2, Char: "л"},
+			},
+			want: false,
+		},
+		{
+			name: "L-shaped path no gaps",
+			word: []game.Letter{
+				{RowID: 0, ColID: 0, Char: "с"},
+				{RowID: 1, ColID: 0, Char: "т"},
+				{RowID: 2, ColID: 0, Char: "о"},
+				{RowID: 2, ColID: 1, Char: "л"},
+			},
+			want: false,
+		},
+		{
+			name: "gap of two cells",
+			word: []game.Letter{
+				{RowID: 2, ColID: 0, Char: "с"},
+				{RowID: 2, ColID: 2, Char: "о"}, // skips ColID 1
+			},
+			want: true,
+		},
+		{
+			name: "diagonal jump — not adjacent",
+			word: []game.Letter{
+				{RowID: 1, ColID: 1, Char: "а"},
+				{RowID: 2, ColID: 2, Char: "б"}, // diagonal: rowDiff+colDiff == 2
+			},
+			want: true,
+		},
+		{
+			name: "same cell repeated — distance 0",
+			word: []game.Letter{
+				{RowID: 2, ColID: 2, Char: "а"},
+				{RowID: 2, ColID: 2, Char: "б"},
+			},
+			want: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := game.GapsBetweenLetters(tc.word)
+			if got != tc.want {
+				t.Errorf("GapsBetweenLetters(%v) = %v, want %v", tc.word, got, tc.want)
+			}
+		})
+	}
 }

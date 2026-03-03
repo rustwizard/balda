@@ -3,15 +3,34 @@ package game
 
 import (
 	"context"
-	"log"
+	"errors"
+	"log/slog"
+	"slices"
 	"sync"
 	"time"
+)
+
+var (
+	ErrNotYourTurn         = errors.New("game: not your turn")
+	ErrWrongState          = errors.New("game: wrong state for this action")
+	ErrWordHasGaps         = errors.New("game: word path has gaps between letters")
+	ErrNewLetterNotInWord  = errors.New("game: new letter must be included in the word")
+	ErrWordAlreadyUsed     = errors.New("game: word already used")
+	ErrWordNotInDictionary = errors.New("game: word not found in dictionary")
 )
 
 const (
 	TurnDuration           = 60 * time.Second
 	MaxConsecutiveTimeouts = 3
 )
+
+// Option configures a Game at construction time.
+type Option func(*Game)
+
+// WithTurnDuration overrides the per-turn timer duration.
+func WithTurnDuration(d time.Duration) Option {
+	return func(g *Game) { g.turnDuration = d }
+}
 
 type Turn struct {
 	PlayerID  string
@@ -26,15 +45,16 @@ type Notifier interface {
 }
 
 type Game struct {
-	mu       sync.Mutex
-	state    GameState
-	players  []*Player
-	board    *LettersTable
-	current  int
-	turn     *Turn
-	eventCh  chan TurnEvent
-	done     chan struct{}
-	notifier Notifier
+	mu           sync.Mutex
+	state        GameState
+	players      []*Player
+	board        *LettersTable
+	current      int
+	turn         *Turn
+	eventCh      chan TurnEvent
+	done         chan struct{}
+	notifier     Notifier
+	turnDuration time.Duration // 0 means use TurnDuration constant
 }
 
 func (g *Game) СheckWordExistence(word string) bool {
@@ -77,18 +97,22 @@ func GapsBetweenLetters(word []Letter) bool {
 	return false
 }
 
-func NewGame(players []*Player, n Notifier) (*Game, error) {
+func NewGame(players []*Player, n Notifier, opts ...Option) (*Game, error) {
 	board, err := NewLettersTable(Dict.RandomFiveLetterWord())
 	if err != nil {
 		return nil, err
 	}
-	return &Game{
+	g := &Game{
 		players:  players,
 		eventCh:  make(chan TurnEvent, 4), // buffered: timer + auto-kick can queue simultaneously
 		done:     make(chan struct{}),
 		board:    board,
 		notifier: n,
-	}, nil
+	}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g, nil
 }
 
 func (g *Game) Run(ctx context.Context) {
@@ -118,7 +142,7 @@ func (g *Game) Run(ctx context.Context) {
 func (g *Game) dispatch(ev TurnEvent) {
 	t, ok := fsmTable[g.state][ev]
 	if !ok {
-		log.Printf("ignored event %v in state %v", ev, g.state)
+		slog.Info("game dispatch", slog.Any("ignored event", ev), "state", g.state)
 		return
 	}
 	t.action(g)      // action runs first; may queue follow-up events
@@ -178,11 +202,15 @@ func (g *Game) advanceTurn() {
 }
 
 func (g *Game) startTurn() {
+	d := g.turnDuration
+	if d == 0 {
+		d = TurnDuration
+	}
 	p := g.currentPlayer()
 	g.turn = &Turn{
 		PlayerID:  p.ID,
 		StartedAt: time.Now(),
-		timer: time.AfterFunc(TurnDuration, func() {
+		timer: time.AfterFunc(d, func() {
 			select {
 			case g.eventCh <- EventTurnTimeout:
 			case <-g.done:
@@ -198,6 +226,129 @@ func (g *Game) cancelTimer() {
 	}
 }
 
+// SubmitWord validates and applies a player's move: places newLetter on the
+// board and records the word formed by the given sequence of board letters.
+// The sequence must include the new letter, be connected (adjacent cells),
+// be present in the dictionary, and not have been played before.
+// On success the turn passes to the next player.
+func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) error {
+	g.mu.Lock()
+
+	if g.state != StateWaitingForMove {
+		g.mu.Unlock()
+		return ErrWrongState
+	}
+	if g.currentPlayer().ID != playerID {
+		g.mu.Unlock()
+		return ErrNotYourTurn
+	}
+	if GapsBetweenLetters(word) {
+		g.mu.Unlock()
+		return ErrWordHasGaps
+	}
+
+	newLetterUsed := false
+	for _, l := range word {
+		if l.RowID == newLetter.RowID && l.ColID == newLetter.ColID {
+			newLetterUsed = true
+			break
+		}
+	}
+	if !newLetterUsed {
+		g.mu.Unlock()
+		return ErrNewLetterNotInWord
+	}
+
+	wordStr := MakeWord(word)
+	for _, p := range g.players {
+		if slices.Contains(p.Words, wordStr) {
+			g.mu.Unlock()
+			return ErrWordAlreadyUsed
+		}
+	}
+	if !g.СheckWordExistence(wordStr) {
+		g.mu.Unlock()
+		return ErrWordNotInDictionary
+	}
+	if err := g.board.PutLetterOnTable(newLetter); err != nil {
+		g.mu.Unlock()
+		return err
+	}
+
+	p := g.currentPlayer()
+	p.Words = append(p.Words, wordStr)
+	p.Score += len(word)
+
+	g.mu.Unlock()
+
+	select {
+	case g.eventCh <- EventMoveSubmitted:
+	case <-g.done:
+	}
+	return nil
+}
+
+// NewGameWithWord creates a Game with a specific initial board word instead of a random one.
+func NewGameWithWord(players []*Player, initWord string, n Notifier, opts ...Option) (*Game, error) {
+	board, err := NewLettersTable(initWord)
+	if err != nil {
+		return nil, err
+	}
+	g := &Game{
+		players:  players,
+		eventCh:  make(chan TurnEvent, 4),
+		done:     make(chan struct{}),
+		board:    board,
+		notifier: n,
+	}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g, nil
+}
+
+// Board returns the game's letter board.
+func (g *Game) Board() *LettersTable {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.board
+}
+
+// Skip signals that playerID passes their turn without placing a letter.
+func (g *Game) Skip(playerID string) error {
+	g.mu.Lock()
+	if g.state != StateWaitingForMove {
+		g.mu.Unlock()
+		return ErrWrongState
+	}
+	if g.currentPlayer().ID != playerID {
+		g.mu.Unlock()
+		return ErrNotYourTurn
+	}
+	g.mu.Unlock()
+	select {
+	case g.eventCh <- EventTurnSkipped:
+	case <-g.done:
+	}
+	return nil
+}
+
+// AckTimeout acknowledges a timeout notification; the game resumes with the next player's turn.
+func (g *Game) AckTimeout() {
+	select {
+	case g.eventCh <- EventAckTimeout:
+	case <-g.done:
+	}
+}
+
+// Kick forcibly removes the current player and ends the game.
+func (g *Game) Kick() {
+	select {
+	case g.eventCh <- EventKick:
+	case <-g.done:
+	}
+}
+
 func (g *Game) shutdown() {
 	g.cancelTimer()
 	// Safe to call multiple times: sync.Once or closed-channel idiom
@@ -206,4 +357,21 @@ func (g *Game) shutdown() {
 	default:
 		close(g.done)
 	}
+}
+
+func (g *Game) AddWordToCurrentPlayer(word string) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.currentPlayer().Words = append(g.currentPlayer().Words, word)
+}
+
+func (g *Game) IsTakenWord(word string) bool {
+	for _, player := range g.players {
+		for _, pword := range player.Words {
+			if pword == word {
+				return true
+			}
+		}
+	}
+	return false
 }
