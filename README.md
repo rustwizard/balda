@@ -26,7 +26,7 @@ The player with the most words when the game ends wins.
 | Session store | Redis 8 |
 | Migrations | [tern](https://github.com/jackc/tern) (embedded SQL, runs on server start) |
 | Logging | `log/slog` (standard library) |
-| IDs | ULID (games), UUID (sessions) |
+| IDs | UUID (games and sessions) |
 
 ## Project Structure
 
@@ -63,7 +63,7 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 |--------|------|-------------|
 | POST | `/signup` | Register a new user account |
 | POST | `/auth` | Authenticate and get a session |
-| GET | `/users/state/{uid}` | Get user profile and state |
+| GET | `/player/state/{uid}` | Get player profile and state |
 
 ### POST /signup
 
@@ -79,7 +79,7 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 // Response
 {
   "user": {
-    "uid": 1,
+    "uid": "<player-uuid>",
     "firstname": "Ivan",
     "lastname": "Petrov",
     "sid": "<session-uuid>",
@@ -99,8 +99,8 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 
 // Response
 {
-  "user": {
-    "uid": 1,
+  "player": {
+    "uid": "<player-uuid>",
     "firstname": "Ivan",
     "lastname": "Petrov",
     "sid": "<session-uuid>",
@@ -109,17 +109,28 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 }
 ```
 
-### GET /users/state/{uid}
+### GET /player/state/{uid}
+
+`game_id` is present only when the player is in an active game. When absent, the player is in the lobby (not in any game).
 
 ```json
-// Response
+// Response — player not in a game
 {
-  "uid": 1,
+  "uid": "<player-uuid>",
   "nickname": "BlackShearCougar",
   "exp": 0,
   "flags": 0,
-  "lives": 0,
-  "game_id": 0
+  "lives": 5
+}
+
+// Response — player in an active game
+{
+  "uid": "<player-uuid>",
+  "nickname": "BlackShearCougar",
+  "exp": 0,
+  "flags": 0,
+  "lives": 5,
+  "game_id": "<game-uuid>"
 }
 ```
 
