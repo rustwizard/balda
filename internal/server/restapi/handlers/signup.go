@@ -15,7 +15,7 @@ import (
 func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (baldaapi.SignupRes, error) {
 	slog.Info("signup handler called")
 
-	tx, err := h.pool.Begin(ctx)
+	tx, err := h.svc.DB().Pool().Begin(ctx)
 	if err != nil {
 		return &baldaapi.ErrorResponse{
 			Message: baldaapi.NewOptString(""),
@@ -26,6 +26,7 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 
 	var uid int64
 	var apiKey string
+
 	err = tx.QueryRow(ctx, `INSERT INTO users(first_name, last_name, email, hash_password)
 		VALUES($1, $2, $3, crypt($4, gen_salt('bf', 8))) RETURNING user_id, api_key`,
 		req.Firstname, req.Lastname, req.Email, req.Password).Scan(&uid, &apiKey)
@@ -41,8 +42,9 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 		}, nil
 	}
 
-	_, err = tx.Exec(ctx, `INSERT INTO user_state(user_id, nickname, exp, flags, lives)
-		VALUES($1, $2, $3, $4, $5)`, uid, flname.GenNickname(), 0, 0, 5)
+	var playerID string
+	err = tx.QueryRow(ctx, `INSERT INTO player_state(user_id, nickname, exp, flags, lives)
+		VALUES($1, $2, $3, $4, $5) RETURNING player_id`, uid, flname.GenNickname(), 0, 0, 5).Scan(&playerID)
 	if err != nil {
 		slog.Error("signup: user state", slog.Any("error", err))
 		if err = tx.Rollback(ctx); err != nil {
@@ -85,9 +87,19 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 		}, nil
 	}
 
+	pid, err := uuid.Parse(playerID)
+	if err != nil {
+		slog.Error("signup: parse player_id", slog.Any("error", err))
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusBadRequest),
+			Type:    baldaapi.NewOptString("SignUp Error"),
+		}, nil
+	}
+
 	return &baldaapi.SignupResponse{
-		User: baldaapi.NewOptUser(baldaapi.User{
-			UID:       baldaapi.NewOptInt64(uid),
+		User: baldaapi.NewOptPlayer(baldaapi.Player{
+			UID:       baldaapi.NewOptUUID(pid),
 			Firstname: baldaapi.NewOptString(req.Firstname),
 			Lastname:  baldaapi.NewOptString(req.Lastname),
 			Sid:       baldaapi.NewOptString(sid.String()),

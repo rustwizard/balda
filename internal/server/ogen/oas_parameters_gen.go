@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/go-faster/errors"
+	"github.com/google/uuid"
 	"github.com/ogen-go/ogen/conv"
 	"github.com/ogen-go/ogen/middleware"
 	"github.com/ogen-go/ogen/ogenerrors"
@@ -14,24 +15,24 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
-// GetUsersStateUIDParams is parameters of getUsersStateUID operation.
-type GetUsersStateUIDParams struct {
-	// User ID.
-	UID int64
+// GetPlayerStateUIDParams is parameters of getPlayerStateUID operation.
+type GetPlayerStateUIDParams struct {
+	// Player ID.
+	UID uuid.UUID
 }
 
-func unpackGetUsersStateUIDParams(packed middleware.Parameters) (params GetUsersStateUIDParams) {
+func unpackGetPlayerStateUIDParams(packed middleware.Parameters) (params GetPlayerStateUIDParams) {
 	{
 		key := middleware.ParameterKey{
 			Name: "uid",
 			In:   "path",
 		}
-		params.UID = packed[key].(int64)
+		params.UID = packed[key].(uuid.UUID)
 	}
 	return params
 }
 
-func decodeGetUsersStateUIDParams(args [1]string, argsEscaped bool, r *http.Request) (params GetUsersStateUIDParams, _ error) {
+func decodeGetPlayerStateUIDParams(args [1]string, argsEscaped bool, r *http.Request) (params GetPlayerStateUIDParams, _ error) {
 	// Decode path: uid.
 	if err := func() error {
 		param := args[0]
@@ -56,7 +57,7 @@ func decodeGetUsersStateUIDParams(args [1]string, argsEscaped bool, r *http.Requ
 					return err
 				}
 
-				c, err := conv.ToInt64(val)
+				c, err := conv.ToUUID(val)
 				if err != nil {
 					return err
 				}

@@ -8,7 +8,12 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rustwizard/balda/api/openapi"
+	"github.com/rustwizard/balda/internal/game"
+	"github.com/rustwizard/balda/internal/lobby"
+	"github.com/rustwizard/balda/internal/matchmaking"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
+	"github.com/rustwizard/balda/internal/service"
+	"github.com/rustwizard/balda/internal/storage"
 	"github.com/spf13/pflag"
 
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
@@ -84,14 +89,28 @@ var serverCmd = &cobra.Command{
 			cfg.Pg.User, cfg.Pg.Password, cfg.Pg.Host, cfg.Pg.Port,
 			cfg.Pg.DatabaseName, cfg.Pg.SSL, cfg.Pg.MaxPoolSize,
 		)
-		pool, err := pgxpool.New(context.Background(), connStr)
+		pool, err := pgxpool.New(cmd.Context(), connStr)
 		if err != nil {
 			return fmt.Errorf("connect to pg: %v", err)
 		}
 		defer pool.Close()
 
 		sess := session.NewService(cfg.Session)
-		h := handlers.New(pool, sess, cfg.XAPIToken)
+
+		lby := lobby.New(func(ctx context.Context, players []*game.Player, n game.Notifier) (*game.Game, error) {
+			return game.NewGame(players, n)
+		})
+		mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
+			// TODO: do not forget to innit notifier and pass to StartGame instead of nil
+			_, err := lby.StartGame(cmd.Context(), players, nil)
+			return err
+		})
+
+		s := storage.New(pool, 10*time.Second)
+
+		svc := service.New(lby, mm, s)
+
+		h := handlers.New(svc, sess, cfg.XAPIToken)
 
 		srv, err := baldaapi.NewServer(h, h, baldaapi.WithPathPrefix("/balda/api/v1"))
 		if err != nil {

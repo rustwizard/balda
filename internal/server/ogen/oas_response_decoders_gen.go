@@ -89,7 +89,7 @@ func decodeAuthResponse(resp *http.Response) (res AuthRes, _ error) {
 	return res, validate.UnexpectedStatusCodeWithResponse(resp)
 }
 
-func decodeGetUsersStateUIDResponse(resp *http.Response) (res GetUsersStateUIDRes, _ error) {
+func decodeGetPlayerStateUIDResponse(resp *http.Response) (res GetPlayerStateUIDRes, _ error) {
 	switch resp.StatusCode {
 	case 200:
 		// Code 200.
@@ -105,7 +105,7 @@ func decodeGetUsersStateUIDResponse(resp *http.Response) (res GetUsersStateUIDRe
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response UserState
+			var response PlayerState
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err

@@ -44,9 +44,9 @@ func encodeAuthResponse(response AuthRes, w http.ResponseWriter, span trace.Span
 	}
 }
 
-func encodeGetUsersStateUIDResponse(response GetUsersStateUIDRes, w http.ResponseWriter, span trace.Span) error {
+func encodeGetPlayerStateUIDResponse(response GetPlayerStateUIDRes, w http.ResponseWriter, span trace.Span) error {
 	switch response := response.(type) {
-	case *UserState:
+	case *PlayerState:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
 		span.SetStatus(codes.Ok, http.StatusText(200))

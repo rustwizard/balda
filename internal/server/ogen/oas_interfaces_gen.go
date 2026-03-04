@@ -5,8 +5,8 @@ type AuthRes interface {
 	authRes()
 }
 
-type GetUsersStateUIDRes interface {
-	getUsersStateUIDRes()
+type GetPlayerStateUIDRes interface {
+	getPlayerStateUIDRes()
 }
 
 type SignupRes interface {

@@ -27,20 +27,20 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SignupRequest'
+              $ref: "#/components/schemas/SignupRequest"
       responses:
-        '200':
+        "200":
           description: Response for signup request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SignupResponse'
-        '400':
+                $ref: "#/components/schemas/SignupResponse"
+        "400":
           description: Error when signup
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /auth:
     post:
@@ -56,46 +56,47 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AuthRequest'
+              $ref: "#/components/schemas/AuthRequest"
       responses:
-        '200':
+        "200":
           description: Response for auth request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '401':
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
           description: Error when auth
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
-  /users/state/{uid}:
+  /player/state/{uid}:
     get:
-      operationId: getUsersStateUID
+      operationId: getPlayerStateUID
       summary: Get user state
       parameters:
         - name: uid
           in: path
-          description: User ID
+          description: Player ID
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
+            format: uuid
+            description: The unique identifier of the player
       responses:
-        '200':
+        "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserState'
-        '400':
-          description: Error when get user state
+                $ref: "#/components/schemas/PlayerState"
+        "400":
+          description: Error when get player state
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   securitySchemes:
@@ -155,30 +156,29 @@ components:
       type: object
       properties:
         user:
-          $ref: '#/components/schemas/User'
+          $ref: "#/components/schemas/Player"
 
-    User:
+    Player:
       type: object
       properties:
         uid:
-          description: User's ID in the system
-          example: 545648798
-          type: integer
-          format: int64
+          description: Player's ID in the system
+          type: string
+          format: uuid
         firstname:
-          description: User's first name
+          description: Player's first name
           example: John
           type: string
         lastname:
-          description: User's last name
+          description: Player's last name
           example: Smith
           type: string
         sid:
-          description: User's session ID
+          description: Player's session ID
           example: 6c160004-35c8-45b1-a4da-0ab67076afde
           type: string
         key:
-          description: User's API Key that the client needs to provide when making API calls.
+          description: Player's API Key that the client needs to provide when making API calls.
           example: some_api_key
           type: string
 
@@ -200,38 +200,37 @@ components:
     AuthResponse:
       type: object
       properties:
-        user:
-          $ref: '#/components/schemas/User'
+        player:
+          $ref: "#/components/schemas/Player"
 
-    UserState:
+    PlayerState:
       type: object
       properties:
         uid:
-          description: User's ID in the system
-          example: 545648798
-          type: integer
-          format: int64
+          description: Player's ID in the system
+          type: string
+          format: uuid
         nickname:
           description: Generated nickname in the system
-          example: John
+          example: JohnSmith
           type: string
         exp:
-          description: User's exp points in the system
-          example: 545648798
+          description: Player's exp points in the system
+          example: 100
           type: integer
           format: int64
         lives:
-          description: User's lives count in the system
-          example: 5
+          description: Player's lives count in the system
+          example: 3
+          type: integer
+          format: int64
+        flags:
+          description: Some Player's flags.
+          example: 10
           type: integer
           format: int64
         game_id:
-          description: Game's ID (if game_id == 0 or absent then user in the lobby)
+          description: Game's ID (if game_id empty or absent then player in the lobby)
           example: 144
-          type: integer
-          format: int32
-        flags:
-          description: Some User's flags.
-          example: 99
-          type: integer
-          format: int64
+          type: string
+          format: uuid
