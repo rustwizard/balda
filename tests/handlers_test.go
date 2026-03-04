@@ -346,7 +346,7 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 		{ID: uid1.String()},
 		{ID: uid2.String()},
 	}
-	_, err = lby.StartGame(ctx, players, nil)
+	_, err = lby.StartGame(ctx, players, noopNotifier{})
 	require.NoError(t, err)
 
 	t.Run("player in active game has GameID set", func(t *testing.T) {
