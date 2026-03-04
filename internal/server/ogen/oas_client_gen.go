@@ -34,12 +34,12 @@ type Invoker interface {
 	//
 	// POST /auth
 	Auth(ctx context.Context, request *AuthRequest) (AuthRes, error)
-	// GetUsersStateUID invokes getUsersStateUID operation.
+	// GetPlayerStateUID invokes getPlayerStateUID operation.
 	//
 	// Get user state.
 	//
-	// GET /users/state/{uid}
-	GetUsersStateUID(ctx context.Context, params GetUsersStateUIDParams) (GetUsersStateUIDRes, error)
+	// GET /player/state/{uid}
+	GetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (GetPlayerStateUIDRes, error)
 	// Signup invokes signup operation.
 	//
 	// Sign-up request.
@@ -211,21 +211,21 @@ func (c *Client) sendAuth(ctx context.Context, request *AuthRequest) (res AuthRe
 	return result, nil
 }
 
-// GetUsersStateUID invokes getUsersStateUID operation.
+// GetPlayerStateUID invokes getPlayerStateUID operation.
 //
 // Get user state.
 //
-// GET /users/state/{uid}
-func (c *Client) GetUsersStateUID(ctx context.Context, params GetUsersStateUIDParams) (GetUsersStateUIDRes, error) {
-	res, err := c.sendGetUsersStateUID(ctx, params)
+// GET /player/state/{uid}
+func (c *Client) GetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (GetPlayerStateUIDRes, error) {
+	res, err := c.sendGetPlayerStateUID(ctx, params)
 	return res, err
 }
 
-func (c *Client) sendGetUsersStateUID(ctx context.Context, params GetUsersStateUIDParams) (res GetUsersStateUIDRes, err error) {
+func (c *Client) sendGetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (res GetPlayerStateUIDRes, err error) {
 	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("getUsersStateUID"),
+		otelogen.OperationID("getPlayerStateUID"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.URLTemplateKey.String("/users/state/{uid}"),
+		semconv.URLTemplateKey.String("/player/state/{uid}"),
 	}
 	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
 
@@ -241,7 +241,7 @@ func (c *Client) sendGetUsersStateUID(ctx context.Context, params GetUsersStateU
 	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
 
 	// Start a span for this request.
-	ctx, span := c.cfg.Tracer.Start(ctx, GetUsersStateUIDOperation,
+	ctx, span := c.cfg.Tracer.Start(ctx, GetPlayerStateUIDOperation,
 		trace.WithAttributes(otelAttrs...),
 		clientSpanKind,
 	)
@@ -259,7 +259,7 @@ func (c *Client) sendGetUsersStateUID(ctx context.Context, params GetUsersStateU
 	stage = "BuildURL"
 	u := uri.Clone(c.requestURL(ctx))
 	var pathParts [2]string
-	pathParts[0] = "/users/state/"
+	pathParts[0] = "/player/state/"
 	{
 		// Encode "uid" parameter.
 		e := uri.NewPathEncoder(uri.PathEncoderConfig{
@@ -268,7 +268,7 @@ func (c *Client) sendGetUsersStateUID(ctx context.Context, params GetUsersStateU
 			Explode: false,
 		})
 		if err := func() error {
-			return e.EncodeValue(conv.Int64ToString(params.UID))
+			return e.EncodeValue(conv.UUIDToString(params.UID))
 		}(); err != nil {
 			return res, errors.Wrap(err, "encode path")
 		}
@@ -295,7 +295,7 @@ func (c *Client) sendGetUsersStateUID(ctx context.Context, params GetUsersStateU
 	defer body.Close()
 
 	stage = "DecodeResponse"
-	result, err := decodeGetUsersStateUIDResponse(resp)
+	result, err := decodeGetPlayerStateUIDResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}

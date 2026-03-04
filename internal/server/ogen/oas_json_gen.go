@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
+	"github.com/ogen-go/ogen/json"
 	"github.com/ogen-go/ogen/validate"
 )
 
@@ -134,15 +135,15 @@ func (s *AuthResponse) Encode(e *jx.Encoder) {
 // encodeFields encodes fields.
 func (s *AuthResponse) encodeFields(e *jx.Encoder) {
 	{
-		if s.User.Set {
-			e.FieldStart("user")
-			s.User.Encode(e)
+		if s.Player.Set {
+			e.FieldStart("player")
+			s.Player.Encode(e)
 		}
 	}
 }
 
 var jsonFieldsNameOfAuthResponse = [1]string{
-	0: "user",
+	0: "player",
 }
 
 // Decode decodes AuthResponse from json.
@@ -153,15 +154,15 @@ func (s *AuthResponse) Decode(d *jx.Decoder) error {
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
 		switch string(k) {
-		case "user":
+		case "player":
 			if err := func() error {
-				s.User.Reset()
-				if err := s.User.Decode(d); err != nil {
+				s.Player.Reset()
+				if err := s.Player.Decode(d); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"user\"")
+				return errors.Wrap(err, "decode field \"player\"")
 			}
 		default:
 			return d.Skip()
@@ -319,41 +320,6 @@ func (s *OptInt) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes int32 as json.
-func (o OptInt32) Encode(e *jx.Encoder) {
-	if !o.Set {
-		return
-	}
-	e.Int32(int32(o.Value))
-}
-
-// Decode decodes int32 from json.
-func (o *OptInt32) Decode(d *jx.Decoder) error {
-	if o == nil {
-		return errors.New("invalid: unable to decode OptInt32 to nil")
-	}
-	o.Set = true
-	v, err := d.Int32()
-	if err != nil {
-		return err
-	}
-	o.Value = int32(v)
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s OptInt32) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptInt32) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
 // Encode encodes int64 as json.
 func (o OptInt64) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -385,6 +351,39 @@ func (s OptInt64) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *OptInt64) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes Player as json.
+func (o OptPlayer) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes Player from json.
+func (o *OptPlayer) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptPlayer to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptPlayer) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptPlayer) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -424,35 +423,316 @@ func (s *OptString) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
-// Encode encodes User as json.
-func (o OptUser) Encode(e *jx.Encoder) {
+// Encode encodes uuid.UUID as json.
+func (o OptUUID) Encode(e *jx.Encoder) {
 	if !o.Set {
 		return
 	}
-	o.Value.Encode(e)
+	json.EncodeUUID(e, o.Value)
 }
 
-// Decode decodes User from json.
-func (o *OptUser) Decode(d *jx.Decoder) error {
+// Decode decodes uuid.UUID from json.
+func (o *OptUUID) Decode(d *jx.Decoder) error {
 	if o == nil {
-		return errors.New("invalid: unable to decode OptUser to nil")
+		return errors.New("invalid: unable to decode OptUUID to nil")
 	}
 	o.Set = true
-	if err := o.Value.Decode(d); err != nil {
+	v, err := json.DecodeUUID(d)
+	if err != nil {
 		return err
 	}
+	o.Value = v
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s OptUser) MarshalJSON() ([]byte, error) {
+func (s OptUUID) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *OptUser) UnmarshalJSON(data []byte) error {
+func (s *OptUUID) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *Player) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *Player) encodeFields(e *jx.Encoder) {
+	{
+		if s.UID.Set {
+			e.FieldStart("uid")
+			s.UID.Encode(e)
+		}
+	}
+	{
+		if s.Firstname.Set {
+			e.FieldStart("firstname")
+			s.Firstname.Encode(e)
+		}
+	}
+	{
+		if s.Lastname.Set {
+			e.FieldStart("lastname")
+			s.Lastname.Encode(e)
+		}
+	}
+	{
+		if s.Sid.Set {
+			e.FieldStart("sid")
+			s.Sid.Encode(e)
+		}
+	}
+	{
+		if s.Key.Set {
+			e.FieldStart("key")
+			s.Key.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfPlayer = [5]string{
+	0: "uid",
+	1: "firstname",
+	2: "lastname",
+	3: "sid",
+	4: "key",
+}
+
+// Decode decodes Player from json.
+func (s *Player) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode Player to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "uid":
+			if err := func() error {
+				s.UID.Reset()
+				if err := s.UID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"uid\"")
+			}
+		case "firstname":
+			if err := func() error {
+				s.Firstname.Reset()
+				if err := s.Firstname.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"firstname\"")
+			}
+		case "lastname":
+			if err := func() error {
+				s.Lastname.Reset()
+				if err := s.Lastname.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"lastname\"")
+			}
+		case "sid":
+			if err := func() error {
+				s.Sid.Reset()
+				if err := s.Sid.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"sid\"")
+			}
+		case "key":
+			if err := func() error {
+				s.Key.Reset()
+				if err := s.Key.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"key\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode Player")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *Player) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *Player) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *PlayerState) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *PlayerState) encodeFields(e *jx.Encoder) {
+	{
+		if s.UID.Set {
+			e.FieldStart("uid")
+			s.UID.Encode(e)
+		}
+	}
+	{
+		if s.Nickname.Set {
+			e.FieldStart("nickname")
+			s.Nickname.Encode(e)
+		}
+	}
+	{
+		if s.Exp.Set {
+			e.FieldStart("exp")
+			s.Exp.Encode(e)
+		}
+	}
+	{
+		if s.Lives.Set {
+			e.FieldStart("lives")
+			s.Lives.Encode(e)
+		}
+	}
+	{
+		if s.Flags.Set {
+			e.FieldStart("flags")
+			s.Flags.Encode(e)
+		}
+	}
+	{
+		if s.GameID.Set {
+			e.FieldStart("game_id")
+			s.GameID.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfPlayerState = [6]string{
+	0: "uid",
+	1: "nickname",
+	2: "exp",
+	3: "lives",
+	4: "flags",
+	5: "game_id",
+}
+
+// Decode decodes PlayerState from json.
+func (s *PlayerState) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode PlayerState to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "uid":
+			if err := func() error {
+				s.UID.Reset()
+				if err := s.UID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"uid\"")
+			}
+		case "nickname":
+			if err := func() error {
+				s.Nickname.Reset()
+				if err := s.Nickname.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"nickname\"")
+			}
+		case "exp":
+			if err := func() error {
+				s.Exp.Reset()
+				if err := s.Exp.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"exp\"")
+			}
+		case "lives":
+			if err := func() error {
+				s.Lives.Reset()
+				if err := s.Lives.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"lives\"")
+			}
+		case "flags":
+			if err := func() error {
+				s.Flags.Reset()
+				if err := s.Flags.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"flags\"")
+			}
+		case "game_id":
+			if err := func() error {
+				s.GameID.Reset()
+				if err := s.GameID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"game_id\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode PlayerState")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *PlayerState) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *PlayerState) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -663,285 +943,6 @@ func (s *SignupResponse) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *SignupResponse) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *User) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *User) encodeFields(e *jx.Encoder) {
-	{
-		if s.UID.Set {
-			e.FieldStart("uid")
-			s.UID.Encode(e)
-		}
-	}
-	{
-		if s.Firstname.Set {
-			e.FieldStart("firstname")
-			s.Firstname.Encode(e)
-		}
-	}
-	{
-		if s.Lastname.Set {
-			e.FieldStart("lastname")
-			s.Lastname.Encode(e)
-		}
-	}
-	{
-		if s.Sid.Set {
-			e.FieldStart("sid")
-			s.Sid.Encode(e)
-		}
-	}
-	{
-		if s.Key.Set {
-			e.FieldStart("key")
-			s.Key.Encode(e)
-		}
-	}
-}
-
-var jsonFieldsNameOfUser = [5]string{
-	0: "uid",
-	1: "firstname",
-	2: "lastname",
-	3: "sid",
-	4: "key",
-}
-
-// Decode decodes User from json.
-func (s *User) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode User to nil")
-	}
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "uid":
-			if err := func() error {
-				s.UID.Reset()
-				if err := s.UID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"uid\"")
-			}
-		case "firstname":
-			if err := func() error {
-				s.Firstname.Reset()
-				if err := s.Firstname.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"firstname\"")
-			}
-		case "lastname":
-			if err := func() error {
-				s.Lastname.Reset()
-				if err := s.Lastname.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"lastname\"")
-			}
-		case "sid":
-			if err := func() error {
-				s.Sid.Reset()
-				if err := s.Sid.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"sid\"")
-			}
-		case "key":
-			if err := func() error {
-				s.Key.Reset()
-				if err := s.Key.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"key\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode User")
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *User) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *User) UnmarshalJSON(data []byte) error {
-	d := jx.DecodeBytes(data)
-	return s.Decode(d)
-}
-
-// Encode implements json.Marshaler.
-func (s *UserState) Encode(e *jx.Encoder) {
-	e.ObjStart()
-	s.encodeFields(e)
-	e.ObjEnd()
-}
-
-// encodeFields encodes fields.
-func (s *UserState) encodeFields(e *jx.Encoder) {
-	{
-		if s.UID.Set {
-			e.FieldStart("uid")
-			s.UID.Encode(e)
-		}
-	}
-	{
-		if s.Nickname.Set {
-			e.FieldStart("nickname")
-			s.Nickname.Encode(e)
-		}
-	}
-	{
-		if s.Exp.Set {
-			e.FieldStart("exp")
-			s.Exp.Encode(e)
-		}
-	}
-	{
-		if s.Lives.Set {
-			e.FieldStart("lives")
-			s.Lives.Encode(e)
-		}
-	}
-	{
-		if s.GameID.Set {
-			e.FieldStart("game_id")
-			s.GameID.Encode(e)
-		}
-	}
-	{
-		if s.Flags.Set {
-			e.FieldStart("flags")
-			s.Flags.Encode(e)
-		}
-	}
-}
-
-var jsonFieldsNameOfUserState = [6]string{
-	0: "uid",
-	1: "nickname",
-	2: "exp",
-	3: "lives",
-	4: "game_id",
-	5: "flags",
-}
-
-// Decode decodes UserState from json.
-func (s *UserState) Decode(d *jx.Decoder) error {
-	if s == nil {
-		return errors.New("invalid: unable to decode UserState to nil")
-	}
-
-	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
-		switch string(k) {
-		case "uid":
-			if err := func() error {
-				s.UID.Reset()
-				if err := s.UID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"uid\"")
-			}
-		case "nickname":
-			if err := func() error {
-				s.Nickname.Reset()
-				if err := s.Nickname.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"nickname\"")
-			}
-		case "exp":
-			if err := func() error {
-				s.Exp.Reset()
-				if err := s.Exp.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"exp\"")
-			}
-		case "lives":
-			if err := func() error {
-				s.Lives.Reset()
-				if err := s.Lives.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"lives\"")
-			}
-		case "game_id":
-			if err := func() error {
-				s.GameID.Reset()
-				if err := s.GameID.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"game_id\"")
-			}
-		case "flags":
-			if err := func() error {
-				s.Flags.Reset()
-				if err := s.Flags.Decode(d); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
-				return errors.Wrap(err, "decode field \"flags\"")
-			}
-		default:
-			return d.Skip()
-		}
-		return nil
-	}); err != nil {
-		return errors.Wrap(err, "decode UserState")
-	}
-
-	return nil
-}
-
-// MarshalJSON implements stdjson.Marshaler.
-func (s *UserState) MarshalJSON() ([]byte, error) {
-	e := jx.Encoder{}
-	s.Encode(&e)
-	return e.Bytes(), nil
-}
-
-// UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *UserState) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

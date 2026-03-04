@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/google/uuid"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/session"
 )
@@ -13,12 +14,16 @@ import (
 func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaapi.AuthRes, error) {
 	slog.Info("auth handler called")
 
-	var uid int64
 	var firstname, lastname string
-	err := h.svc.DB().Pool().QueryRow(ctx, `SELECT user_id, first_name, last_name FROM users WHERE email = $1 AND
-					hash_password = crypt($2, hash_password)
-								`, req.Email, req.Password).
-		Scan(&uid, &firstname, &lastname)
+	var uid int64
+	var playerID uuid.UUID
+	err := h.svc.DB().Pool().QueryRow(ctx, `
+		SELECT u.user_id, u.first_name, u.last_name, ps.player_id
+		FROM users u
+		JOIN player_state ps ON ps.user_id = u.user_id
+		WHERE u.email = $1 AND u.hash_password = crypt($2, u.hash_password)
+	`, req.Email, req.Password).
+		Scan(&uid, &firstname, &lastname, &playerID)
 	if err != nil {
 		if uid == 0 {
 			slog.Error("auth: wrong email/password", slog.Any("error", err))
@@ -32,8 +37,8 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 		}, nil
 	}
 
-	user := baldaapi.User{
-		UID:       baldaapi.NewOptInt64(uid),
+	player := baldaapi.Player{
+		UID:       baldaapi.NewOptUUID(playerID),
 		Firstname: baldaapi.NewOptString(firstname),
 		Lastname:  baldaapi.NewOptString(lastname),
 	}
@@ -49,8 +54,8 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 				Type:    baldaapi.NewOptString("Auth Error"),
 			}, nil
 		}
-		user.Sid = baldaapi.NewOptString(sidStr)
-		return &baldaapi.AuthResponse{User: baldaapi.NewOptUser(user)}, nil
+		player.Sid = baldaapi.NewOptString(sidStr)
+		return &baldaapi.AuthResponse{Player: baldaapi.NewOptPlayer(player)}, nil
 	}
 	if err != nil {
 		slog.Error("auth: get sid", slog.Any("error", err))
@@ -61,6 +66,6 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 		}, nil
 	}
 
-	user.Sid = baldaapi.NewOptString(sid.Sid)
-	return &baldaapi.AuthResponse{User: baldaapi.NewOptUser(user)}, nil
+	player.Sid = baldaapi.NewOptString(sid.Sid)
+	return &baldaapi.AuthResponse{Player: baldaapi.NewOptPlayer(player)}, nil
 }

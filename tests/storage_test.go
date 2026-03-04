@@ -57,7 +57,7 @@ func TestMigrations(t *testing.T) {
 
 	assert.NotNil(t, s.Pool())
 
-	tables := []string{"users", "user_state"}
+	tables := []string{"users", "player_state"}
 	for _, table := range tables {
 		var exists bool
 		err := s.Pool().QueryRow(ctx,

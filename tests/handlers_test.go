@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
@@ -128,7 +129,7 @@ func TestSignupHandler(t *testing.T) {
 		require.True(t, ok.User.IsSet())
 
 		u := ok.User.Value
-		assert.Positive(t, u.UID.Value)
+		assert.NotEqual(t, uuid.UUID{}, u.UID.Value)
 		assert.Equal(t, "John", u.Firstname.Value)
 		assert.Equal(t, "Smith", u.Lastname.Value)
 		assert.NotEmpty(t, u.Sid.Value)
@@ -174,10 +175,10 @@ func TestAuthHandler(t *testing.T) {
 
 		ok, isOK := res.(*baldaapi.AuthResponse)
 		require.True(t, isOK, "expected *AuthResponse, got %T", res)
-		require.True(t, ok.User.IsSet())
+		require.True(t, ok.Player.IsSet())
 
-		u := ok.User.Value
-		assert.Positive(t, u.UID.Value)
+		u := ok.Player.Value
+		assert.NotEqual(t, uuid.UUID{}, u.UID.Value)
 		assert.NotEmpty(t, u.Sid.Value)
 	})
 
@@ -191,8 +192,8 @@ func TestAuthHandler(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		sid1 := res1.(*baldaapi.AuthResponse).User.Value.Sid.Value
-		sid2 := res2.(*baldaapi.AuthResponse).User.Value.Sid.Value
+		sid1 := res1.(*baldaapi.AuthResponse).Player.Value.Sid.Value
+		sid2 := res2.(*baldaapi.AuthResponse).Player.Value.Sid.Value
 		assert.Equal(t, sid1, sid2, "expected same session ID on repeated login")
 	})
 
@@ -239,11 +240,11 @@ func TestGetUsersStateUIDHandler(t *testing.T) {
 	uid := signupRes.(*baldaapi.SignupResponse).User.Value.UID.Value
 
 	t.Run("existing user returns state with initial values", func(t *testing.T) {
-		res, err := h.GetUsersStateUID(ctx, baldaapi.GetUsersStateUIDParams{UID: uid})
+		res, err := h.GetPlayerStateUID(ctx, baldaapi.GetPlayerStateUIDParams{UID: uid})
 		require.NoError(t, err)
 
-		state, isOK := res.(*baldaapi.UserState)
-		require.True(t, isOK, "expected *UserState, got %T", res)
+		state, isOK := res.(*baldaapi.PlayerState)
+		require.True(t, isOK, "expected *PlayerState, got %T", res)
 
 		assert.Equal(t, uid, state.UID.Value)
 		assert.NotEmpty(t, state.Nickname.Value)
@@ -253,7 +254,8 @@ func TestGetUsersStateUIDHandler(t *testing.T) {
 	})
 
 	t.Run("non-existent user returns 400", func(t *testing.T) {
-		res, err := h.GetUsersStateUID(ctx, baldaapi.GetUsersStateUIDParams{UID: 9999999})
+		uid := uuid.New()
+		res, err := h.GetPlayerStateUID(ctx, baldaapi.GetPlayerStateUIDParams{UID: uid})
 		require.NoError(t, err)
 
 		errResp, isErr := res.(*baldaapi.ErrorResponse)

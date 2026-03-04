@@ -14,12 +14,12 @@ type Handler interface {
 	//
 	// POST /auth
 	Auth(ctx context.Context, req *AuthRequest) (AuthRes, error)
-	// GetUsersStateUID implements getUsersStateUID operation.
+	// GetPlayerStateUID implements getPlayerStateUID operation.
 	//
 	// Get user state.
 	//
-	// GET /users/state/{uid}
-	GetUsersStateUID(ctx context.Context, params GetUsersStateUIDParams) (GetUsersStateUIDRes, error)
+	// GET /player/state/{uid}
+	GetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (GetPlayerStateUIDRes, error)
 	// Signup implements signup operation.
 	//
 	// Sign-up request.

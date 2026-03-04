@@ -6,7 +6,7 @@ package baldaapi
 type OperationName = string
 
 const (
-	AuthOperation             OperationName = "Auth"
-	GetUsersStateUIDOperation OperationName = "GetUsersStateUID"
-	SignupOperation           OperationName = "Signup"
+	AuthOperation              OperationName = "Auth"
+	GetPlayerStateUIDOperation OperationName = "GetPlayerStateUID"
+	SignupOperation            OperationName = "Signup"
 )

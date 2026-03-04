@@ -238,24 +238,24 @@ func (s *Server) handleAuthRequest(args [0]string, argsEscaped bool, w http.Resp
 	}
 }
 
-// handleGetUsersStateUIDRequest handles getUsersStateUID operation.
+// handleGetPlayerStateUIDRequest handles getPlayerStateUID operation.
 //
 // Get user state.
 //
-// GET /users/state/{uid}
-func (s *Server) handleGetUsersStateUIDRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+// GET /player/state/{uid}
+func (s *Server) handleGetPlayerStateUIDRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
 	statusWriter := &codeRecorder{ResponseWriter: w}
 	w = statusWriter
 	otelAttrs := []attribute.KeyValue{
-		otelogen.OperationID("getUsersStateUID"),
+		otelogen.OperationID("getPlayerStateUID"),
 		semconv.HTTPRequestMethodKey.String("GET"),
-		semconv.HTTPRouteKey.String("/users/state/{uid}"),
+		semconv.HTTPRouteKey.String("/player/state/{uid}"),
 	}
 	// Add attributes from config.
 	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
 
 	// Start a span for this request.
-	ctx, span := s.cfg.Tracer.Start(r.Context(), GetUsersStateUIDOperation,
+	ctx, span := s.cfg.Tracer.Start(r.Context(), GetPlayerStateUIDOperation,
 		trace.WithAttributes(otelAttrs...),
 		serverSpanKind,
 	)
@@ -310,11 +310,11 @@ func (s *Server) handleGetUsersStateUIDRequest(args [1]string, argsEscaped bool,
 		}
 		err          error
 		opErrContext = ogenerrors.OperationContext{
-			Name: GetUsersStateUIDOperation,
-			ID:   "getUsersStateUID",
+			Name: GetPlayerStateUIDOperation,
+			ID:   "getPlayerStateUID",
 		}
 	)
-	params, err := decodeGetUsersStateUIDParams(args, argsEscaped, r)
+	params, err := decodeGetPlayerStateUIDParams(args, argsEscaped, r)
 	if err != nil {
 		err = &ogenerrors.DecodeParamsError{
 			OperationContext: opErrContext,
@@ -327,13 +327,13 @@ func (s *Server) handleGetUsersStateUIDRequest(args [1]string, argsEscaped bool,
 
 	var rawBody []byte
 
-	var response GetUsersStateUIDRes
+	var response GetPlayerStateUIDRes
 	if m := s.cfg.Middleware; m != nil {
 		mreq := middleware.Request{
 			Context:          ctx,
-			OperationName:    GetUsersStateUIDOperation,
+			OperationName:    GetPlayerStateUIDOperation,
 			OperationSummary: "Get user state",
-			OperationID:      "getUsersStateUID",
+			OperationID:      "getPlayerStateUID",
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
@@ -347,8 +347,8 @@ func (s *Server) handleGetUsersStateUIDRequest(args [1]string, argsEscaped bool,
 
 		type (
 			Request  = struct{}
-			Params   = GetUsersStateUIDParams
-			Response = GetUsersStateUIDRes
+			Params   = GetPlayerStateUIDParams
+			Response = GetPlayerStateUIDRes
 		)
 		response, err = middleware.HookMiddleware[
 			Request,
@@ -357,14 +357,14 @@ func (s *Server) handleGetUsersStateUIDRequest(args [1]string, argsEscaped bool,
 		](
 			m,
 			mreq,
-			unpackGetUsersStateUIDParams,
+			unpackGetPlayerStateUIDParams,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.GetUsersStateUID(ctx, params)
+				response, err = s.h.GetPlayerStateUID(ctx, params)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.GetUsersStateUID(ctx, params)
+		response, err = s.h.GetPlayerStateUID(ctx, params)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -372,7 +372,7 @@ func (s *Server) handleGetUsersStateUIDRequest(args [1]string, argsEscaped bool,
 		return
 	}
 
-	if err := encodeGetUsersStateUIDResponse(response, w, span); err != nil {
+	if err := encodeGetPlayerStateUIDResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)

@@ -2,6 +2,10 @@
 
 package baldaapi
 
+import (
+	"github.com/google/uuid"
+)
+
 type APIKeyHeader struct {
 	APIKey string
 	Roles  []string
@@ -82,17 +86,17 @@ func (s *AuthRequest) SetPassword(val string) {
 
 // Ref: #/components/schemas/AuthResponse
 type AuthResponse struct {
-	User OptUser `json:"user"`
+	Player OptPlayer `json:"player"`
 }
 
-// GetUser returns the value of User.
-func (s *AuthResponse) GetUser() OptUser {
-	return s.User
+// GetPlayer returns the value of Player.
+func (s *AuthResponse) GetPlayer() OptPlayer {
+	return s.Player
 }
 
-// SetUser sets the value of User.
-func (s *AuthResponse) SetUser(val OptUser) {
-	s.User = val
+// SetPlayer sets the value of Player.
+func (s *AuthResponse) SetPlayer(val OptPlayer) {
+	s.Player = val
 }
 
 func (*AuthResponse) authRes() {}
@@ -137,9 +141,9 @@ func (s *ErrorResponse) SetType(val OptString) {
 	s.Type = val
 }
 
-func (*ErrorResponse) authRes()             {}
-func (*ErrorResponse) getUsersStateUIDRes() {}
-func (*ErrorResponse) signupRes()           {}
+func (*ErrorResponse) authRes()              {}
+func (*ErrorResponse) getPlayerStateUIDRes() {}
+func (*ErrorResponse) signupRes()            {}
 
 // NewOptInt returns new OptInt with value set to v.
 func NewOptInt(v int) OptInt {
@@ -181,52 +185,6 @@ func (o OptInt) Get() (v int, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptInt) Or(d int) int {
-	if v, ok := o.Get(); ok {
-		return v
-	}
-	return d
-}
-
-// NewOptInt32 returns new OptInt32 with value set to v.
-func NewOptInt32(v int32) OptInt32 {
-	return OptInt32{
-		Value: v,
-		Set:   true,
-	}
-}
-
-// OptInt32 is optional int32.
-type OptInt32 struct {
-	Value int32
-	Set   bool
-}
-
-// IsSet returns true if OptInt32 was set.
-func (o OptInt32) IsSet() bool { return o.Set }
-
-// Reset unsets value.
-func (o *OptInt32) Reset() {
-	var v int32
-	o.Value = v
-	o.Set = false
-}
-
-// SetTo sets value to v.
-func (o *OptInt32) SetTo(v int32) {
-	o.Set = true
-	o.Value = v
-}
-
-// Get returns value and boolean that denotes whether value was set.
-func (o OptInt32) Get() (v int32, ok bool) {
-	if !o.Set {
-		return v, false
-	}
-	return o.Value, true
-}
-
-// Or returns value if set, or given parameter if does not.
-func (o OptInt32) Or(d int32) int32 {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -279,6 +237,52 @@ func (o OptInt64) Or(d int64) int64 {
 	return d
 }
 
+// NewOptPlayer returns new OptPlayer with value set to v.
+func NewOptPlayer(v Player) OptPlayer {
+	return OptPlayer{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptPlayer is optional Player.
+type OptPlayer struct {
+	Value Player
+	Set   bool
+}
+
+// IsSet returns true if OptPlayer was set.
+func (o OptPlayer) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptPlayer) Reset() {
+	var v Player
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptPlayer) SetTo(v Player) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptPlayer) Get() (v Player, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptPlayer) Or(d Player) Player {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptString returns new OptString with value set to v.
 func NewOptString(v string) OptString {
 	return OptString{
@@ -325,38 +329,38 @@ func (o OptString) Or(d string) string {
 	return d
 }
 
-// NewOptUser returns new OptUser with value set to v.
-func NewOptUser(v User) OptUser {
-	return OptUser{
+// NewOptUUID returns new OptUUID with value set to v.
+func NewOptUUID(v uuid.UUID) OptUUID {
+	return OptUUID{
 		Value: v,
 		Set:   true,
 	}
 }
 
-// OptUser is optional User.
-type OptUser struct {
-	Value User
+// OptUUID is optional uuid.UUID.
+type OptUUID struct {
+	Value uuid.UUID
 	Set   bool
 }
 
-// IsSet returns true if OptUser was set.
-func (o OptUser) IsSet() bool { return o.Set }
+// IsSet returns true if OptUUID was set.
+func (o OptUUID) IsSet() bool { return o.Set }
 
 // Reset unsets value.
-func (o *OptUser) Reset() {
-	var v User
+func (o *OptUUID) Reset() {
+	var v uuid.UUID
 	o.Value = v
 	o.Set = false
 }
 
 // SetTo sets value to v.
-func (o *OptUser) SetTo(v User) {
+func (o *OptUUID) SetTo(v uuid.UUID) {
 	o.Set = true
 	o.Value = v
 }
 
 // Get returns value and boolean that denotes whether value was set.
-func (o OptUser) Get() (v User, ok bool) {
+func (o OptUUID) Get() (v uuid.UUID, ok bool) {
 	if !o.Set {
 		return v, false
 	}
@@ -364,12 +368,154 @@ func (o OptUser) Get() (v User, ok bool) {
 }
 
 // Or returns value if set, or given parameter if does not.
-func (o OptUser) Or(d User) User {
+func (o OptUUID) Or(d uuid.UUID) uuid.UUID {
 	if v, ok := o.Get(); ok {
 		return v
 	}
 	return d
 }
+
+// Ref: #/components/schemas/Player
+type Player struct {
+	// Player's ID in the system.
+	UID OptUUID `json:"uid"`
+	// Player's first name.
+	Firstname OptString `json:"firstname"`
+	// Player's last name.
+	Lastname OptString `json:"lastname"`
+	// Player's session ID.
+	Sid OptString `json:"sid"`
+	// Player's API Key that the client needs to provide when making API calls.
+	Key OptString `json:"key"`
+}
+
+// GetUID returns the value of UID.
+func (s *Player) GetUID() OptUUID {
+	return s.UID
+}
+
+// GetFirstname returns the value of Firstname.
+func (s *Player) GetFirstname() OptString {
+	return s.Firstname
+}
+
+// GetLastname returns the value of Lastname.
+func (s *Player) GetLastname() OptString {
+	return s.Lastname
+}
+
+// GetSid returns the value of Sid.
+func (s *Player) GetSid() OptString {
+	return s.Sid
+}
+
+// GetKey returns the value of Key.
+func (s *Player) GetKey() OptString {
+	return s.Key
+}
+
+// SetUID sets the value of UID.
+func (s *Player) SetUID(val OptUUID) {
+	s.UID = val
+}
+
+// SetFirstname sets the value of Firstname.
+func (s *Player) SetFirstname(val OptString) {
+	s.Firstname = val
+}
+
+// SetLastname sets the value of Lastname.
+func (s *Player) SetLastname(val OptString) {
+	s.Lastname = val
+}
+
+// SetSid sets the value of Sid.
+func (s *Player) SetSid(val OptString) {
+	s.Sid = val
+}
+
+// SetKey sets the value of Key.
+func (s *Player) SetKey(val OptString) {
+	s.Key = val
+}
+
+// Ref: #/components/schemas/PlayerState
+type PlayerState struct {
+	// Player's ID in the system.
+	UID OptUUID `json:"uid"`
+	// Generated nickname in the system.
+	Nickname OptString `json:"nickname"`
+	// Player's exp points in the system.
+	Exp OptInt64 `json:"exp"`
+	// Player's lives count in the system.
+	Lives OptInt64 `json:"lives"`
+	// Some Player's flags.
+	Flags OptInt64 `json:"flags"`
+	// Game's ID (if game_id == 0 or absent then user in the lobby).
+	GameID OptUUID `json:"game_id"`
+}
+
+// GetUID returns the value of UID.
+func (s *PlayerState) GetUID() OptUUID {
+	return s.UID
+}
+
+// GetNickname returns the value of Nickname.
+func (s *PlayerState) GetNickname() OptString {
+	return s.Nickname
+}
+
+// GetExp returns the value of Exp.
+func (s *PlayerState) GetExp() OptInt64 {
+	return s.Exp
+}
+
+// GetLives returns the value of Lives.
+func (s *PlayerState) GetLives() OptInt64 {
+	return s.Lives
+}
+
+// GetFlags returns the value of Flags.
+func (s *PlayerState) GetFlags() OptInt64 {
+	return s.Flags
+}
+
+// GetGameID returns the value of GameID.
+func (s *PlayerState) GetGameID() OptUUID {
+	return s.GameID
+}
+
+// SetUID sets the value of UID.
+func (s *PlayerState) SetUID(val OptUUID) {
+	s.UID = val
+}
+
+// SetNickname sets the value of Nickname.
+func (s *PlayerState) SetNickname(val OptString) {
+	s.Nickname = val
+}
+
+// SetExp sets the value of Exp.
+func (s *PlayerState) SetExp(val OptInt64) {
+	s.Exp = val
+}
+
+// SetLives sets the value of Lives.
+func (s *PlayerState) SetLives(val OptInt64) {
+	s.Lives = val
+}
+
+// SetFlags sets the value of Flags.
+func (s *PlayerState) SetFlags(val OptInt64) {
+	s.Flags = val
+}
+
+// SetGameID sets the value of GameID.
+func (s *PlayerState) SetGameID(val OptUUID) {
+	s.GameID = val
+}
+
+func (*PlayerState) getPlayerStateUIDRes() {}
 
 // Ref: #/components/schemas/SignupRequest
 type SignupRequest struct {
@@ -425,159 +571,17 @@ func (s *SignupRequest) SetPassword(val string) {
 
 // Ref: #/components/schemas/SignupResponse
 type SignupResponse struct {
-	User OptUser `json:"user"`
+	User OptPlayer `json:"user"`
 }
 
 // GetUser returns the value of User.
-func (s *SignupResponse) GetUser() OptUser {
+func (s *SignupResponse) GetUser() OptPlayer {
 	return s.User
 }
 
 // SetUser sets the value of User.
-func (s *SignupResponse) SetUser(val OptUser) {
+func (s *SignupResponse) SetUser(val OptPlayer) {
 	s.User = val
 }
 
 func (*SignupResponse) signupRes() {}
-
-// Ref: #/components/schemas/User
-type User struct {
-	// User's ID in the system.
-	UID OptInt64 `json:"uid"`
-	// User's first name.
-	Firstname OptString `json:"firstname"`
-	// User's last name.
-	Lastname OptString `json:"lastname"`
-	// User's session ID.
-	Sid OptString `json:"sid"`
-	// User's API Key that the client needs to provide when making API calls.
-	Key OptString `json:"key"`
-}
-
-// GetUID returns the value of UID.
-func (s *User) GetUID() OptInt64 {
-	return s.UID
-}
-
-// GetFirstname returns the value of Firstname.
-func (s *User) GetFirstname() OptString {
-	return s.Firstname
-}
-
-// GetLastname returns the value of Lastname.
-func (s *User) GetLastname() OptString {
-	return s.Lastname
-}
-
-// GetSid returns the value of Sid.
-func (s *User) GetSid() OptString {
-	return s.Sid
-}
-
-// GetKey returns the value of Key.
-func (s *User) GetKey() OptString {
-	return s.Key
-}
-
-// SetUID sets the value of UID.
-func (s *User) SetUID(val OptInt64) {
-	s.UID = val
-}
-
-// SetFirstname sets the value of Firstname.
-func (s *User) SetFirstname(val OptString) {
-	s.Firstname = val
-}
-
-// SetLastname sets the value of Lastname.
-func (s *User) SetLastname(val OptString) {
-	s.Lastname = val
-}
-
-// SetSid sets the value of Sid.
-func (s *User) SetSid(val OptString) {
-	s.Sid = val
-}
-
-// SetKey sets the value of Key.
-func (s *User) SetKey(val OptString) {
-	s.Key = val
-}
-
-// Ref: #/components/schemas/UserState
-type UserState struct {
-	// User's ID in the system.
-	UID OptInt64 `json:"uid"`
-	// Generated nickname in the system.
-	Nickname OptString `json:"nickname"`
-	// User's exp points in the system.
-	Exp OptInt64 `json:"exp"`
-	// User's lives count in the system.
-	Lives OptInt64 `json:"lives"`
-	// Game's ID (if game_id == 0 or absent then user in the lobby).
-	GameID OptInt32 `json:"game_id"`
-	// Some User's flags.
-	Flags OptInt64 `json:"flags"`
-}
-
-// GetUID returns the value of UID.
-func (s *UserState) GetUID() OptInt64 {
-	return s.UID
-}
-
-// GetNickname returns the value of Nickname.
-func (s *UserState) GetNickname() OptString {
-	return s.Nickname
-}
-
-// GetExp returns the value of Exp.
-func (s *UserState) GetExp() OptInt64 {
-	return s.Exp
-}
-
-// GetLives returns the value of Lives.
-func (s *UserState) GetLives() OptInt64 {
-	return s.Lives
-}
-
-// GetGameID returns the value of GameID.
-func (s *UserState) GetGameID() OptInt32 {
-	return s.GameID
-}
-
-// GetFlags returns the value of Flags.
-func (s *UserState) GetFlags() OptInt64 {
-	return s.Flags
-}
-
-// SetUID sets the value of UID.
-func (s *UserState) SetUID(val OptInt64) {
-	s.UID = val
-}
-
-// SetNickname sets the value of Nickname.
-func (s *UserState) SetNickname(val OptString) {
-	s.Nickname = val
-}
-
-// SetExp sets the value of Exp.
-func (s *UserState) SetExp(val OptInt64) {
-	s.Exp = val
-}
-
-// SetLives sets the value of Lives.
-func (s *UserState) SetLives(val OptInt64) {
-	s.Lives = val
-}
-
-// SetGameID sets the value of GameID.
-func (s *UserState) SetGameID(val OptInt32) {
-	s.GameID = val
-}
-
-// SetFlags sets the value of Flags.
-func (s *UserState) SetFlags(val OptInt64) {
-	s.Flags = val
-}
-
-func (*UserState) getUsersStateUIDRes() {}

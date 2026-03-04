@@ -22,12 +22,12 @@ func (UnimplementedHandler) Auth(ctx context.Context, req *AuthRequest) (r AuthR
 	return r, ht.ErrNotImplemented
 }
 
-// GetUsersStateUID implements getUsersStateUID operation.
+// GetPlayerStateUID implements getPlayerStateUID operation.
 //
 // Get user state.
 //
-// GET /users/state/{uid}
-func (UnimplementedHandler) GetUsersStateUID(ctx context.Context, params GetUsersStateUIDParams) (r GetUsersStateUIDRes, _ error) {
+// GET /player/state/{uid}
+func (UnimplementedHandler) GetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (r GetPlayerStateUIDRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

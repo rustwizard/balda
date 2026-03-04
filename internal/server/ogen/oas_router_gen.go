@@ -95,34 +95,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-			case 's': // Prefix: "signup"
+			case 'p': // Prefix: "player/state/"
 
-				if l := len("signup"); len(elem) >= l && elem[0:l] == "signup" {
-					elem = elem[l:]
-				} else {
-					break
-				}
-
-				if len(elem) == 0 {
-					// Leaf node.
-					switch r.Method {
-					case "POST":
-						s.handleSignupRequest([0]string{}, elemIsEscaped, w, r)
-					default:
-						s.notAllowed(w, r, notAllowedParams{
-							allowedMethods: "POST",
-							allowedHeaders: rn5AllowedHeaders,
-							acceptPost:     "application/json",
-							acceptPatch:    "",
-						})
-					}
-
-					return
-				}
-
-			case 'u': // Prefix: "users/state/"
-
-				if l := len("users/state/"); len(elem) >= l && elem[0:l] == "users/state/" {
+				if l := len("player/state/"); len(elem) >= l && elem[0:l] == "player/state/" {
 					elem = elem[l:]
 				} else {
 					break
@@ -141,7 +116,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					// Leaf node.
 					switch r.Method {
 					case "GET":
-						s.handleGetUsersStateUIDRequest([1]string{
+						s.handleGetPlayerStateUIDRequest([1]string{
 							args[0],
 						}, elemIsEscaped, w, r)
 					default:
@@ -149,6 +124,31 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							allowedMethods: "GET",
 							allowedHeaders: nil,
 							acceptPost:     "",
+							acceptPatch:    "",
+						})
+					}
+
+					return
+				}
+
+			case 's': // Prefix: "signup"
+
+				if l := len("signup"); len(elem) >= l && elem[0:l] == "signup" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch r.Method {
+					case "POST":
+						s.handleSignupRequest([0]string{}, elemIsEscaped, w, r)
+					default:
+						s.notAllowed(w, r, notAllowedParams{
+							allowedMethods: "POST",
+							allowedHeaders: rn5AllowedHeaders,
+							acceptPost:     "application/json",
 							acceptPatch:    "",
 						})
 					}
@@ -281,6 +281,40 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					}
 				}
 
+			case 'p': // Prefix: "player/state/"
+
+				if l := len("player/state/"); len(elem) >= l && elem[0:l] == "player/state/" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				// Param: "uid"
+				// Leaf parameter, slashes are prohibited
+				idx := strings.IndexByte(elem, '/')
+				if idx >= 0 {
+					break
+				}
+				args[0] = elem
+				elem = ""
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch method {
+					case "GET":
+						r.name = GetPlayerStateUIDOperation
+						r.summary = "Get user state"
+						r.operationID = "getPlayerStateUID"
+						r.operationGroup = ""
+						r.pathPattern = "/player/state/{uid}"
+						r.args = args
+						r.count = 1
+						return r, true
+					default:
+						return
+					}
+				}
+
 			case 's': // Prefix: "signup"
 
 				if l := len("signup"); len(elem) >= l && elem[0:l] == "signup" {
@@ -300,40 +334,6 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						r.pathPattern = "/signup"
 						r.args = args
 						r.count = 0
-						return r, true
-					default:
-						return
-					}
-				}
-
-			case 'u': // Prefix: "users/state/"
-
-				if l := len("users/state/"); len(elem) >= l && elem[0:l] == "users/state/" {
-					elem = elem[l:]
-				} else {
-					break
-				}
-
-				// Param: "uid"
-				// Leaf parameter, slashes are prohibited
-				idx := strings.IndexByte(elem, '/')
-				if idx >= 0 {
-					break
-				}
-				args[0] = elem
-				elem = ""
-
-				if len(elem) == 0 {
-					// Leaf node.
-					switch method {
-					case "GET":
-						r.name = GetUsersStateUIDOperation
-						r.summary = "Get user state"
-						r.operationID = "getUsersStateUID"
-						r.operationGroup = ""
-						r.pathPattern = "/users/state/{uid}"
-						r.args = args
-						r.count = 1
 						return r, true
 					default:
 						return
