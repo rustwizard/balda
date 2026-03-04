@@ -44,6 +44,15 @@ type Notifier interface {
 	NotifyTurnStart(playerID string)
 }
 
+type Player struct {
+	ID                  string
+	Exp                 int
+	Score               int
+	Words               []string
+	ConsecutiveTimeouts int
+	Kicked              bool
+}
+
 type Game struct {
 	mu           sync.Mutex
 	state        GameState
