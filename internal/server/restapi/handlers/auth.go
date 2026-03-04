@@ -15,7 +15,7 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 
 	var uid int64
 	var firstname, lastname string
-	err := h.pool.QueryRow(ctx, `SELECT user_id, first_name, last_name FROM users WHERE email = $1 AND
+	err := h.svc.DB().Pool().QueryRow(ctx, `SELECT user_id, first_name, last_name FROM users WHERE email = $1 AND
 					hash_password = crypt($2, hash_password)
 								`, req.Email, req.Password).
 		Scan(&uid, &firstname, &lastname)

@@ -15,7 +15,7 @@ import (
 func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (baldaapi.SignupRes, error) {
 	slog.Info("signup handler called")
 
-	tx, err := h.pool.Begin(ctx)
+	tx, err := h.svc.DB().Pool().Begin(ctx)
 	if err != nil {
 		return &baldaapi.ErrorResponse{
 			Message: baldaapi.NewOptString(""),

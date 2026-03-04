@@ -46,7 +46,7 @@ func TestConnect(t *testing.T) {
 	assert.NoError(t, err)
 
 	st := storage.New(pool, 10*time.Second)
-	assert.NotNil(t, st.DB())
+	assert.NotNil(t, st.Pool())
 }
 
 func TestMigrations(t *testing.T) {
@@ -55,12 +55,12 @@ func TestMigrations(t *testing.T) {
 	s, cleanup := initStorage(ctx, t)
 	defer cleanup()
 
-	assert.NotNil(t, s.DB())
+	assert.NotNil(t, s.Pool())
 
 	tables := []string{"users", "user_state"}
 	for _, table := range tables {
 		var exists bool
-		err := s.DB().QueryRow(ctx,
+		err := s.Pool().QueryRow(ctx,
 			"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = $1)",
 			table,
 		).Scan(&exists)

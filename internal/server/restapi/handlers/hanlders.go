@@ -5,20 +5,20 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
+	"github.com/rustwizard/balda/internal/service"
 	"github.com/rustwizard/balda/internal/session"
 )
 
 // Handlers implements baldaapi.Handler and baldaapi.SecurityHandler.
 type Handlers struct {
-	pool      *pgxpool.Pool
+	svc       *service.Balda
 	sess      *session.Service
 	xAPIToken string
 }
 
-func New(pool *pgxpool.Pool, sess *session.Service, xAPIToken string) *Handlers {
-	return &Handlers{pool: pool, sess: sess, xAPIToken: xAPIToken}
+func New(svc *service.Balda, sess *session.Service, xAPIToken string) *Handlers {
+	return &Handlers{svc: svc, sess: sess, xAPIToken: xAPIToken}
 }
 
 // HandleAPIKeyHeader implements baldaapi.SecurityHandler.

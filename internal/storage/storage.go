@@ -15,6 +15,6 @@ func New(db *pgxpool.Pool, t time.Duration) *Balda {
 	return &Balda{db: db, t: t}
 }
 
-func (b Balda) DB() *pgxpool.Pool {
+func (b Balda) Pool() *pgxpool.Pool {
 	return b.db
 }

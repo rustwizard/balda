@@ -12,9 +12,14 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rustwizard/balda/internal/server/restapi/handlers"
+	"github.com/rustwizard/balda/internal/game"
+	"github.com/rustwizard/balda/internal/lobby"
+	"github.com/rustwizard/balda/internal/matchmaking"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
+	"github.com/rustwizard/balda/internal/server/restapi/handlers"
+	"github.com/rustwizard/balda/internal/service"
 	"github.com/rustwizard/balda/internal/session"
+	"github.com/rustwizard/balda/internal/storage"
 	"github.com/rustwizard/balda/migrations"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -81,7 +86,19 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 		Expiration: 30 * time.Second,
 	})
 
-	h := handlers.New(pool, sess, testAPIToken)
+	lby := lobby.New(func(ctx context.Context, players []*game.Player, n game.Notifier) (*game.Game, error) {
+		return game.NewGame(players, n)
+	})
+	mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
+		_, err := lby.StartGame(ctx, players, nil)
+		return err
+	})
+
+	s := storage.New(pool, 10*time.Second)
+
+	svc := service.New(lby, mm, s)
+
+	h := handlers.New(svc, sess, testAPIToken)
 
 	cleanup := func() {
 		pool.Close()
