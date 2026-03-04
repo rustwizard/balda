@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
+	"github.com/rustwizard/balda/internal/notifier"
 	"github.com/rustwizard/balda/internal/matchmaking"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
@@ -30,12 +31,6 @@ import (
 
 const testAPIToken = "test-api-token"
 
-// noopNotifier satisfies game.Notifier without doing anything.
-type noopNotifier struct{}
-
-func (noopNotifier) NotifyTimeout(_ string, _ int, _ bool) {}
-func (noopNotifier) NotifyKick(_ string)                   {}
-func (noopNotifier) NotifyTurnStart(_ string)              {}
 
 func startRedis(ctx context.Context, t *testing.T) (addr string, cleanup func()) {
 	t.Helper()
@@ -98,7 +93,7 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 		return game.NewGame(players, n)
 	})
 	mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-		_, err := lby.StartGame(ctx, players, noopNotifier{})
+		_, err := lby.StartGame(ctx, players, &notifier.Noop{})
 		return err
 	})
 
@@ -304,7 +299,7 @@ func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 		return game.NewGame(players, n)
 	})
 	mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-		_, err := lby.StartGame(ctx, players, noopNotifier{})
+		_, err := lby.StartGame(ctx, players, &notifier.Noop{})
 		return err
 	})
 
@@ -346,7 +341,7 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 		{ID: uid1.String()},
 		{ID: uid2.String()},
 	}
-	_, err = lby.StartGame(ctx, players, noopNotifier{})
+	_, err = lby.StartGame(ctx, players, &notifier.Noop{})
 	require.NoError(t, err)
 
 	t.Run("player in active game has GameID set", func(t *testing.T) {
