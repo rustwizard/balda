@@ -451,7 +451,7 @@ type PlayerState struct {
 	Lives OptInt64 `json:"lives"`
 	// Some Player's flags.
 	Flags OptInt64 `json:"flags"`
-	// Game's ID (if game_id == 0 or absent then user in the lobby).
+	// Game's ID (if game_id empty or absent then player in the lobby).
 	GameID OptUUID `json:"game_id"`
 }
 

@@ -19,3 +19,15 @@ func New(lby *lobby.Lobby, mm *matchmaking.Queue, s *storage.Balda) *Balda {
 func (s *Balda) DB() *storage.Balda {
 	return s.s
 }
+
+func (s *Balda) GameSummary(playerID string) *lobby.GameSummary {
+	gs, err := s.lby.FindByPlayer(playerID)
+	if err == lobby.ErrGameNotFound {
+		return nil
+	}
+	return &gs
+}
+
+func (s *Balda) Lobby() *lobby.Lobby {
+	return s.lby
+}
