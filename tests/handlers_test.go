@@ -30,6 +30,13 @@ import (
 
 const testAPIToken = "test-api-token"
 
+// noopNotifier satisfies game.Notifier without doing anything.
+type noopNotifier struct{}
+
+func (noopNotifier) NotifyTimeout(_ string, _ int, _ bool) {}
+func (noopNotifier) NotifyKick(_ string)                   {}
+func (noopNotifier) NotifyTurnStart(_ string)              {}
+
 func startRedis(ctx context.Context, t *testing.T) (addr string, cleanup func()) {
 	t.Helper()
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -91,7 +98,7 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 		return game.NewGame(players, n)
 	})
 	mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-		_, err := lby.StartGame(ctx, players, nil)
+		_, err := lby.StartGame(ctx, players, noopNotifier{})
 		return err
 	})
 
@@ -297,7 +304,7 @@ func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 		return game.NewGame(players, n)
 	})
 	mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-		_, err := lby.StartGame(ctx, players, nil)
+		_, err := lby.StartGame(ctx, players, noopNotifier{})
 		return err
 	})
 
