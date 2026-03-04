@@ -185,3 +185,16 @@ func summaryOf(rec *GameRecord) GameSummary {
 		StartedAt: rec.StartedAt,
 	}
 }
+
+/*
+Пример интеграции в сервер
+
+lby := lobby.New(func(ctx context.Context, players []*game.Player, n game.Notifier) (*game.Game, error) {
+    return game.NewGame(players, n)
+})
+queue := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
+    _, err := lby.StartGame(serverCtx, players, myNotifier)
+    return err
+})
+go queue.Run(serverCtx)
+*/
