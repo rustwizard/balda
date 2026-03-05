@@ -11,6 +11,7 @@ import (
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
+	"github.com/rustwizard/balda/internal/notifier"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/balda/internal/service"
 	"github.com/rustwizard/balda/internal/storage"
@@ -102,7 +103,7 @@ var serverCmd = &cobra.Command{
 		})
 		mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
 			// TODO: do not forget to innit notifier and pass to StartGame instead of nil
-			_, err := lby.StartGame(cmd.Context(), players, nil)
+			_, err := lby.StartGame(cmd.Context(), players, &notifier.Noop{})
 			return err
 		})
 

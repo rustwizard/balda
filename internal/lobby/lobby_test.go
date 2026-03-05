@@ -9,17 +9,12 @@ import (
 
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
+	"github.com/rustwizard/balda/internal/notifier"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-
-type mockNotifier struct{}
-
-func (m *mockNotifier) NotifyTimeout(_ string, _ int, _ bool) {}
-func (m *mockNotifier) NotifyKick(_ string)                   {}
-func (m *mockNotifier) NotifyTurnStart(_ string)              {}
 
 func makePlayers(ids ...string) []*game.Player {
 	out := make([]*game.Player, len(ids))
@@ -47,7 +42,7 @@ func TestLobby_StartGame_RegistersGame(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rec, err := l.StartGame(ctx, players, &mockNotifier{})
+	rec, err := l.StartGame(ctx, players, &notifier.Noop{})
 	require.NoError(t, err)
 	require.NotEmpty(t, rec.ID)
 
@@ -63,11 +58,11 @@ func TestLobby_StartGame_PlayerAlreadyInGame(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	_, err := l.StartGame(ctx, makePlayers("p1", "p2"), &mockNotifier{})
+	_, err := l.StartGame(ctx, makePlayers("p1", "p2"), &notifier.Noop{})
 	require.NoError(t, err)
 
 	// p1 tries to join another game.
-	_, err = l.StartGame(ctx, makePlayers("p1", "p3"), &mockNotifier{})
+	_, err = l.StartGame(ctx, makePlayers("p1", "p3"), &notifier.Noop{})
 	assert.ErrorIs(t, err, lobby.ErrPlayerInGame)
 }
 
@@ -77,7 +72,7 @@ func TestLobby_Remove_DeletesGame(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rec, err := l.StartGame(ctx, makePlayers("p1", "p2"), &mockNotifier{})
+	rec, err := l.StartGame(ctx, makePlayers("p1", "p2"), &notifier.Noop{})
 	require.NoError(t, err)
 
 	require.NoError(t, l.Remove(rec.ID))
@@ -100,7 +95,7 @@ func TestLobby_Get_Found(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rec, err := l.StartGame(ctx, makePlayers("p1", "p2"), &mockNotifier{})
+	rec, err := l.StartGame(ctx, makePlayers("p1", "p2"), &notifier.Noop{})
 	require.NoError(t, err)
 
 	got, err := l.Get(rec.ID)
@@ -120,7 +115,7 @@ func TestLobby_FindByPlayer_Found(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rec, err := l.StartGame(ctx, makePlayers("p1", "p2"), &mockNotifier{})
+	rec, err := l.StartGame(ctx, makePlayers("p1", "p2"), &notifier.Noop{})
 	require.NoError(t, err)
 
 	summary, err := l.FindByPlayer("p1")
@@ -143,7 +138,7 @@ func TestLobby_GameEndsAutomatically(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	_, err := l.StartGame(ctx, makePlayers("p1", "p2"), &mockNotifier{})
+	_, err := l.StartGame(ctx, makePlayers("p1", "p2"), &notifier.Noop{})
 	require.NoError(t, err)
 
 	require.Len(t, l.List(), 1)
@@ -170,7 +165,7 @@ func TestLobby_ConcurrentAccess(t *testing.T) {
 		playerID := "player-" + string(rune('A'+i))
 		go func(pid string) {
 			defer wg.Done()
-			rec, err := l.StartGame(ctx, makePlayers(pid), &mockNotifier{})
+			rec, err := l.StartGame(ctx, makePlayers(pid), &notifier.Noop{})
 			if err != nil && !errors.Is(err, lobby.ErrPlayerInGame) {
 				t.Errorf("unexpected StartGame error: %v", err)
 				return
