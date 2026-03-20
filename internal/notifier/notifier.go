@@ -1,5 +1,7 @@
 package notifier
 
+import "github.com/redis/go-redis/v9"
+
 // EventType identifies the kind of game event.
 type EventType string
 
@@ -27,15 +29,37 @@ type Sender interface {
 	Send(playerID string, event Event)
 }
 
+// Option configures a GameNotifier.
+type Option func(*GameNotifier)
+
+// WithSender sets an arbitrary Sender implementation.
+func WithSender(s Sender) Option {
+	return func(n *GameNotifier) { n.sender = s }
+}
+
+// WithRedisSender creates a RedisSender from client and sets it.
+func WithRedisSender(client *redis.Client) Option {
+	return func(n *GameNotifier) { n.sender = NewRedisSender(client) }
+}
+
 // GameNotifier implements game.Notifier using a Sender.
 // It is the only place that knows how game events map to Event values.
 type GameNotifier struct {
 	sender Sender
 }
 
-func New(s Sender) *GameNotifier {
-	return &GameNotifier{sender: s}
+// New returns a GameNotifier. Without options it uses a no-op Sender.
+func New(opts ...Option) *GameNotifier {
+	n := &GameNotifier{sender: noopSender{}}
+	for _, opt := range opts {
+		opt(n)
+	}
+	return n
 }
+
+type noopSender struct{}
+
+func (noopSender) Send(_ string, _ Event) {}
 
 func (n *GameNotifier) NotifyTimeout(playerID string, consecutive int, willKick bool) {
 	n.sender.Send(playerID, Event{

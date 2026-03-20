@@ -42,7 +42,7 @@ func (r *recordingSender) last() notifierCall {
 
 func TestGameNotifier_NotifyTurnStart(t *testing.T) {
 	s := &recordingSender{}
-	n := notifier.New(s)
+	n := notifier.New(notifier.WithSender(s))
 
 	n.NotifyTurnStart("p1")
 
@@ -54,7 +54,7 @@ func TestGameNotifier_NotifyTurnStart(t *testing.T) {
 
 func TestGameNotifier_NotifyKick(t *testing.T) {
 	s := &recordingSender{}
-	n := notifier.New(s)
+	n := notifier.New(notifier.WithSender(s))
 
 	n.NotifyKick("p2")
 
@@ -76,7 +76,7 @@ func TestGameNotifier_NotifyTimeout(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			s := &recordingSender{}
-			n := notifier.New(s)
+			n := notifier.New(notifier.WithSender(s))
 
 			n.NotifyTimeout("p3", tc.consecutive, tc.willKick)
 
@@ -125,7 +125,7 @@ func receiveEvent(ctx context.Context, t *testing.T, sub *redis.PubSub) notifier
 func TestRedisSender_NotifyTurnStart(t *testing.T) {
 	ctx := context.Background()
 	sender := newNotifierSender(t)
-	n := notifier.New(sender)
+	n := notifier.New(notifier.WithSender(sender))
 
 	sub := subscribeReady(ctx, t, sender, "p1")
 	defer sub.Close()
@@ -140,7 +140,7 @@ func TestRedisSender_NotifyTurnStart(t *testing.T) {
 func TestRedisSender_NotifyKick(t *testing.T) {
 	ctx := context.Background()
 	sender := newNotifierSender(t)
-	n := notifier.New(sender)
+	n := notifier.New(notifier.WithSender(sender))
 
 	sub := subscribeReady(ctx, t, sender, "p1")
 	defer sub.Close()
@@ -155,7 +155,7 @@ func TestRedisSender_NotifyKick(t *testing.T) {
 func TestRedisSender_NotifyTimeout(t *testing.T) {
 	ctx := context.Background()
 	sender := newNotifierSender(t)
-	n := notifier.New(sender)
+	n := notifier.New(notifier.WithSender(sender))
 
 	sub := subscribeReady(ctx, t, sender, "p1")
 	defer sub.Close()
@@ -179,7 +179,7 @@ func TestRedisSender_NotifyTimeout(t *testing.T) {
 func TestRedisSender_IsolatedChannels(t *testing.T) {
 	ctx := context.Background()
 	sender := newNotifierSender(t)
-	n := notifier.New(sender)
+	n := notifier.New(notifier.WithSender(sender))
 
 	subA := subscribeReady(ctx, t, sender, "playerA")
 	defer subA.Close()
@@ -201,7 +201,7 @@ func TestRedisSender_IsolatedChannels(t *testing.T) {
 // no subscribers does not panic or block.
 func TestRedisSender_OfflinePlayer(t *testing.T) {
 	sender := newNotifierSender(t)
-	n := notifier.New(sender)
+	n := notifier.New(notifier.WithSender(sender))
 
 	n.NotifyKick("offline")
 }
