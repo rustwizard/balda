@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/rustwizard/balda/api/openapi"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
@@ -98,12 +99,19 @@ var serverCmd = &cobra.Command{
 
 		sess := session.NewService(cfg.Session)
 
+		redisClient := redis.NewClient(&redis.Options{
+			Addr:     cfg.Session.Addr,
+			Username: cfg.Session.Username,
+			Password: cfg.Session.Password,
+			DB:       cfg.Session.DBNum,
+		})
+		n := notifier.New(notifier.WithRedisSender(redisClient))
+
 		lby := lobby.New(func(ctx context.Context, players []*game.Player, n game.Notifier) (*game.Game, error) {
 			return game.NewGame(players, n)
 		})
 		mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-			// TODO: do not forget to innit notifier and pass to StartGame instead of nil
-			_, err := lby.StartGame(cmd.Context(), players, &notifier.Noop{})
+			_, err := lby.StartGame(cmd.Context(), players, n)
 			return err
 		})
 
