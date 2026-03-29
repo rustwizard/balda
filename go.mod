@@ -14,6 +14,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0
 	golang.org/x/net v0.51.0 // indirect
+	google.golang.org/grpc v1.79.3 // indirect
 )
 
 require (
