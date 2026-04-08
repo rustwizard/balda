@@ -101,6 +101,36 @@ func (s *AuthResponse) SetPlayer(val OptPlayer) {
 
 func (*AuthResponse) authRes() {}
 
+// Ref: #/components/schemas/Error
+type Error struct {
+	// Error code.
+	Code OptInt `json:"code"`
+	// Human-readable error message.
+	Message OptString `json:"message"`
+}
+
+// GetCode returns the value of Code.
+func (s *Error) GetCode() OptInt {
+	return s.Code
+}
+
+// GetMessage returns the value of Message.
+func (s *Error) GetMessage() OptString {
+	return s.Message
+}
+
+// SetCode sets the value of Code.
+func (s *Error) SetCode(val OptInt) {
+	s.Code = val
+}
+
+// SetMessage sets the value of Message.
+func (s *Error) SetMessage(val OptString) {
+	s.Message = val
+}
+
+func (*Error) pingRes() {}
+
 // Ref: #/components/schemas/ErrorResponse
 type ErrorResponse struct {
 	// The HTTP response code.
@@ -374,6 +404,34 @@ func (o OptUUID) Or(d uuid.UUID) uuid.UUID {
 	}
 	return d
 }
+
+// PingNoContent is response for Ping operation.
+type PingNoContent struct {
+	XRequestID  OptInt64
+	XServerTime OptInt64
+}
+
+// GetXRequestID returns the value of XRequestID.
+func (s *PingNoContent) GetXRequestID() OptInt64 {
+	return s.XRequestID
+}
+
+// GetXServerTime returns the value of XServerTime.
+func (s *PingNoContent) GetXServerTime() OptInt64 {
+	return s.XServerTime
+}
+
+// SetXRequestID sets the value of XRequestID.
+func (s *PingNoContent) SetXRequestID(val OptInt64) {
+	s.XRequestID = val
+}
+
+// SetXServerTime sets the value of XServerTime.
+func (s *PingNoContent) SetXServerTime(val OptInt64) {
+	s.XServerTime = val
+}
+
+func (*PingNoContent) pingRes() {}
 
 // Ref: #/components/schemas/Player
 type Player struct {

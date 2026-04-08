@@ -31,6 +31,17 @@ func (UnimplementedHandler) GetPlayerStateUID(ctx context.Context, params GetPla
 	return r, ht.ErrNotImplemented
 }
 
+// Ping implements ping operation.
+//
+// Mirrors cm_ping (id=1). POST not GET — mutates session TTL.
+// Returns 204 with X-Server-Time header instead of a JSON body
+// to minimize bandwidth on frequent pings (every ping_delay ms).
+//
+// POST /session/ping
+func (UnimplementedHandler) Ping(ctx context.Context, params PingParams) (r PingRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // Signup implements signup operation.
 //
 // Sign-up request.

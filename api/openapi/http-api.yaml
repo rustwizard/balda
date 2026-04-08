@@ -71,6 +71,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /session/ping:
+    post:
+      operationId: ping
+      tags: [Session]
+      summary: Keepalive ping
+      description: |
+        Mirrors cm_ping (id=1). POST not GET — mutates session TTL.
+        Returns 204 with X-Server-Time header instead of a JSON body
+        to minimize bandwidth on frequent pings (every ping_delay ms).
+      parameters:
+        - $ref: '#/components/parameters/RequestIdHeader'
+      responses:
+        '204':
+          description: Session alive.
+          headers:
+            X-Server-Time:
+              $ref: '#/components/headers/X-Server-Time'
+            X-Request-ID:
+              $ref: '#/components/headers/X-Request-ID'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /player/state/{uid}:
     get:
       operationId: getPlayerStateUID
@@ -109,7 +131,28 @@ components:
       in: query
       name: api_key
 
+  responses:
+    Unauthorized:
+      description: Missing or invalid session (mirrors err_code -100).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: -100
+            message: "Session required"
+
   schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          description: Error code
+          type: integer
+        message:
+          description: Human-readable error message
+          type: string
+
     ErrorResponse:
       type: object
       properties:
@@ -234,3 +277,51 @@ components:
           example: 144
           type: string
           format: uuid
+          
+  headers:
+    X-Request-ID:
+      description: Monotonically increasing client sequence number. Mirrors command_num. Server echoes it back.
+      schema:
+        type: integer
+        minimum: 1
+        format: int64
+    X-Server-Time:
+      description: Server Unix timestamp in milliseconds.
+      schema:
+        type: integer
+        format: int64
+    Retry-After:
+      description: Seconds until the rate-limited or cooled-down action may be retried.
+      schema:
+        type: integer
+    ETag:
+      description: Entity tag for conditional GET caching.
+      schema:
+        type: string
+    Cache-Control:
+      description: Cache directive.
+      schema:
+        type: string
+    X-RateLimit-Limit:
+      description: Maximum requests allowed in the current window.
+      schema:
+        type: integer
+    X-RateLimit-Remaining:
+      description: Requests remaining in the current window.
+      schema:
+        type: integer
+    X-RateLimit-Reset:
+      description: When the current rate-limit window resets (ISO 8601).
+      schema:
+        type: string
+        format: date-time
+
+  parameters:
+    RequestIdHeader:
+      in: header
+      name: X-Request-ID
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1

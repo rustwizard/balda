@@ -20,6 +20,14 @@ type Handler interface {
 	//
 	// GET /player/state/{uid}
 	GetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (GetPlayerStateUIDRes, error)
+	// Ping implements ping operation.
+	//
+	// Mirrors cm_ping (id=1). POST not GET — mutates session TTL.
+	// Returns 204 with X-Server-Time header instead of a JSON body
+	// to minimize bandwidth on frequent pings (every ping_delay ms).
+	//
+	// POST /session/ping
+	Ping(ctx context.Context, params PingParams) (PingRes, error)
 	// Signup implements signup operation.
 	//
 	// Sign-up request.

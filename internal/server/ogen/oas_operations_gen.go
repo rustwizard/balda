@@ -8,5 +8,6 @@ type OperationName = string
 const (
 	AuthOperation              OperationName = "Auth"
 	GetPlayerStateUIDOperation OperationName = "GetPlayerStateUID"
+	PingOperation              OperationName = "Ping"
 	SignupOperation            OperationName = "Signup"
 )

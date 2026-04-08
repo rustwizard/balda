@@ -80,3 +80,76 @@ func decodeGetPlayerStateUIDParams(args [1]string, argsEscaped bool, r *http.Req
 	}
 	return params, nil
 }
+
+// PingParams is parameters of ping operation.
+type PingParams struct {
+	XRequestID int64
+}
+
+func unpackPingParams(packed middleware.Parameters) (params PingParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-Request-ID",
+			In:   "header",
+		}
+		params.XRequestID = packed[key].(int64)
+	}
+	return params
+}
+
+func decodePingParams(args [0]string, argsEscaped bool, r *http.Request) (params PingParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-Request-ID.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-Request-ID",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToInt64(val)
+				if err != nil {
+					return err
+				}
+
+				params.XRequestID = c
+				return nil
+			}); err != nil {
+				return err
+			}
+			if err := func() error {
+				if err := (validate.Int{
+					MinSet:        true,
+					Min:           1,
+					MaxSet:        false,
+					Max:           0,
+					MinExclusive:  false,
+					MaxExclusive:  false,
+					MultipleOfSet: false,
+					MultipleOf:    0,
+					Pattern:       nil,
+				}).Validate(int64(params.XRequestID)); err != nil {
+					return errors.Wrap(err, "int")
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-Request-ID",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
