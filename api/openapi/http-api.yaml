@@ -77,7 +77,7 @@ paths:
       tags: [Session]
       summary: Keepalive ping
       description: |
-        Mirrors cm_ping (id=1). POST not GET — mutates session TTL.
+        POST not GET — mutates session TTL.
         Returns 204 with X-Server-Time header instead of a JSON body
         to minimize bandwidth on frequent pings (every ping_delay ms).
       security:
@@ -285,7 +285,7 @@ components:
           
   headers:
     X-Request-ID:
-      description: Monotonically increasing client sequence number. Mirrors command_num. Server echoes it back.
+      description: Monotonically increasing client sequence number.
       schema:
         type: integer
         minimum: 1
