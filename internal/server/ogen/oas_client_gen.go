@@ -383,6 +383,17 @@ func (c *Client) sendPing(ctx context.Context, params PingParams) (res PingRes, 
 			return res, errors.Wrap(err, "encode header")
 		}
 	}
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-API-User",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.Int64ToString(params.XAPIUser))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
 
 	stage = "SendRequest"
 	resp, err := c.cfg.Client.Do(r)

@@ -101,36 +101,6 @@ func (s *AuthResponse) SetPlayer(val OptPlayer) {
 
 func (*AuthResponse) authRes() {}
 
-// Ref: #/components/schemas/Error
-type Error struct {
-	// Error code.
-	Code OptInt `json:"code"`
-	// Human-readable error message.
-	Message OptString `json:"message"`
-}
-
-// GetCode returns the value of Code.
-func (s *Error) GetCode() OptInt {
-	return s.Code
-}
-
-// GetMessage returns the value of Message.
-func (s *Error) GetMessage() OptString {
-	return s.Message
-}
-
-// SetCode sets the value of Code.
-func (s *Error) SetCode(val OptInt) {
-	s.Code = val
-}
-
-// SetMessage sets the value of Message.
-func (s *Error) SetMessage(val OptString) {
-	s.Message = val
-}
-
-func (*Error) pingRes() {}
-
 // Ref: #/components/schemas/ErrorResponse
 type ErrorResponse struct {
 	// The HTTP response code.
@@ -173,6 +143,7 @@ func (s *ErrorResponse) SetType(val OptString) {
 
 func (*ErrorResponse) authRes()              {}
 func (*ErrorResponse) getPlayerStateUIDRes() {}
+func (*ErrorResponse) pingRes()              {}
 func (*ErrorResponse) signupRes()            {}
 
 // NewOptInt returns new OptInt with value set to v.

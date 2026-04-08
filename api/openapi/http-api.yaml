@@ -82,6 +82,7 @@ paths:
         to minimize bandwidth on frequent pings (every ping_delay ms).
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
+        - $ref: '#/components/parameters/ApiUserHeader'
       responses:
         '204':
           description: Session alive.
@@ -133,14 +134,15 @@ components:
 
   responses:
     Unauthorized:
-      description: Missing or invalid session (mirrors err_code -100).
+      description: Missing or invalid credentials.
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/Error'
+            $ref: '#/components/schemas/ErrorResponse'
           example:
-            code: -100
+            status: 401
             message: "Session required"
+            type: "Unauthorized"
 
   schemas:
     Error:
@@ -320,6 +322,14 @@ components:
     RequestIdHeader:
       in: header
       name: X-Request-ID
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    ApiUserHeader:
+      in: header
+      name: X-API-User
       required: true
       schema:
         type: integer

@@ -287,7 +287,7 @@ func decodePingResponse(resp *http.Response) (res PingRes, _ error) {
 			}
 			d := jx.DecodeBytes(buf)
 
-			var response Error
+			var response ErrorResponse
 			if err := func() error {
 				if err := response.Decode(d); err != nil {
 					return err

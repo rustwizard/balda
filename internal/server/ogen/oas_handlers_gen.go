@@ -486,6 +486,10 @@ func (s *Server) handlePingRequest(args [0]string, argsEscaped bool, w http.Resp
 					Name: "X-Request-ID",
 					In:   "header",
 				}: params.XRequestID,
+				{
+					Name: "X-API-User",
+					In:   "header",
+				}: params.XAPIUser,
 			},
 			Raw: r,
 		}
