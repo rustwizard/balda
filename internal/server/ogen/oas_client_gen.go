@@ -385,13 +385,58 @@ func (c *Client) sendPing(ctx context.Context, params PingParams) (res PingRes, 
 	}
 	{
 		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-User",
+			Name:    "X-API-Session",
 			Explode: false,
 		}
 		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.Int64ToString(params.XAPIUser))
+			return e.EncodeValue(conv.StringToString(params.XAPISession))
 		}); err != nil {
 			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:APIKeyHeader"
+			switch err := c.securityAPIKeyHeader(ctx, PingOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
+			}
+		}
+		{
+			stage = "Security:APIKeyQueryParam"
+			switch err := c.securityAPIKeyQueryParam(ctx, PingOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
 		}
 	}
 

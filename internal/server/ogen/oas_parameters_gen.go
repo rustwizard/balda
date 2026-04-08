@@ -83,8 +83,8 @@ func decodeGetPlayerStateUIDParams(args [1]string, argsEscaped bool, r *http.Req
 
 // PingParams is parameters of ping operation.
 type PingParams struct {
-	XRequestID int64
-	XAPIUser   int64
+	XRequestID  int64
+	XAPISession string
 }
 
 func unpackPingParams(packed middleware.Parameters) (params PingParams) {
@@ -97,10 +97,10 @@ func unpackPingParams(packed middleware.Parameters) (params PingParams) {
 	}
 	{
 		key := middleware.ParameterKey{
-			Name: "X-API-User",
+			Name: "X-API-Session",
 			In:   "header",
 		}
-		params.XAPIUser = packed[key].(int64)
+		params.XAPISession = packed[key].(string)
 	}
 	return params
 }
@@ -159,10 +159,10 @@ func decodePingParams(args [0]string, argsEscaped bool, r *http.Request) (params
 			Err:  err,
 		}
 	}
-	// Decode header: X-API-User.
+	// Decode header: X-API-Session.
 	if err := func() error {
 		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-User",
+			Name:    "X-API-Session",
 			Explode: false,
 		}
 		if err := h.HasParam(cfg); err == nil {
@@ -172,32 +172,14 @@ func decodePingParams(args [0]string, argsEscaped bool, r *http.Request) (params
 					return err
 				}
 
-				c, err := conv.ToInt64(val)
+				c, err := conv.ToString(val)
 				if err != nil {
 					return err
 				}
 
-				params.XAPIUser = c
+				params.XAPISession = c
 				return nil
 			}); err != nil {
-				return err
-			}
-			if err := func() error {
-				if err := (validate.Int{
-					MinSet:        true,
-					Min:           1,
-					MaxSet:        false,
-					Max:           0,
-					MinExclusive:  false,
-					MaxExclusive:  false,
-					MultipleOfSet: false,
-					MultipleOf:    0,
-					Pattern:       nil,
-				}).Validate(int64(params.XAPIUser)); err != nil {
-					return errors.Wrap(err, "int")
-				}
-				return nil
-			}(); err != nil {
 				return err
 			}
 		} else {
@@ -206,7 +188,7 @@ func decodePingParams(args [0]string, argsEscaped bool, r *http.Request) (params
 		return nil
 	}(); err != nil {
 		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-User",
+			Name: "X-API-Session",
 			In:   "header",
 			Err:  err,
 		}

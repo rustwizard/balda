@@ -15,7 +15,7 @@ var (
 		"POST": "Content-Type,X-Api-Key",
 	}
 	rn5AllowedHeaders = map[string]string{
-		"POST": "X-Api-User,X-Request-Id",
+		"POST": "X-Api-Key,X-Api-Session,X-Request-Id",
 	}
 	rn7AllowedHeaders = map[string]string{
 		"POST": "Content-Type",

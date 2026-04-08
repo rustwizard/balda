@@ -395,6 +395,127 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 	})
 }
 
+func TestPingHandler(t *testing.T) {
+	h, cleanup := setupHandlers(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	signupRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
+		Firstname: "Ping",
+		Lastname:  "User",
+		Email:     "ping.user@example.org",
+		Password:  "pingpass",
+	})
+	require.NoError(t, err)
+	player := signupRes.(*baldaapi.SignupResponse).User.Value
+
+	t.Run("valid session returns 204", func(t *testing.T) {
+		res, err := h.Ping(ctx, baldaapi.PingParams{XRequestID: 1, XAPISession: player.Sid.Value})
+		require.NoError(t, err)
+
+		_, ok := res.(*baldaapi.PingNoContent)
+		require.True(t, ok, "expected *PingNoContent, got %T", res)
+	})
+
+	t.Run("x-request-id is echoed back", func(t *testing.T) {
+		const reqID int64 = 42
+		res, err := h.Ping(ctx, baldaapi.PingParams{XRequestID: reqID, XAPISession: player.Sid.Value})
+		require.NoError(t, err)
+
+		pong := res.(*baldaapi.PingNoContent)
+		assert.Equal(t, reqID, pong.XRequestID.Value)
+	})
+
+	t.Run("x-server-time reflects current time", func(t *testing.T) {
+		before := time.Now().UnixMilli()
+		res, err := h.Ping(ctx, baldaapi.PingParams{XRequestID: 1, XAPISession: player.Sid.Value})
+		require.NoError(t, err)
+
+		pong := res.(*baldaapi.PingNoContent)
+		assert.GreaterOrEqual(t, pong.XServerTime.Value, before)
+	})
+
+	t.Run("expired or unknown sid returns 401", func(t *testing.T) {
+		res, err := h.Ping(ctx, baldaapi.PingParams{XRequestID: 1, XAPISession: "non-existent-sid"})
+		require.NoError(t, err)
+
+		errResp, ok := res.(*baldaapi.ErrorResponse)
+		require.True(t, ok, "expected *ErrorResponse, got %T", res)
+		assert.Equal(t, http.StatusUnauthorized, errResp.Status.Value)
+	})
+}
+
+func TestPingHTTP(t *testing.T) {
+	srv, email, password, cleanup := setupServer(t)
+	defer cleanup()
+
+	// Auth to get the session SID.
+	body, _ := json.Marshal(map[string]string{"email": email, "password": password})
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", testAPIToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var authBody struct {
+		Player struct {
+			Sid string `json:"sid"`
+		} `json:"player"`
+	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&authBody))
+	resp.Body.Close()
+
+	sid := authBody.Player.Sid
+	require.NotEmpty(t, sid)
+
+	pingURL := srv.URL + "/balda/api/v1/session/ping"
+
+	t.Run("missing api key returns 401", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, pingURL, http.NoBody)
+		require.NoError(t, err)
+		req.Header.Set("X-Request-ID", "1")
+		req.Header.Set("X-API-Session", sid)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
+
+	t.Run("unknown sid returns 401", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, pingURL, http.NoBody)
+		require.NoError(t, err)
+		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-Request-ID", "1")
+		req.Header.Set("X-API-Session", "unknown-sid")
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	})
+
+	t.Run("valid session returns 204 with response headers", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, pingURL, http.NoBody)
+		require.NoError(t, err)
+		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-Request-ID", "42")
+		req.Header.Set("X-API-Session", sid)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+		assert.Equal(t, "42", resp.Header.Get("X-Request-Id"))
+		assert.NotEmpty(t, resp.Header.Get("X-Server-Time"))
+	})
+}
+
 // setupServer returns an httptest.Server wired with a full ogen server
 // (including security middleware) plus a seeded user for auth requests.
 func setupServer(t *testing.T) (srv *httptest.Server, email, password string, cleanup func()) {
