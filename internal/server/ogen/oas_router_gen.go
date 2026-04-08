@@ -15,6 +15,9 @@ var (
 		"POST": "Content-Type,X-Api-Key",
 	}
 	rn5AllowedHeaders = map[string]string{
+		"POST": "X-Api-Key,X-Api-Session,X-Request-Id",
+	}
+	rn7AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 )
@@ -131,29 +134,68 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
-			case 's': // Prefix: "signup"
+			case 's': // Prefix: "s"
 
-				if l := len("signup"); len(elem) >= l && elem[0:l] == "signup" {
+				if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					// Leaf node.
-					switch r.Method {
-					case "POST":
-						s.handleSignupRequest([0]string{}, elemIsEscaped, w, r)
-					default:
-						s.notAllowed(w, r, notAllowedParams{
-							allowedMethods: "POST",
-							allowedHeaders: rn5AllowedHeaders,
-							acceptPost:     "application/json",
-							acceptPatch:    "",
-						})
+					break
+				}
+				switch elem[0] {
+				case 'e': // Prefix: "ession/ping"
+
+					if l := len("ession/ping"); len(elem) >= l && elem[0:l] == "ession/ping" {
+						elem = elem[l:]
+					} else {
+						break
 					}
 
-					return
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handlePingRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, notAllowedParams{
+								allowedMethods: "POST",
+								allowedHeaders: rn5AllowedHeaders,
+								acceptPost:     "",
+								acceptPatch:    "",
+							})
+						}
+
+						return
+					}
+
+				case 'i': // Prefix: "ignup"
+
+					if l := len("ignup"); len(elem) >= l && elem[0:l] == "ignup" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch r.Method {
+						case "POST":
+							s.handleSignupRequest([0]string{}, elemIsEscaped, w, r)
+						default:
+							s.notAllowed(w, r, notAllowedParams{
+								allowedMethods: "POST",
+								allowedHeaders: rn7AllowedHeaders,
+								acceptPost:     "application/json",
+								acceptPatch:    "",
+							})
+						}
+
+						return
+					}
+
 				}
 
 			}
@@ -315,29 +357,68 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 					}
 				}
 
-			case 's': // Prefix: "signup"
+			case 's': // Prefix: "s"
 
-				if l := len("signup"); len(elem) >= l && elem[0:l] == "signup" {
+				if l := len("s"); len(elem) >= l && elem[0:l] == "s" {
 					elem = elem[l:]
 				} else {
 					break
 				}
 
 				if len(elem) == 0 {
-					// Leaf node.
-					switch method {
-					case "POST":
-						r.name = SignupOperation
-						r.summary = "Sign-up request"
-						r.operationID = "signup"
-						r.operationGroup = ""
-						r.pathPattern = "/signup"
-						r.args = args
-						r.count = 0
-						return r, true
-					default:
-						return
+					break
+				}
+				switch elem[0] {
+				case 'e': // Prefix: "ession/ping"
+
+					if l := len("ession/ping"); len(elem) >= l && elem[0:l] == "ession/ping" {
+						elem = elem[l:]
+					} else {
+						break
 					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "POST":
+							r.name = PingOperation
+							r.summary = "Keepalive ping"
+							r.operationID = "ping"
+							r.operationGroup = ""
+							r.pathPattern = "/session/ping"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
+				case 'i': // Prefix: "ignup"
+
+					if l := len("ignup"); len(elem) >= l && elem[0:l] == "ignup" {
+						elem = elem[l:]
+					} else {
+						break
+					}
+
+					if len(elem) == 0 {
+						// Leaf node.
+						switch method {
+						case "POST":
+							r.name = SignupOperation
+							r.summary = "Sign-up request"
+							r.operationID = "signup"
+							r.operationGroup = ""
+							r.pathPattern = "/signup"
+							r.args = args
+							r.count = 0
+							return r, true
+						default:
+							return
+						}
+					}
+
 				}
 
 			}

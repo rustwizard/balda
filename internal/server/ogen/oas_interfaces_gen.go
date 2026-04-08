@@ -9,6 +9,10 @@ type GetPlayerStateUIDRes interface {
 	getPlayerStateUIDRes()
 }
 
+type PingRes interface {
+	pingRes()
+}
+
 type SignupRes interface {
 	signupRes()
 }

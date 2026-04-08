@@ -13,7 +13,10 @@ import (
 	"log/slog"
 )
 
-const keyPrefix = "sessions:"
+const (
+	keyPrefix    = "sessions:"
+	sidKeyPrefix = "sessions:sid:"
+)
 
 var (
 	ErrNotFound       = errors.New("session service: not found")
@@ -43,22 +46,30 @@ type User struct {
 }
 
 func (s *Service) Get(uid int64) (*User, error) {
-	var user *User
-	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cacnel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	val, err := s.storage.GetEx(ctx, keyPrefix+strconv.FormatInt(uid, 10), s.cfg.Expiration).Result()
-	if err == redis.Nil {
-		return user, ErrNotFound
+	if errors.Is(err, redis.Nil) {
+		return nil, ErrNotFound
 	}
 	if err != nil {
-		return user, err
+		return nil, err
 	}
-	user = &User{
-		Sid: val,
-		UID: uid,
+	return &User{Sid: val, UID: uid}, nil
+}
+
+// Refresh extends the TTL of the session identified by sid.
+// Returns ErrNotFound if the session does not exist or has already expired.
+func (s *Service) Refresh(sid string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := s.storage.GetEx(ctx, sidKeyPrefix+sid, s.cfg.Expiration).Result()
+	if errors.Is(err, redis.Nil) {
+		return ErrNotFound
 	}
-	return user, nil
+	return err
 }
 
 func (s *Service) Save(u *User) error {
@@ -67,25 +78,32 @@ func (s *Service) Save(u *User) error {
 		return ErrEmptySessionID
 	}
 
-	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cacnel()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	err := s.storage.Set(ctx, keyPrefix+strconv.FormatInt(u.UID, 10), u.Sid, s.cfg.Expiration).Err()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	uidStr := strconv.FormatInt(u.UID, 10)
+	_, err := s.storage.TxPipelined(ctx, func(p redis.Pipeliner) error {
+		p.Set(ctx, keyPrefix+uidStr, u.Sid, s.cfg.Expiration)
+		p.Set(ctx, sidKeyPrefix+u.Sid, uidStr, s.cfg.Expiration)
+		return nil
+	})
+	return err
 }
 
 func (s *Service) Create(uid int64) (string, error) {
-	ctx, cacnel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cacnel()
-	sid := uuid.New().String()
-	err := s.storage.Set(ctx, keyPrefix+strconv.FormatInt(uid, 10), sid, s.cfg.Expiration).Err()
-	if err != nil {
-		return sid, err
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
+	sid := uuid.New().String()
+	uidStr := strconv.FormatInt(uid, 10)
+
+	_, err := s.storage.TxPipelined(ctx, func(p redis.Pipeliner) error {
+		p.Set(ctx, keyPrefix+uidStr, sid, s.cfg.Expiration)
+		p.Set(ctx, sidKeyPrefix+sid, uidStr, s.cfg.Expiration)
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
 	return sid, nil
 }

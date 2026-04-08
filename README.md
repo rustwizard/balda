@@ -63,6 +63,7 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 |--------|------|-------------|
 | POST | `/signup` | Register a new user account |
 | POST | `/auth` | Authenticate and get a session |
+| POST | `/session/ping` | Keepalive — refreshes session TTL |
 | GET | `/player/state/{uid}` | Get player profile and state |
 
 ### POST /signup
@@ -108,6 +109,14 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
   }
 }
 ```
+
+### POST /session/ping
+
+Refreshes the session TTL. Returns `204` with `X-Server-Time` and echoed `X-Request-ID` headers.
+
+**Required headers:** `X-API-Key`, `X-API-Session` (session `sid`), `X-Request-ID` (monotonic int).
+
+---
 
 ### GET /player/state/{uid}
 

@@ -143,6 +143,7 @@ func (s *ErrorResponse) SetType(val OptString) {
 
 func (*ErrorResponse) authRes()              {}
 func (*ErrorResponse) getPlayerStateUIDRes() {}
+func (*ErrorResponse) pingRes()              {}
 func (*ErrorResponse) signupRes()            {}
 
 // NewOptInt returns new OptInt with value set to v.
@@ -374,6 +375,34 @@ func (o OptUUID) Or(d uuid.UUID) uuid.UUID {
 	}
 	return d
 }
+
+// PingNoContent is response for Ping operation.
+type PingNoContent struct {
+	XRequestID  OptInt64
+	XServerTime OptInt64
+}
+
+// GetXRequestID returns the value of XRequestID.
+func (s *PingNoContent) GetXRequestID() OptInt64 {
+	return s.XRequestID
+}
+
+// GetXServerTime returns the value of XServerTime.
+func (s *PingNoContent) GetXServerTime() OptInt64 {
+	return s.XServerTime
+}
+
+// SetXRequestID sets the value of XRequestID.
+func (s *PingNoContent) SetXRequestID(val OptInt64) {
+	s.XRequestID = val
+}
+
+// SetXServerTime sets the value of XServerTime.
+func (s *PingNoContent) SetXServerTime(val OptInt64) {
+	s.XServerTime = val
+}
+
+func (*PingNoContent) pingRes() {}
 
 // Ref: #/components/schemas/Player
 type Player struct {
