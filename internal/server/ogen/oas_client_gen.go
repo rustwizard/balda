@@ -40,9 +40,15 @@ type Invoker interface {
 	//
 	// GET /player/state/{uid}
 	GetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (GetPlayerStateUIDRes, error)
+	// ListGames invokes listGames operation.
+	//
+	// Returns a snapshot of all currently active games.
+	//
+	// GET /games
+	ListGames(ctx context.Context, params ListGamesParams) (ListGamesRes, error)
 	// Ping invokes ping operation.
 	//
-	// Mirrors cm_ping (id=1). POST not GET — mutates session TTL.
+	// POST not GET — mutates session TTL.
 	// Returns 204 with X-Server-Time header instead of a JSON body
 	// to minimize bandwidth on frequent pings (every ping_delay ms).
 	//
@@ -311,9 +317,142 @@ func (c *Client) sendGetPlayerStateUID(ctx context.Context, params GetPlayerStat
 	return result, nil
 }
 
+// ListGames invokes listGames operation.
+//
+// Returns a snapshot of all currently active games.
+//
+// GET /games
+func (c *Client) ListGames(ctx context.Context, params ListGamesParams) (ListGamesRes, error) {
+	res, err := c.sendListGames(ctx, params)
+	return res, err
+}
+
+func (c *Client) sendListGames(ctx context.Context, params ListGamesParams) (res ListGamesRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("listGames"),
+		semconv.HTTPRequestMethodKey.String("GET"),
+		semconv.URLTemplateKey.String("/games"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, ListGamesOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/games"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "GET", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+
+	stage = "EncodeHeaderParams"
+	h := uri.NewHeaderEncoder(r.Header)
+	{
+		cfg := uri.HeaderParameterEncodingConfig{
+			Name:    "X-API-Session",
+			Explode: false,
+		}
+		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
+			return e.EncodeValue(conv.StringToString(params.XAPISession))
+		}); err != nil {
+			return res, errors.Wrap(err, "encode header")
+		}
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:APIKeyHeader"
+			switch err := c.securityAPIKeyHeader(ctx, ListGamesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
+			}
+		}
+		{
+			stage = "Security:APIKeyQueryParam"
+			switch err := c.securityAPIKeyQueryParam(ctx, ListGamesOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 1
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+				{0b00000010},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeListGamesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
 // Ping invokes ping operation.
 //
-// Mirrors cm_ping (id=1). POST not GET — mutates session TTL.
+// POST not GET — mutates session TTL.
 // Returns 204 with X-Server-Time header instead of a JSON body
 // to minimize bandwidth on frequent pings (every ping_delay ms).
 //

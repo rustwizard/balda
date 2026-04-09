@@ -28,6 +28,10 @@ func (s *Balda) GameSummary(playerID string) *lobby.GameSummary {
 	return &gs
 }
 
+func (s *Balda) ListGames() []lobby.GameSummary {
+	return s.lby.List()
+}
+
 func (s *Balda) Lobby() *lobby.Lobby {
 	return s.lby
 }

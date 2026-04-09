@@ -9,6 +9,10 @@ type GetPlayerStateUIDRes interface {
 	getPlayerStateUIDRes()
 }
 
+type ListGamesRes interface {
+	listGamesRes()
+}
+
 type PingRes interface {
 	pingRes()
 }
