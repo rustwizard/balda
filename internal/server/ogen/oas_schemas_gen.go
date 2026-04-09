@@ -143,8 +143,66 @@ func (s *ErrorResponse) SetType(val OptString) {
 
 func (*ErrorResponse) authRes()              {}
 func (*ErrorResponse) getPlayerStateUIDRes() {}
+func (*ErrorResponse) listGamesRes()         {}
 func (*ErrorResponse) pingRes()              {}
 func (*ErrorResponse) signupRes()            {}
+
+// Ref: #/components/schemas/GameSummary
+type GameSummary struct {
+	// Game ID.
+	ID OptUUID `json:"id"`
+	// IDs of players participating in the game.
+	PlayerIds []uuid.UUID `json:"player_ids"`
+	// When the game was started (Unix timestamp in milliseconds).
+	StartedAt OptInt64 `json:"started_at"`
+}
+
+// GetID returns the value of ID.
+func (s *GameSummary) GetID() OptUUID {
+	return s.ID
+}
+
+// GetPlayerIds returns the value of PlayerIds.
+func (s *GameSummary) GetPlayerIds() []uuid.UUID {
+	return s.PlayerIds
+}
+
+// GetStartedAt returns the value of StartedAt.
+func (s *GameSummary) GetStartedAt() OptInt64 {
+	return s.StartedAt
+}
+
+// SetID sets the value of ID.
+func (s *GameSummary) SetID(val OptUUID) {
+	s.ID = val
+}
+
+// SetPlayerIds sets the value of PlayerIds.
+func (s *GameSummary) SetPlayerIds(val []uuid.UUID) {
+	s.PlayerIds = val
+}
+
+// SetStartedAt sets the value of StartedAt.
+func (s *GameSummary) SetStartedAt(val OptInt64) {
+	s.StartedAt = val
+}
+
+// Ref: #/components/schemas/ListGamesResponse
+type ListGamesResponse struct {
+	Games []GameSummary `json:"games"`
+}
+
+// GetGames returns the value of Games.
+func (s *ListGamesResponse) GetGames() []GameSummary {
+	return s.Games
+}
+
+// SetGames sets the value of Games.
+func (s *ListGamesResponse) SetGames(val []GameSummary) {
+	s.Games = val
+}
+
+func (*ListGamesResponse) listGamesRes() {}
 
 // NewOptInt returns new OptInt with value set to v.
 func NewOptInt(v int) OptInt {

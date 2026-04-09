@@ -97,6 +97,28 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /games:
+    get:
+      operationId: listGames
+      summary: List active games
+      description: Returns a snapshot of all currently active games.
+      tags:
+        - Games
+      security:
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
+      parameters:
+        - $ref: '#/components/parameters/ApiSessionHeader'
+      responses:
+        "200":
+          description: List of active games
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListGamesResponse"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
   /player/state/{uid}:
     get:
       operationId: getPlayerStateUID
@@ -250,6 +272,34 @@ components:
       properties:
         player:
           $ref: "#/components/schemas/Player"
+
+    GameSummary:
+      type: object
+      properties:
+        id:
+          description: Game ID
+          type: string
+          format: uuid
+          example: "144e8a2b-3c1d-4e5f-a6b7-8c9d0e1f2a3b"
+        player_ids:
+          description: IDs of players participating in the game
+          type: array
+          items:
+            type: string
+            format: uuid
+        started_at:
+          description: When the game was started (Unix timestamp in milliseconds)
+          type: integer
+          format: int64
+          example: 1712600000000
+
+    ListGamesResponse:
+      type: object
+      properties:
+        games:
+          type: array
+          items:
+            $ref: "#/components/schemas/GameSummary"
 
     PlayerState:
       type: object

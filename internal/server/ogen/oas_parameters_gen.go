@@ -81,6 +81,61 @@ func decodeGetPlayerStateUIDParams(args [1]string, argsEscaped bool, r *http.Req
 	return params, nil
 }
 
+// ListGamesParams is parameters of listGames operation.
+type ListGamesParams struct {
+	XAPISession string
+}
+
+func unpackListGamesParams(packed middleware.Parameters) (params ListGamesParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-API-Session",
+			In:   "header",
+		}
+		params.XAPISession = packed[key].(string)
+	}
+	return params
+}
+
+func decodeListGamesParams(args [0]string, argsEscaped bool, r *http.Request) (params ListGamesParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-API-Session.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-API-Session",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XAPISession = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-API-Session",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // PingParams is parameters of ping operation.
 type PingParams struct {
 	XRequestID  int64

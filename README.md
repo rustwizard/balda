@@ -65,6 +65,7 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 | POST | `/auth` | Authenticate and get a session |
 | POST | `/session/ping` | Keepalive — refreshes session TTL |
 | GET | `/player/state/{uid}` | Get player profile and state |
+| GET | `/games` | List all currently active games |
 
 ### POST /signup
 
@@ -142,6 +143,27 @@ Refreshes the session TTL. Returns `204` with `X-Server-Time` and echoed `X-Requ
   "game_id": "<game-uuid>"
 }
 ```
+
+### GET /games
+
+Returns a snapshot of all currently active games. Requires `X-API-Key`.
+
+```json
+// Response
+{
+  "games": [
+    {
+      "id": "<game-uuid>",
+      "player_ids": ["<uuid>", "<uuid>"],
+      "started_at": 1712600000000
+    }
+  ]
+}
+```
+
+`started_at` is a Unix timestamp in milliseconds. `games` is an empty array when no games are active.
+
+---
 
 ## Game Mechanics
 

@@ -15,9 +15,12 @@ var (
 		"POST": "Content-Type,X-Api-Key",
 	}
 	rn5AllowedHeaders = map[string]string{
+		"GET": "X-Api-Key,X-Api-Session",
+	}
+	rn6AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session,X-Request-Id",
 	}
-	rn7AllowedHeaders = map[string]string{
+	rn8AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 )
@@ -98,6 +101,31 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					return
 				}
 
+			case 'g': // Prefix: "games"
+
+				if l := len("games"); len(elem) >= l && elem[0:l] == "games" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch r.Method {
+					case "GET":
+						s.handleListGamesRequest([0]string{}, elemIsEscaped, w, r)
+					default:
+						s.notAllowed(w, r, notAllowedParams{
+							allowedMethods: "GET",
+							allowedHeaders: rn5AllowedHeaders,
+							acceptPost:     "",
+							acceptPatch:    "",
+						})
+					}
+
+					return
+				}
+
 			case 'p': // Prefix: "player/state/"
 
 				if l := len("player/state/"); len(elem) >= l && elem[0:l] == "player/state/" {
@@ -162,7 +190,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn5AllowedHeaders,
+								allowedHeaders: rn6AllowedHeaders,
 								acceptPost:     "",
 								acceptPatch:    "",
 							})
@@ -187,7 +215,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn7AllowedHeaders,
+								allowedHeaders: rn8AllowedHeaders,
 								acceptPost:     "application/json",
 								acceptPatch:    "",
 							})
@@ -315,6 +343,31 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						r.operationID = "auth"
 						r.operationGroup = ""
 						r.pathPattern = "/auth"
+						r.args = args
+						r.count = 0
+						return r, true
+					default:
+						return
+					}
+				}
+
+			case 'g': // Prefix: "games"
+
+				if l := len("games"); len(elem) >= l && elem[0:l] == "games" {
+					elem = elem[l:]
+				} else {
+					break
+				}
+
+				if len(elem) == 0 {
+					// Leaf node.
+					switch method {
+					case "GET":
+						r.name = ListGamesOperation
+						r.summary = "List active games"
+						r.operationID = "listGames"
+						r.operationGroup = ""
+						r.pathPattern = "/games"
 						r.args = args
 						r.count = 0
 						return r, true

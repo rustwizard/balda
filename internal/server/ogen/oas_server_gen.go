@@ -20,9 +20,15 @@ type Handler interface {
 	//
 	// GET /player/state/{uid}
 	GetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (GetPlayerStateUIDRes, error)
+	// ListGames implements listGames operation.
+	//
+	// Returns a snapshot of all currently active games.
+	//
+	// GET /games
+	ListGames(ctx context.Context, params ListGamesParams) (ListGamesRes, error)
 	// Ping implements ping operation.
 	//
-	// Mirrors cm_ping (id=1). POST not GET — mutates session TTL.
+	// POST not GET — mutates session TTL.
 	// Returns 204 with X-Server-Time header instead of a JSON body
 	// to minimize bandwidth on frequent pings (every ping_delay ms).
 	//
