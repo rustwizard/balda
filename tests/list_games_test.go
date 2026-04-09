@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -82,14 +83,35 @@ func TestListGamesHandler(t *testing.T) {
 }
 
 func TestListGamesHTTP(t *testing.T) {
-	srv, _, _, cleanup := setupServer(t)
+	srv, email, password, cleanup := setupServer(t)
 	defer cleanup()
 
 	gamesURL := srv.URL + "/balda/api/v1/games"
 
+	// Auth once to get a valid session SID.
+	authResp, err := http.DefaultClient.Do(func() *http.Request {
+		body, _ := json.Marshal(map[string]string{"email": email, "password": password})
+		req, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Key", testAPIToken)
+		return req
+	}())
+	require.NoError(t, err)
+	defer authResp.Body.Close()
+
+	var authBody struct {
+		Player struct {
+			Sid string `json:"sid"`
+		} `json:"player"`
+	}
+	require.NoError(t, json.NewDecoder(authResp.Body).Decode(&authBody))
+	sid := authBody.Player.Sid
+	require.NotEmpty(t, sid)
+
 	t.Run("missing api key returns 401", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, gamesURL, http.NoBody)
 		require.NoError(t, err)
+		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -101,6 +123,7 @@ func TestListGamesHTTP(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, gamesURL, http.NoBody)
 		require.NoError(t, err)
 		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
