@@ -5,6 +5,10 @@ type AuthRes interface {
 	authRes()
 }
 
+type CreateGameRes interface {
+	createGameRes()
+}
+
 type GetPlayerStateUIDRes interface {
 	getPlayerStateUIDRes()
 }

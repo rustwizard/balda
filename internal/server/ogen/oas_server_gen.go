@@ -14,6 +14,12 @@ type Handler interface {
 	//
 	// POST /auth
 	Auth(ctx context.Context, req *AuthRequest) (AuthRes, error)
+	// CreateGame implements createGame operation.
+	//
+	// Create a new game.
+	//
+	// POST /games
+	CreateGame(ctx context.Context, params CreateGameParams) (CreateGameRes, error)
 	// GetPlayerStateUID implements getPlayerStateUID operation.
 	//
 	// Get user state.

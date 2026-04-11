@@ -16,12 +16,21 @@ var (
 	ErrPlayerInGame = errors.New("lobby: player already in a game")
 )
 
+type GameStatus string
+
+const (
+	GameStatusWaiting    GameStatus = "waiting"
+	GameStatusInProgress GameStatus = "in_progress"
+	GameStatusFinished   GameStatus = "finished"
+)
+
 // GameRecord is the Lobby's view of a running game.
 type GameRecord struct {
 	ID        string
 	Game      *game.Game
 	Players   []*game.Player
 	StartedAt time.Time
+	Status    GameStatus
 	cancel    context.CancelFunc
 }
 
@@ -30,6 +39,7 @@ type GameSummary struct {
 	ID        string
 	PlayerIDs []string
 	StartedAt time.Time
+	Status    GameStatus
 }
 
 // GameFactory abstracts game construction so the Lobby is testable.
@@ -50,6 +60,29 @@ func New(factory GameFactory) *Lobby {
 		byPlayer: make(map[string]string),
 		factory:  factory,
 	}
+}
+
+// Create registers a new game in waiting status for a single player (the creator).
+// Other players join later via join mechanics.
+// Returns ErrPlayerInGame if the player is already in an active game.
+func (l *Lobby) Create(playerID string) (*GameRecord, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	if _, ok := l.byPlayer[playerID]; ok {
+		return nil, ErrPlayerInGame
+	}
+
+	id := uuid.New().String()
+	rec := &GameRecord{
+		ID:        id,
+		Players:   []*game.Player{{ID: playerID}},
+		StartedAt: time.Now(),
+		Status:    GameStatusWaiting,
+	}
+	l.games[id] = rec
+	l.byPlayer[playerID] = id
+	return rec, nil
 }
 
 // StartGame creates a new game for players, registers it in the lobby, and
@@ -79,6 +112,7 @@ func (l *Lobby) StartGame(ctx context.Context, players []*game.Player, n game.No
 		Game:      g,
 		Players:   players,
 		StartedAt: time.Now(),
+		Status:    GameStatusInProgress,
 		cancel:    cancel,
 	}
 
@@ -183,6 +217,7 @@ func summaryOf(rec *GameRecord) GameSummary {
 		ID:        rec.ID,
 		PlayerIDs: ids,
 		StartedAt: rec.StartedAt,
+		Status:    rec.Status,
 	}
 }
 

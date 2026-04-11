@@ -59,6 +59,26 @@ func (s *Service) Get(uid int64) (*User, error) {
 	return &User{Sid: val, UID: uid}, nil
 }
 
+// GetUID returns the user ID associated with the session identified by sid.
+// Returns ErrNotFound if the session does not exist or has already expired.
+func (s *Service) GetUID(sid string) (int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	val, err := s.storage.GetEx(ctx, sidKeyPrefix+sid, s.cfg.Expiration).Result()
+	if errors.Is(err, redis.Nil) {
+		return 0, ErrNotFound
+	}
+	if err != nil {
+		return 0, err
+	}
+	uid, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return uid, nil
+}
+
 // Refresh extends the TTL of the session identified by sid.
 // Returns ErrNotFound if the session does not exist or has already expired.
 func (s *Service) Refresh(sid string) error {
