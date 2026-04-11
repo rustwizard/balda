@@ -3,6 +3,7 @@
 package baldaapi
 
 import (
+	"github.com/go-faster/errors"
 	"github.com/google/uuid"
 )
 
@@ -101,6 +102,23 @@ func (s *AuthResponse) SetPlayer(val OptPlayer) {
 
 func (*AuthResponse) authRes() {}
 
+// Ref: #/components/schemas/CreateGameResponse
+type CreateGameResponse struct {
+	Game OptGameSummary `json:"game"`
+}
+
+// GetGame returns the value of Game.
+func (s *CreateGameResponse) GetGame() OptGameSummary {
+	return s.Game
+}
+
+// SetGame sets the value of Game.
+func (s *CreateGameResponse) SetGame(val OptGameSummary) {
+	s.Game = val
+}
+
+func (*CreateGameResponse) createGameRes() {}
+
 // Ref: #/components/schemas/ErrorResponse
 type ErrorResponse struct {
 	// The HTTP response code.
@@ -142,17 +160,69 @@ func (s *ErrorResponse) SetType(val OptString) {
 }
 
 func (*ErrorResponse) authRes()              {}
+func (*ErrorResponse) createGameRes()        {}
 func (*ErrorResponse) getPlayerStateUIDRes() {}
 func (*ErrorResponse) listGamesRes()         {}
 func (*ErrorResponse) pingRes()              {}
 func (*ErrorResponse) signupRes()            {}
+
+// Current state of the game.
+// Ref: #/components/schemas/GameStatus
+type GameStatus string
+
+const (
+	GameStatusWaiting    GameStatus = "waiting"
+	GameStatusInProgress GameStatus = "in_progress"
+	GameStatusFinished   GameStatus = "finished"
+)
+
+// AllValues returns all GameStatus values.
+func (GameStatus) AllValues() []GameStatus {
+	return []GameStatus{
+		GameStatusWaiting,
+		GameStatusInProgress,
+		GameStatusFinished,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GameStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case GameStatusWaiting:
+		return []byte(s), nil
+	case GameStatusInProgress:
+		return []byte(s), nil
+	case GameStatusFinished:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GameStatus) UnmarshalText(data []byte) error {
+	switch GameStatus(data) {
+	case GameStatusWaiting:
+		*s = GameStatusWaiting
+		return nil
+	case GameStatusInProgress:
+		*s = GameStatusInProgress
+		return nil
+	case GameStatusFinished:
+		*s = GameStatusFinished
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // Ref: #/components/schemas/GameSummary
 type GameSummary struct {
 	// Game ID.
 	ID OptUUID `json:"id"`
 	// IDs of players participating in the game.
-	PlayerIds []uuid.UUID `json:"player_ids"`
+	PlayerIds []uuid.UUID   `json:"player_ids"`
+	Status    OptGameStatus `json:"status"`
 	// When the game was started (Unix timestamp in milliseconds).
 	StartedAt OptInt64 `json:"started_at"`
 }
@@ -165,6 +235,11 @@ func (s *GameSummary) GetID() OptUUID {
 // GetPlayerIds returns the value of PlayerIds.
 func (s *GameSummary) GetPlayerIds() []uuid.UUID {
 	return s.PlayerIds
+}
+
+// GetStatus returns the value of Status.
+func (s *GameSummary) GetStatus() OptGameStatus {
+	return s.Status
 }
 
 // GetStartedAt returns the value of StartedAt.
@@ -180,6 +255,11 @@ func (s *GameSummary) SetID(val OptUUID) {
 // SetPlayerIds sets the value of PlayerIds.
 func (s *GameSummary) SetPlayerIds(val []uuid.UUID) {
 	s.PlayerIds = val
+}
+
+// SetStatus sets the value of Status.
+func (s *GameSummary) SetStatus(val OptGameStatus) {
+	s.Status = val
 }
 
 // SetStartedAt sets the value of StartedAt.
@@ -203,6 +283,98 @@ func (s *ListGamesResponse) SetGames(val []GameSummary) {
 }
 
 func (*ListGamesResponse) listGamesRes() {}
+
+// NewOptGameStatus returns new OptGameStatus with value set to v.
+func NewOptGameStatus(v GameStatus) OptGameStatus {
+	return OptGameStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptGameStatus is optional GameStatus.
+type OptGameStatus struct {
+	Value GameStatus
+	Set   bool
+}
+
+// IsSet returns true if OptGameStatus was set.
+func (o OptGameStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptGameStatus) Reset() {
+	var v GameStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptGameStatus) SetTo(v GameStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptGameStatus) Get() (v GameStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptGameStatus) Or(d GameStatus) GameStatus {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptGameSummary returns new OptGameSummary with value set to v.
+func NewOptGameSummary(v GameSummary) OptGameSummary {
+	return OptGameSummary{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptGameSummary is optional GameSummary.
+type OptGameSummary struct {
+	Value GameSummary
+	Set   bool
+}
+
+// IsSet returns true if OptGameSummary was set.
+func (o OptGameSummary) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptGameSummary) Reset() {
+	var v GameSummary
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptGameSummary) SetTo(v GameSummary) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptGameSummary) Get() (v GameSummary, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptGameSummary) Or(d GameSummary) GameSummary {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
 
 // NewOptInt returns new OptInt with value set to v.
 func NewOptInt(v int) OptInt {

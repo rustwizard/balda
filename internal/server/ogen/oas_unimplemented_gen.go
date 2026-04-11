@@ -22,6 +22,15 @@ func (UnimplementedHandler) Auth(ctx context.Context, req *AuthRequest) (r AuthR
 	return r, ht.ErrNotImplemented
 }
 
+// CreateGame implements createGame operation.
+//
+// Create a new game.
+//
+// POST /games
+func (UnimplementedHandler) CreateGame(ctx context.Context, params CreateGameParams) (r CreateGameRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetPlayerStateUID implements getPlayerStateUID operation.
 //
 // Get user state.

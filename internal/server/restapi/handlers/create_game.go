@@ -1,0 +1,68 @@
+package handlers
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+
+	"github.com/google/uuid"
+	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
+	"github.com/rustwizard/balda/internal/lobby"
+	"github.com/rustwizard/balda/internal/session"
+)
+
+// CreateGame implements baldaapi.Handler.
+func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGameParams) (baldaapi.CreateGameRes, error) {
+	uid, err := h.sess.GetUID(params.XAPISession)
+	if err != nil {
+		if errors.Is(err, session.ErrNotFound) {
+			return unauthorized("session not found"), nil
+		}
+		slog.Error("create_game: get uid", slog.String("sid", params.XAPISession), slog.Any("error", err))
+		return unauthorized("session unavailable"), nil
+	}
+
+	rec, err := h.svc.CreateGame(ctx, uid)
+	if err != nil {
+		if errors.Is(err, lobby.ErrPlayerInGame) {
+			return &baldaapi.ErrorResponse{
+				Status:  baldaapi.NewOptInt(http.StatusConflict),
+				Message: baldaapi.NewOptString("player already in a game"),
+				Type:    baldaapi.NewOptString("Conflict"),
+			}, nil
+		}
+		slog.Error("create_game: create", slog.Any("error", err))
+		return &baldaapi.ErrorResponse{
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Message: baldaapi.NewOptString("failed to create game"),
+		}, nil
+	}
+
+	gameID, err := uuid.Parse(rec.ID)
+	if err != nil {
+		slog.Error("create_game: parse game id", slog.Any("error", err))
+		return &baldaapi.ErrorResponse{
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Message: baldaapi.NewOptString("internal error"),
+		}, nil
+	}
+
+	playerIDs := make([]uuid.UUID, 0, len(rec.Players))
+	for _, p := range rec.Players {
+		pid, err := uuid.Parse(p.ID)
+		if err != nil {
+			continue
+		}
+		playerIDs = append(playerIDs, pid)
+	}
+
+	return &baldaapi.CreateGameResponse{
+		Game: baldaapi.NewOptGameSummary(baldaapi.GameSummary{
+			ID:        baldaapi.NewOptUUID(gameID),
+			PlayerIds: playerIDs,
+			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatusWaiting),
+			StartedAt: baldaapi.NewOptInt64(rec.StartedAt.UnixMilli()),
+		}),
+	}, nil
+}

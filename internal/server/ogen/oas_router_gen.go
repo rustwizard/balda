@@ -14,8 +14,9 @@ var (
 	rn1AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Api-Key",
 	}
-	rn5AllowedHeaders = map[string]string{
-		"GET": "X-Api-Key,X-Api-Session",
+	rn3AllowedHeaders = map[string]string{
+		"GET":  "X-Api-Key,X-Api-Session",
+		"POST": "X-Api-Key,X-Api-Session",
 	}
 	rn6AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session,X-Request-Id",
@@ -114,10 +115,12 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					switch r.Method {
 					case "GET":
 						s.handleListGamesRequest([0]string{}, elemIsEscaped, w, r)
+					case "POST":
+						s.handleCreateGameRequest([0]string{}, elemIsEscaped, w, r)
 					default:
 						s.notAllowed(w, r, notAllowedParams{
-							allowedMethods: "GET",
-							allowedHeaders: rn5AllowedHeaders,
+							allowedMethods: "GET,POST",
+							allowedHeaders: rn3AllowedHeaders,
 							acceptPost:     "",
 							acceptPatch:    "",
 						})
@@ -366,6 +369,15 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						r.name = ListGamesOperation
 						r.summary = "List active games"
 						r.operationID = "listGames"
+						r.operationGroup = ""
+						r.pathPattern = "/games"
+						r.args = args
+						r.count = 0
+						return r, true
+					case "POST":
+						r.name = CreateGameOperation
+						r.summary = "Create a new game"
+						r.operationID = "createGame"
 						r.operationGroup = ""
 						r.pathPattern = "/games"
 						r.args = args

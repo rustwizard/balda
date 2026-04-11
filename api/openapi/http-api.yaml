@@ -98,6 +98,25 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   /games:
+    post:
+      operationId: createGame
+      summary: Create a new game
+      tags:
+        - Games
+      security:
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
+      parameters:
+        - $ref: '#/components/parameters/ApiSessionHeader'
+      responses:
+        "200":
+          description: Game created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateGameResponse"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
     get:
       operationId: listGames
       summary: List active games
@@ -273,6 +292,14 @@ components:
         player:
           $ref: "#/components/schemas/Player"
 
+    GameStatus:
+      type: string
+      enum:
+        - waiting
+        - in_progress
+        - finished
+      description: Current state of the game
+
     GameSummary:
       type: object
       properties:
@@ -287,11 +314,19 @@ components:
           items:
             type: string
             format: uuid
+        status:
+          $ref: "#/components/schemas/GameStatus"
         started_at:
           description: When the game was started (Unix timestamp in milliseconds)
           type: integer
           format: int64
           example: 1712600000000
+
+    CreateGameResponse:
+      type: object
+      properties:
+        game:
+          $ref: "#/components/schemas/GameSummary"
 
     ListGamesResponse:
       type: object

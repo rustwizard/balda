@@ -30,6 +30,7 @@ func (h *Handlers) ListGames(ctx context.Context, _ baldaapi.ListGamesParams) (b
 		games[i] = baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
 			PlayerIds: playerIDs,
+			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatus(s.Status)),
 			StartedAt: baldaapi.NewOptInt64(s.StartedAt.UnixMilli()),
 		}
 	}
