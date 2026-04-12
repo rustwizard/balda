@@ -141,10 +141,17 @@ func (s *AuthResponse) encodeFields(e *jx.Encoder) {
 			s.Player.Encode(e)
 		}
 	}
+	{
+		if s.CentrifugoToken.Set {
+			e.FieldStart("centrifugo_token")
+			s.CentrifugoToken.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfAuthResponse = [1]string{
+var jsonFieldsNameOfAuthResponse = [2]string{
 	0: "player",
+	1: "centrifugo_token",
 }
 
 // Decode decodes AuthResponse from json.
@@ -164,6 +171,16 @@ func (s *AuthResponse) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"player\"")
+			}
+		case "centrifugo_token":
+			if err := func() error {
+				s.CentrifugoToken.Reset()
+				if err := s.CentrifugoToken.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"centrifugo_token\"")
 			}
 		default:
 			return d.Skip()
@@ -1449,10 +1466,17 @@ func (s *SignupResponse) encodeFields(e *jx.Encoder) {
 			s.User.Encode(e)
 		}
 	}
+	{
+		if s.CentrifugoToken.Set {
+			e.FieldStart("centrifugo_token")
+			s.CentrifugoToken.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfSignupResponse = [1]string{
+var jsonFieldsNameOfSignupResponse = [2]string{
 	0: "user",
+	1: "centrifugo_token",
 }
 
 // Decode decodes SignupResponse from json.
@@ -1472,6 +1496,16 @@ func (s *SignupResponse) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"user\"")
+			}
+		case "centrifugo_token":
+			if err := func() error {
+				s.CentrifugoToken.Reset()
+				if err := s.CentrifugoToken.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"centrifugo_token\"")
 			}
 		default:
 			return d.Skip()

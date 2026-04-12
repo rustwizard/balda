@@ -88,6 +88,8 @@ func (s *AuthRequest) SetPassword(val string) {
 // Ref: #/components/schemas/AuthResponse
 type AuthResponse struct {
 	Player OptPlayer `json:"player"`
+	// JWT for connecting to the Centrifugo WebSocket.
+	CentrifugoToken OptString `json:"centrifugo_token"`
 }
 
 // GetPlayer returns the value of Player.
@@ -95,9 +97,19 @@ func (s *AuthResponse) GetPlayer() OptPlayer {
 	return s.Player
 }
 
+// GetCentrifugoToken returns the value of CentrifugoToken.
+func (s *AuthResponse) GetCentrifugoToken() OptString {
+	return s.CentrifugoToken
+}
+
 // SetPlayer sets the value of Player.
 func (s *AuthResponse) SetPlayer(val OptPlayer) {
 	s.Player = val
+}
+
+// SetCentrifugoToken sets the value of CentrifugoToken.
+func (s *AuthResponse) SetCentrifugoToken(val OptString) {
+	s.CentrifugoToken = val
 }
 
 func (*AuthResponse) authRes() {}
@@ -860,6 +872,8 @@ func (s *SignupRequest) SetPassword(val string) {
 // Ref: #/components/schemas/SignupResponse
 type SignupResponse struct {
 	User OptPlayer `json:"user"`
+	// JWT for connecting to the Centrifugo WebSocket.
+	CentrifugoToken OptString `json:"centrifugo_token"`
 }
 
 // GetUser returns the value of User.
@@ -867,9 +881,19 @@ func (s *SignupResponse) GetUser() OptPlayer {
 	return s.User
 }
 
+// GetCentrifugoToken returns the value of CentrifugoToken.
+func (s *SignupResponse) GetCentrifugoToken() OptString {
+	return s.CentrifugoToken
+}
+
 // SetUser sets the value of User.
 func (s *SignupResponse) SetUser(val OptPlayer) {
 	s.User = val
+}
+
+// SetCentrifugoToken sets the value of CentrifugoToken.
+func (s *SignupResponse) SetCentrifugoToken(val OptString) {
+	s.CentrifugoToken = val
 }
 
 func (*SignupResponse) signupRes() {}
