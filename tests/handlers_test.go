@@ -13,10 +13,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
-	"github.com/rustwizard/balda/internal/notifier"
 	"github.com/rustwizard/balda/internal/matchmaking"
+	"github.com/rustwizard/balda/internal/notifier"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/balda/internal/service"
@@ -101,7 +102,8 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 
 	svc := service.New(lby, mm, s, &notifier.Noop{})
 
-	h := handlers.New(svc, sess, testAPIToken)
+	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
+	h := handlers.New(svc, sess, testAPIToken, cf, "test-secret")
 
 	cleanup := func() {
 		pool.Close()
@@ -305,7 +307,8 @@ func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 
 	s := storage.New(pool, 10*time.Second)
 	svc := service.New(lby, mm, s, &notifier.Noop{})
-	h := handlers.New(svc, sess, testAPIToken)
+	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
+	h := handlers.New(svc, sess, testAPIToken, cf, "test-secret")
 
 	cleanup := func() {
 		pool.Close()
