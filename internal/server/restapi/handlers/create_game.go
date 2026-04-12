@@ -7,8 +7,9 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
+	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/lobby"
+	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/session"
 )
 
@@ -55,6 +56,19 @@ func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGamePar
 			continue
 		}
 		playerIDs = append(playerIDs, pid)
+	}
+
+	ev := centrifugo.EvGameCreated{
+		Type:    "game_created",
+		GameID:  rec.ID,
+		Status:  "waiting",
+		Players: make([]string, 0, len(rec.Players)),
+	}
+	for _, p := range rec.Players {
+		ev.Players = append(ev.Players, p.ID)
+	}
+	if err := h.cf.Publish(ctx, centrifugo.ChannelLobby, ev); err != nil {
+		slog.Error("create_game: publish to centrifugo", slog.Any("error", err))
 	}
 
 	return &baldaapi.CreateGameResponse{

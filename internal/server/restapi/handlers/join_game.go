@@ -6,10 +6,11 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/google/uuid"
+	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/session"
-	"github.com/google/uuid"
 )
 
 // JoinGame implements baldaapi.Handler.
@@ -77,6 +78,23 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 			continue
 		}
 		playerIDs = append(playerIDs, pid)
+	}
+
+	ev := centrifugo.EvGameStarted{
+		Type:      "game_started",
+		GameID:    rec.ID,
+		Status:    "in_progress",
+		StartedAt: rec.StartedAt.UnixMilli(),
+		PlayerIDs: make([]string, 0, len(rec.Players)),
+	}
+	for _, p := range rec.Players {
+		ev.PlayerIDs = append(ev.PlayerIDs, p.ID)
+	}
+	if err := h.cf.Publish(ctx, centrifugo.ChannelLobby, ev); err != nil {
+		slog.Error("join_game: publish to lobby", slog.Any("error", err))
+	}
+	if err := h.cf.Publish(ctx, centrifugo.ChannelGame(rec.ID), ev); err != nil {
+		slog.Error("join_game: publish to game channel", slog.Any("error", err))
 	}
 
 	return &baldaapi.JoinGameResponse{

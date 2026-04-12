@@ -4,8 +4,10 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
+	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/flname"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/session"
@@ -97,6 +99,16 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 		}, nil
 	}
 
+	cfToken, err := centrifugo.GenerateConnectionToken(pid.String(), h.centrifugoTokenHMACSecret, 24*time.Hour)
+	if err != nil {
+		slog.Error("signup: generate centrifugo token", slog.Any("error", err))
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Type:    baldaapi.NewOptString("SignUp Error"),
+		}, nil
+	}
+
 	return &baldaapi.SignupResponse{
 		User: baldaapi.NewOptPlayer(baldaapi.Player{
 			UID:       baldaapi.NewOptUUID(pid),
@@ -105,5 +117,6 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 			Sid:       baldaapi.NewOptString(sid.String()),
 			Key:       baldaapi.NewOptString(apiKey),
 		}),
+		CentrifugoToken: baldaapi.NewOptString(cfToken),
 	}, nil
 }
