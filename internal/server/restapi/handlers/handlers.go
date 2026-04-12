@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/rustwizard/balda/internal/centrifugo"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/service"
 	"github.com/rustwizard/balda/internal/session"
@@ -12,13 +13,15 @@ import (
 
 // Handlers implements baldaapi.Handler and baldaapi.SecurityHandler.
 type Handlers struct {
-	svc       *service.Balda
-	sess      *session.Service
-	xAPIToken string
+	svc                     *service.Balda
+	sess                    *session.Service
+	xAPIToken               string
+	cf                      *centrifugo.Client
+	centrifugoTokenHMACSecret string
 }
 
-func New(svc *service.Balda, sess *session.Service, xAPIToken string) *Handlers {
-	return &Handlers{svc: svc, sess: sess, xAPIToken: xAPIToken}
+func New(svc *service.Balda, sess *session.Service, xAPIToken string, cf *centrifugo.Client, centrifugoTokenHMACSecret string) *Handlers {
+	return &Handlers{svc: svc, sess: sess, xAPIToken: xAPIToken, cf: cf, centrifugoTokenHMACSecret: centrifugoTokenHMACSecret}
 }
 
 // HandleAPIKeyHeader implements baldaapi.SecurityHandler.
