@@ -26,6 +26,15 @@ type Handler interface {
 	//
 	// GET /player/state/{uid}
 	GetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (GetPlayerStateUIDRes, error)
+	// JoinGame implements joinGame operation.
+	//
+	// Adds the authenticated player to the specified waiting game.
+	// When the second player joins (quorum of 2 is reached) the game
+	// transitions to in_progress and the first move belongs to the
+	// player who created the game.
+	//
+	// POST /games/{id}/join
+	JoinGame(ctx context.Context, params JoinGameParams) (JoinGameRes, error)
 	// ListGames implements listGames operation.
 	//
 	// Returns a snapshot of all currently active games.

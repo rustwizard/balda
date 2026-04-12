@@ -38,6 +38,7 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 var operationRolesAPIKeyHeader = map[string][]string{
 	AuthOperation:       []string{},
 	CreateGameOperation: []string{},
+	JoinGameOperation:   []string{},
 	ListGamesOperation:  []string{},
 	PingOperation:       []string{},
 }
@@ -67,6 +68,7 @@ func GetRolesForAPIKeyHeader(operation string) []string {
 var operationRolesAPIKeyQueryParam = map[string][]string{
 	AuthOperation:       []string{},
 	CreateGameOperation: []string{},
+	JoinGameOperation:   []string{},
 	ListGamesOperation:  []string{},
 	PingOperation:       []string{},
 }

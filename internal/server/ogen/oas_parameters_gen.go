@@ -136,6 +136,115 @@ func decodeGetPlayerStateUIDParams(args [1]string, argsEscaped bool, r *http.Req
 	return params, nil
 }
 
+// JoinGameParams is parameters of joinGame operation.
+type JoinGameParams struct {
+	XAPISession string
+	// ID of the game to join.
+	ID uuid.UUID
+}
+
+func unpackJoinGameParams(packed middleware.Parameters) (params JoinGameParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-API-Session",
+			In:   "header",
+		}
+		params.XAPISession = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeJoinGameParams(args [1]string, argsEscaped bool, r *http.Request) (params JoinGameParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-API-Session.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-API-Session",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XAPISession = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-API-Session",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // ListGamesParams is parameters of listGames operation.
 type ListGamesParams struct {
 	XAPISession string

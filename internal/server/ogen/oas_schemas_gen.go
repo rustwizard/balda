@@ -267,6 +267,35 @@ func (s *GameSummary) SetStartedAt(val OptInt64) {
 	s.StartedAt = val
 }
 
+type JoinGameConflict ErrorResponse
+
+func (*JoinGameConflict) joinGameRes() {}
+
+type JoinGameNotFound ErrorResponse
+
+func (*JoinGameNotFound) joinGameRes() {}
+
+// Ref: #/components/schemas/JoinGameResponse
+type JoinGameResponse struct {
+	Game OptGameSummary `json:"game"`
+}
+
+// GetGame returns the value of Game.
+func (s *JoinGameResponse) GetGame() OptGameSummary {
+	return s.Game
+}
+
+// SetGame sets the value of Game.
+func (s *JoinGameResponse) SetGame(val OptGameSummary) {
+	s.Game = val
+}
+
+func (*JoinGameResponse) joinGameRes() {}
+
+type JoinGameUnauthorized ErrorResponse
+
+func (*JoinGameUnauthorized) joinGameRes() {}
+
 // Ref: #/components/schemas/ListGamesResponse
 type ListGamesResponse struct {
 	Games []GameSummary `json:"games"`

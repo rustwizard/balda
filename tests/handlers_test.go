@@ -99,7 +99,7 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 
 	s := storage.New(pool, 10*time.Second)
 
-	svc := service.New(lby, mm, s)
+	svc := service.New(lby, mm, s, &notifier.Noop{})
 
 	h := handlers.New(svc, sess, testAPIToken)
 
@@ -304,7 +304,7 @@ func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 	})
 
 	s := storage.New(pool, 10*time.Second)
-	svc := service.New(lby, mm, s)
+	svc := service.New(lby, mm, s, &notifier.Noop{})
 	h := handlers.New(svc, sess, testAPIToken)
 
 	cleanup := func() {
@@ -543,6 +543,29 @@ func setupServer(t *testing.T) (srv *httptest.Server, email, password string, cl
 		cleanupHandlers()
 	}
 	return srv, email, password, cleanup
+}
+
+// postSignup signs up a new user via HTTP and returns their session ID.
+func postSignup(t *testing.T, srv *httptest.Server, email, password string) string {
+	t.Helper()
+	body, err := json.Marshal(map[string]string{
+		"firstname": "Test", "lastname": "User", "email": email, "password": password,
+	})
+	require.NoError(t, err)
+	req, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/signup", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	var out struct {
+		User struct {
+			Sid string `json:"sid"`
+		} `json:"user"`
+	}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&out))
+	require.NotEmpty(t, out.User.Sid)
+	return out.User.Sid
 }
 
 func postAuth(t *testing.T, srv *httptest.Server, email, password string) *http.Response {

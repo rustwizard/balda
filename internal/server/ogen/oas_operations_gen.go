@@ -9,6 +9,7 @@ const (
 	AuthOperation              OperationName = "Auth"
 	CreateGameOperation        OperationName = "CreateGame"
 	GetPlayerStateUIDOperation OperationName = "GetPlayerStateUID"
+	JoinGameOperation          OperationName = "JoinGame"
 	ListGamesOperation         OperationName = "ListGames"
 	PingOperation              OperationName = "Ping"
 	SignupOperation            OperationName = "Signup"

@@ -66,6 +66,8 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 | POST | `/session/ping` | Keepalive — refreshes session TTL |
 | GET | `/player/state/{uid}` | Get player profile and state |
 | GET | `/games` | List all currently active games |
+| POST | `/games` | Create a new waiting game |
+| POST | `/games/{id}/join` | Join an existing waiting game |
 
 ### POST /signup
 
@@ -144,6 +146,42 @@ Refreshes the session TTL. Returns `204` with `X-Server-Time` and echoed `X-Requ
 }
 ```
 
+### POST /games
+
+Creates a new game in `waiting` status with the caller as the only player. Requires `X-API-Key` and `X-API-Session`.
+
+```json
+// Response
+{
+  "game": {
+    "id": "<game-uuid>",
+    "player_ids": ["<creator-uuid>"],
+    "status": "waiting",
+    "started_at": 1712600000000
+  }
+}
+```
+
+Returns `409` if the player is already in a game.
+
+### POST /games/{id}/join
+
+Joins a waiting game by its ID. When the second player joins, the game transitions to `in_progress` and the creator gets the first move. Requires `X-API-Key` and `X-API-Session`.
+
+```json
+// Response
+{
+  "game": {
+    "id": "<game-uuid>",
+    "player_ids": ["<creator-uuid>", "<joiner-uuid>"],
+    "status": "in_progress",
+    "started_at": 1712600000000
+  }
+}
+```
+
+Returns `404` if the game does not exist. Returns `409` if the player is already in a game or the game is not in `waiting` status.
+
 ### GET /games
 
 Returns a snapshot of all currently active games. Requires `X-API-Key`.
@@ -155,6 +193,7 @@ Returns a snapshot of all currently active games. Requires `X-API-Key`.
     {
       "id": "<game-uuid>",
       "player_ids": ["<uuid>", "<uuid>"],
+      "status": "in_progress",
       "started_at": 1712600000000
     }
   ]

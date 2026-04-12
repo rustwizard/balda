@@ -138,6 +138,51 @@ paths:
         "401":
           $ref: '#/components/responses/Unauthorized'
 
+  /games/{id}/join:
+    post:
+      operationId: joinGame
+      summary: Join an existing waiting game
+      description: |
+        Adds the authenticated player to the specified waiting game.
+        When the second player joins (quorum of 2 is reached) the game
+        transitions to in_progress and the first move belongs to the
+        player who created the game.
+      tags:
+        - Games
+      security:
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
+      parameters:
+        - $ref: '#/components/parameters/ApiSessionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game to join
+      responses:
+        "200":
+          description: Successfully joined; game is now in_progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinGameResponse"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Cannot join (player already in a game, game not waiting, or game is full)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /player/state/{uid}:
     get:
       operationId: getPlayerStateUID
@@ -335,6 +380,12 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/GameSummary"
+
+    JoinGameResponse:
+      type: object
+      properties:
+        game:
+          $ref: "#/components/schemas/GameSummary"
 
     PlayerState:
       type: object

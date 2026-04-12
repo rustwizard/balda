@@ -12,8 +12,10 @@ import (
 )
 
 var (
-	ErrGameNotFound = errors.New("lobby: game not found")
-	ErrPlayerInGame = errors.New("lobby: player already in a game")
+	ErrGameNotFound   = errors.New("lobby: game not found")
+	ErrPlayerInGame   = errors.New("lobby: player already in a game")
+	ErrGameNotWaiting = errors.New("lobby: game is not in waiting status")
+	ErrGameFull       = errors.New("lobby: game already has enough players")
 )
 
 type GameStatus string
@@ -82,6 +84,82 @@ func (l *Lobby) Create(playerID string) (*GameRecord, error) {
 	}
 	l.games[id] = rec
 	l.byPlayer[playerID] = id
+	return rec, nil
+}
+
+// Join adds playerID to an existing waiting game. If the joining player brings
+// the player count to 2 (quorum), the game is started immediately via the
+// factory; the first move belongs to the player who created the game (index 0).
+// Returns ErrGameNotFound, ErrGameNotWaiting, ErrGameFull, or ErrPlayerInGame
+// on the corresponding error conditions.
+func (l *Lobby) Join(ctx context.Context, gameID string, playerID string, n game.Notifier) (*GameRecord, error) {
+	// Phase 1: read-check without creating anything.
+	l.mu.RLock()
+	rec, ok := l.games[gameID]
+	if !ok {
+		l.mu.RUnlock()
+		return nil, ErrGameNotFound
+	}
+	if rec.Status != GameStatusWaiting {
+		l.mu.RUnlock()
+		if rec.Status == GameStatusInProgress {
+			return nil, ErrGameFull
+		}
+		return nil, ErrGameNotWaiting
+	}
+	if _, alreadyIn := l.byPlayer[playerID]; alreadyIn {
+		l.mu.RUnlock()
+		return nil, ErrPlayerInGame
+	}
+	// Snapshot creator list so factory can be called outside the lock.
+	existing := make([]*game.Player, len(rec.Players))
+	copy(existing, rec.Players)
+	l.mu.RUnlock()
+
+	// Build the full player list: creator(s) first, joiner last.
+	allPlayers := append(existing, &game.Player{ID: playerID})
+
+	gameCtx, cancel := context.WithCancel(ctx)
+	g, err := l.factory(gameCtx, allPlayers, n)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
+
+	// Phase 2: write-lock, re-validate, commit.
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	rec, ok = l.games[gameID]
+	if !ok {
+		cancel()
+		return nil, ErrGameNotFound
+	}
+	if rec.Status != GameStatusWaiting {
+		cancel()
+		if rec.Status == GameStatusInProgress {
+			return nil, ErrGameFull
+		}
+		return nil, ErrGameNotWaiting
+	}
+	if _, alreadyIn := l.byPlayer[playerID]; alreadyIn {
+		cancel()
+		return nil, ErrPlayerInGame
+	}
+
+	// Commit: update record in-place and register the new player.
+	joiner := &game.Player{ID: playerID}
+	rec.Players = append(rec.Players, joiner)
+	rec.Game = g
+	rec.Status = GameStatusInProgress
+	rec.cancel = cancel
+	l.byPlayer[playerID] = gameID
+
+	go func() {
+		g.Run(gameCtx)
+		l.onDone(gameID)
+	}()
+
 	return rec, nil
 }
 
