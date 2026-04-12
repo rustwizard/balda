@@ -117,7 +117,7 @@ var serverCmd = &cobra.Command{
 
 		s := storage.New(pool, 10*time.Second)
 
-		svc := service.New(lby, mm, s)
+		svc := service.New(lby, mm, s, n)
 
 		h := handlers.New(svc, sess, cfg.XAPIToken)
 
