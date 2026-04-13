@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 create table if not exists users
 (
     user_id       bigserial

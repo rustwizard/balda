@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Balda — Демо доски</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(135deg, #f5f5f0 0%, #e8e6df 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    color: #3d3d3d;
+  }
+  .game-container {
+    width: 100%;
+    max-width: 480px;
+    background: #fffef9;
+    border-radius: 24px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .logo {
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #4a4a4a;
+  }
+  .timer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff3e0;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    color: #e65100;
+    font-variant-numeric: tabular-nums;
+  }
+  .players {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .player-card {
+    flex: 1;
+    background: #f7f7f4;
+    border-radius: 16px;
+    padding: 14px;
+    text-align: center;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+  }
+  .player-card.active {
+    border-color: #4a90d9;
+    background: #eef6ff;
+  }
+  .player-name {
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 4px;
+  }
+  .player-score {
+    font-size: 22px;
+    font-weight: 800;
+    color: #4a90d9;
+  }
+  .words-count {
+    font-size: 12px;
+    color: #888;
+    margin-top: 2px;
+  }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    aspect-ratio: 1 / 1;
+    background: #e0ddd5;
+    padding: 12px;
+    border-radius: 20px;
+    box-shadow: inset 0 4px 12px rgba(0,0,0,0.06);
+  }
+  .cell {
+    position: relative;
+    background: #faf8f3;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(22px, 6vw, 36px);
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #3d3d3d;
+    box-shadow: 0 3px 0 #d4d0c8, 0 4px 8px rgba(0,0,0,0.08);
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .cell:active {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 #d4d0c8, 0 2px 4px rgba(0,0,0,0.08);
+  }
+  .cell.letter {
+    background: linear-gradient(180deg, #f3e9d8 0%, #e6d5b8 100%);
+    color: #2c2c2c;
+    text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+    box-shadow: 0 4px 0 #c9b896, 0 6px 10px rgba(0,0,0,0.12);
+  }
+  .cell.letter:active {
+    box-shadow: 0 2px 0 #c9b896, 0 3px 6px rgba(0,0,0,0.12);
+  }
+  .cell.selected {
+    outline: 3px solid #4a90d9;
+    outline-offset: -3px;
+  }
+  .cell.highlight {
+    background: #fff9c4;
+  }
+
+  .word-bar {
+    background: #f7f7f4;
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+  }
+  .word-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888;
+    margin-bottom: 6px;
+  }
+  .word-value {
+    font-size: 26px;
+    font-weight: 700;
+    min-height: 34px;
+    letter-spacing: 3px;
+  }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .btn {
+    border: none;
+    padding: 16px;
+    border-radius: 16px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: #4a90d9;
+    color: #fff;
+  }
+  .btn-secondary {
+    background: #e0e0e0;
+    color: #555;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+</style>
+</head>
+<body>
+
+<div class="game-container">
+  <div class="header">
+    <div class="logo">БАЛДА</div>
+    <div class="timer">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 6v6l4 2"/>
+      </svg>
+      0:42
+    </div>
+  </div>
+
+  <div class="players">
+    <div class="player-card active">
+      <div class="player-name">BlackShear</div>
+      <div class="player-score">24</div>
+      <div class="words-count">3 слова</div>
+    </div>
+    <div class="player-card">
+      <div class="player-name">Cougar</div>
+      <div class="player-score">18</div>
+      <div class="words-count">2 слова</div>
+    </div>
+  </div>
+
+  <div class="board">
+    <!-- row 0 -->
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <!-- row 1 -->
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <!-- row 2 (center) -->
+    <div class="cell letter">с</div>
+    <div class="cell letter">л</div>
+    <div class="cell letter selected">о</div>
+    <div class="cell letter">в</div>
+    <div class="cell letter">о</div>
+    <!-- row 3 -->
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <!-- row 4 -->
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+    <div class="cell"></div>
+  </div>
+
+  <div class="word-bar">
+    <div class="word-label">Ваше слово</div>
+    <div class="word-value">СЛОВО</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-secondary">Пропустить</button>
+    <button class="btn btn-primary">Отправить</button>
+  </div>
+</div>
+
+</body>
+</html>

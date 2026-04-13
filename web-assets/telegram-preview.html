@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Balda — Telegram Mini App</title>
+<style>
+  :root {
+    --tg-bg: var(--tg-theme-bg-color, #ffffff);
+    --tg-text: var(--tg-theme-text-color, #222222);
+    --tg-hint: var(--tg-theme-hint-color, #999999);
+    --tg-link: var(--tg-theme-link-color, #2481cc);
+    --tg-button: var(--tg-theme-button-color, #2481cc);
+    --tg-button-text: var(--tg-theme-button-text-color, #ffffff);
+    --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #f5f5f5);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--tg-bg);
+    color: var(--tg-text);
+    min-height: 100vh;
+    padding: 12px;
+    padding-top: max(12px, env(safe-area-inset-top));
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .logo {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .timer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(36, 129, 204, 0.1);
+    color: var(--tg-link);
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .players {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .player {
+    flex: 1;
+    background: var(--tg-secondary-bg);
+    border-radius: 14px;
+    padding: 12px;
+    text-align: center;
+    border: 2px solid transparent;
+  }
+  .player.active {
+    border-color: var(--tg-link);
+  }
+  .player-name { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+  .player-score { font-size: 22px; font-weight: 800; color: var(--tg-link); }
+  .player-words { font-size: 11px; color: var(--tg-hint); margin-top: 2px; }
+
+  .board {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    aspect-ratio: 1 / 1;
+    background: #e0ddd5;
+    padding: 10px;
+    border-radius: 18px;
+    margin-bottom: 16px;
+  }
+  .cell {
+    background: var(--tg-bg);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: clamp(20px, 5vw, 32px);
+    font-weight: 700;
+    text-transform: uppercase;
+    box-shadow: 0 2px 0 #d4d0c8, 0 3px 6px rgba(0,0,0,0.06);
+  }
+  .cell.letter {
+    background: linear-gradient(180deg, #f3e9d8 0%, #e6d5b8 100%);
+    color: #1a1a1a;
+  }
+  .cell.selected {
+    outline: 3px solid var(--tg-link);
+    outline-offset: -3px;
+  }
+
+  .word-bar {
+    background: var(--tg-secondary-bg);
+    border-radius: 14px;
+    padding: 14px;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  .word-label { font-size: 11px; text-transform: uppercase; color: var(--tg-hint); letter-spacing: 0.5px; }
+  .word-value { font-size: 24px; font-weight: 700; margin-top: 4px; letter-spacing: 2px; }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .btn {
+    border: none;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+  .btn-primary {
+    background: var(--tg-button);
+    color: var(--tg-button-text);
+  }
+  .btn-secondary {
+    background: var(--tg-secondary-bg);
+    color: var(--tg-text);
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">БАЛДА</div>
+  <div class="timer">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M12 6v6l4 2"/>
+    </svg>
+    0:42
+  </div>
+</div>
+
+<div class="players">
+  <div class="player active">
+    <div class="player-name">BlackShear</div>
+    <div class="player-score">24</div>
+    <div class="player-words">3 слова</div>
+  </div>
+  <div class="player">
+    <div class="player-name">Cougar</div>
+    <div class="player-score">18</div>
+    <div class="player-words">2 слова</div>
+  </div>
+</div>
+
+<div class="board">
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+
+  <div class="cell letter">с</div>
+  <div class="cell letter">л</div>
+  <div class="cell letter selected">о</div>
+  <div class="cell letter">в</div>
+  <div class="cell letter">о</div>
+
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+  <div class="cell"></div>
+</div>
+
+<div class="word-bar">
+  <div class="word-label">Ваше слово</div>
+  <div class="word-value">СЛОВО</div>
+</div>
+
+<div class="actions">
+  <button class="btn btn-secondary">Пропустить</button>
+  <button class="btn btn-primary">Отправить</button>
+</div>
+
+</body>
+</html>

@@ -1,4 +1,17 @@
 services:
+  frontend:
+    image: rustwizard/balda-frontend
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      server:
+        condition: service_started
+      centrifugo:
+        condition: service_started
+
   server:
     image: rustwizard/balda-server
     build:
