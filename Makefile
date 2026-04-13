@@ -7,7 +7,7 @@ BUILD_TARGET=$(MAKEFILE_PATH)/bin/balda
 GREEN_COLOR   = "\033[0;32m"
 DEFAULT_COLOR = "\033[m"
 
-.PHONY: build code-gen test
+.PHONY: build code-gen test docker restart
 
 build:
 	@echo -e $(GREEN_COLOR)[building balda to $(BUILD_TARGET)]$(DEFAULT_COLOR)
@@ -25,3 +25,5 @@ test:
 docker:
 	@docker build -f ./build/Dockerfile ./
 
+restart:
+	@docker compose down && docker compose up --build -d 2>&1
