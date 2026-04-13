@@ -5,10 +5,13 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/google/uuid"
-	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
+	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/lobby"
+	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/session"
 )
 
@@ -57,6 +60,30 @@ func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGamePar
 		playerIDs = append(playerIDs, pid)
 	}
 
+	ev := centrifugo.EvGameCreated{
+		Type:    "game_created",
+		GameID:  rec.ID,
+		Status:  "waiting",
+		Players: make([]string, 0, len(rec.Players)),
+	}
+	for _, p := range rec.Players {
+		ev.Players = append(ev.Players, p.ID)
+	}
+	if err := h.cf.Publish(ctx, centrifugo.ChannelLobby, ev); err != nil {
+		slog.Error("create_game: publish to centrifugo", slog.Any("error", err))
+	}
+
+	gameToken, err := centrifugo.GenerateSubscriptionToken(
+		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,
+	)
+	if err != nil {
+		slog.Error("create_game: generate game token", slog.Any("error", err))
+		return &baldaapi.ErrorResponse{
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Message: baldaapi.NewOptString("internal error"),
+		}, nil
+	}
+
 	return &baldaapi.CreateGameResponse{
 		Game: baldaapi.NewOptGameSummary(baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
@@ -64,5 +91,6 @@ func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGamePar
 			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatusWaiting),
 			StartedAt: baldaapi.NewOptInt64(rec.StartedAt.UnixMilli()),
 		}),
+		GameToken: baldaapi.NewOptString(gameToken),
 	}, nil
 }

@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strconv"
+	"time"
 
+	"github.com/rustwizard/balda/internal/centrifugo"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/service"
 	"github.com/rustwizard/balda/internal/session"
@@ -12,13 +15,31 @@ import (
 
 // Handlers implements baldaapi.Handler and baldaapi.SecurityHandler.
 type Handlers struct {
-	svc       *service.Balda
-	sess      *session.Service
-	xAPIToken string
+	svc                     *service.Balda
+	sess                    *session.Service
+	xAPIToken               string
+	cf                      *centrifugo.Client
+	centrifugoTokenHMACSecret string
 }
 
-func New(svc *service.Balda, sess *session.Service, xAPIToken string) *Handlers {
-	return &Handlers{svc: svc, sess: sess, xAPIToken: xAPIToken}
+func New(svc *service.Balda, sess *session.Service, xAPIToken string, cf *centrifugo.Client, centrifugoTokenHMACSecret string) *Handlers {
+	return &Handlers{svc: svc, sess: sess, xAPIToken: xAPIToken, cf: cf, centrifugoTokenHMACSecret: centrifugoTokenHMACSecret}
+}
+
+// generateCentrifugoTokens returns a connection token and a lobby subscription token for the given user.
+func (h *Handlers) generateCentrifugoTokens(uid int64) (cfToken, lobbyToken string, err error) {
+	sub := strconv.FormatInt(uid, 10)
+	ttl := 24 * time.Hour
+	cfToken, err = centrifugo.GenerateConnectionToken(sub, h.centrifugoTokenHMACSecret, ttl)
+	if err != nil {
+		slog.Error("generate centrifugo connection token", slog.Any("error", err))
+		return
+	}
+	lobbyToken, err = centrifugo.GenerateSubscriptionToken(sub, centrifugo.ChannelLobby, h.centrifugoTokenHMACSecret, ttl)
+	if err != nil {
+		slog.Error("generate centrifugo lobby token", slog.Any("error", err))
+	}
+	return
 }
 
 // HandleAPIKeyHeader implements baldaapi.SecurityHandler.

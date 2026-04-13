@@ -291,6 +291,12 @@ components:
       properties:
         user:
           $ref: "#/components/schemas/Player"
+        centrifugo_token:
+          description: JWT for connecting to the Centrifugo WebSocket
+          type: string
+        lobby_token:
+          description: Centrifugo subscription JWT for the lobby channel
+          type: string
 
     Player:
       type: object
@@ -336,6 +342,12 @@ components:
       properties:
         player:
           $ref: "#/components/schemas/Player"
+        centrifugo_token:
+          description: JWT for connecting to the Centrifugo WebSocket
+          type: string
+        lobby_token:
+          description: Centrifugo subscription JWT for the lobby channel
+          type: string
 
     GameStatus:
       type: string
@@ -372,6 +384,9 @@ components:
       properties:
         game:
           $ref: "#/components/schemas/GameSummary"
+        game_token:
+          description: Centrifugo subscription JWT for the game channel
+          type: string
 
     ListGamesResponse:
       type: object
@@ -386,6 +401,98 @@ components:
       properties:
         game:
           $ref: "#/components/schemas/GameSummary"
+        game_token:
+          description: Centrifugo subscription JWT for the game channel
+          type: string
+
+    PlayerScore:
+      type: object
+      properties:
+        uid:
+          description: Player's ID
+          type: string
+          format: uuid
+        score:
+          description: Number of points scored in the current game
+          type: integer
+
+    EvGameCreated:
+      type: object
+      description: Published to the lobby channel when a new game is created
+      properties:
+        type:
+          type: string
+          enum: [game_created]
+        game:
+          $ref: "#/components/schemas/GameSummary"
+
+    EvGameStarted:
+      type: object
+      description: Published to lobby and game:{id} channels when the second player joins
+      properties:
+        type:
+          type: string
+          enum: [game_started]
+        game:
+          $ref: "#/components/schemas/GameSummary"
+
+    EvGameState:
+      type: object
+      description: |
+        Full game snapshot. Published to game:{id} at game start and after every move.
+        board is a 5x5 grid represented as an array of 5 rows, each row is an array of
+        5 single-character strings (empty string means the cell is empty).
+      properties:
+        type:
+          type: string
+          enum: [game_state]
+        game_id:
+          type: string
+          format: uuid
+        board:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            type: array
+            minItems: 5
+            maxItems: 5
+            items:
+              type: string
+              maxLength: 1
+        current_turn_uid:
+          description: ID of the player whose turn it is
+          type: string
+          format: uuid
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerScore"
+        status:
+          $ref: "#/components/schemas/GameStatus"
+        move_number:
+          description: Number of moves made so far (0 at game start)
+          type: integer
+
+    EvGameOver:
+      type: object
+      description: Published to game:{id} when the game ends
+      properties:
+        type:
+          type: string
+          enum: [game_over]
+        game_id:
+          type: string
+          format: uuid
+        winner_uid:
+          description: ID of the winner, absent if the game ended in a draw
+          type: string
+          format: uuid
+          nullable: true
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerScore"
 
     PlayerState:
       type: object

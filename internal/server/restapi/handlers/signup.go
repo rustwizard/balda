@@ -97,6 +97,15 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 		}, nil
 	}
 
+	cfToken, lobbyToken, err := h.generateCentrifugoTokens(uid)
+	if err != nil {
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Type:    baldaapi.NewOptString("SignUp Error"),
+		}, nil
+	}
+
 	return &baldaapi.SignupResponse{
 		User: baldaapi.NewOptPlayer(baldaapi.Player{
 			UID:       baldaapi.NewOptUUID(pid),
@@ -105,5 +114,7 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 			Sid:       baldaapi.NewOptString(sid.String()),
 			Key:       baldaapi.NewOptString(apiKey),
 		}),
+		CentrifugoToken: baldaapi.NewOptString(cfToken),
+		LobbyToken:      baldaapi.NewOptString(lobbyToken),
 	}, nil
 }

@@ -5,11 +5,14 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"time"
 
+	"github.com/google/uuid"
+	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/session"
-	"github.com/google/uuid"
 )
 
 // JoinGame implements baldaapi.Handler.
@@ -79,6 +82,34 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 		playerIDs = append(playerIDs, pid)
 	}
 
+	ev := centrifugo.EvGameStarted{
+		Type:      "game_started",
+		GameID:    rec.ID,
+		Status:    "in_progress",
+		StartedAt: rec.StartedAt.UnixMilli(),
+		PlayerIDs: make([]string, 0, len(rec.Players)),
+	}
+	for _, p := range rec.Players {
+		ev.PlayerIDs = append(ev.PlayerIDs, p.ID)
+	}
+	if err := h.cf.Publish(ctx, centrifugo.ChannelLobby, ev); err != nil {
+		slog.Error("join_game: publish to lobby", slog.Any("error", err))
+	}
+	if err := h.cf.Publish(ctx, centrifugo.ChannelGame(rec.ID), ev); err != nil {
+		slog.Error("join_game: publish to game channel", slog.Any("error", err))
+	}
+
+	gameToken, err := centrifugo.GenerateSubscriptionToken(
+		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,
+	)
+	if err != nil {
+		slog.Error("join_game: generate game token", slog.Any("error", err))
+		return &baldaapi.JoinGameConflict{
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Message: baldaapi.NewOptString("internal error"),
+		}, nil
+	}
+
 	return &baldaapi.JoinGameResponse{
 		Game: baldaapi.NewOptGameSummary(baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
@@ -86,5 +117,6 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),
 			StartedAt: baldaapi.NewOptInt64(rec.StartedAt.UnixMilli()),
 		}),
+		GameToken: baldaapi.NewOptString(gameToken),
 	}, nil
 }

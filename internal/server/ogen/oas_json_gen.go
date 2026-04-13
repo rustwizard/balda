@@ -141,10 +141,24 @@ func (s *AuthResponse) encodeFields(e *jx.Encoder) {
 			s.Player.Encode(e)
 		}
 	}
+	{
+		if s.CentrifugoToken.Set {
+			e.FieldStart("centrifugo_token")
+			s.CentrifugoToken.Encode(e)
+		}
+	}
+	{
+		if s.LobbyToken.Set {
+			e.FieldStart("lobby_token")
+			s.LobbyToken.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfAuthResponse = [1]string{
+var jsonFieldsNameOfAuthResponse = [3]string{
 	0: "player",
+	1: "centrifugo_token",
+	2: "lobby_token",
 }
 
 // Decode decodes AuthResponse from json.
@@ -164,6 +178,26 @@ func (s *AuthResponse) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"player\"")
+			}
+		case "centrifugo_token":
+			if err := func() error {
+				s.CentrifugoToken.Reset()
+				if err := s.CentrifugoToken.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"centrifugo_token\"")
+			}
+		case "lobby_token":
+			if err := func() error {
+				s.LobbyToken.Reset()
+				if err := s.LobbyToken.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"lobby_token\"")
 			}
 		default:
 			return d.Skip()
@@ -204,10 +238,17 @@ func (s *CreateGameResponse) encodeFields(e *jx.Encoder) {
 			s.Game.Encode(e)
 		}
 	}
+	{
+		if s.GameToken.Set {
+			e.FieldStart("game_token")
+			s.GameToken.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfCreateGameResponse = [1]string{
+var jsonFieldsNameOfCreateGameResponse = [2]string{
 	0: "game",
+	1: "game_token",
 }
 
 // Decode decodes CreateGameResponse from json.
@@ -227,6 +268,16 @@ func (s *CreateGameResponse) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"game\"")
+			}
+		case "game_token":
+			if err := func() error {
+				s.GameToken.Reset()
+				if err := s.GameToken.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"game_token\"")
 			}
 		default:
 			return d.Skip()
@@ -609,10 +660,17 @@ func (s *JoinGameResponse) encodeFields(e *jx.Encoder) {
 			s.Game.Encode(e)
 		}
 	}
+	{
+		if s.GameToken.Set {
+			e.FieldStart("game_token")
+			s.GameToken.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfJoinGameResponse = [1]string{
+var jsonFieldsNameOfJoinGameResponse = [2]string{
 	0: "game",
+	1: "game_token",
 }
 
 // Decode decodes JoinGameResponse from json.
@@ -632,6 +690,16 @@ func (s *JoinGameResponse) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"game\"")
+			}
+		case "game_token":
+			if err := func() error {
+				s.GameToken.Reset()
+				if err := s.GameToken.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"game_token\"")
 			}
 		default:
 			return d.Skip()
@@ -1449,10 +1517,24 @@ func (s *SignupResponse) encodeFields(e *jx.Encoder) {
 			s.User.Encode(e)
 		}
 	}
+	{
+		if s.CentrifugoToken.Set {
+			e.FieldStart("centrifugo_token")
+			s.CentrifugoToken.Encode(e)
+		}
+	}
+	{
+		if s.LobbyToken.Set {
+			e.FieldStart("lobby_token")
+			s.LobbyToken.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfSignupResponse = [1]string{
+var jsonFieldsNameOfSignupResponse = [3]string{
 	0: "user",
+	1: "centrifugo_token",
+	2: "lobby_token",
 }
 
 // Decode decodes SignupResponse from json.
@@ -1472,6 +1554,26 @@ func (s *SignupResponse) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"user\"")
+			}
+		case "centrifugo_token":
+			if err := func() error {
+				s.CentrifugoToken.Reset()
+				if err := s.CentrifugoToken.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"centrifugo_token\"")
+			}
+		case "lobby_token":
+			if err := func() error {
+				s.LobbyToken.Reset()
+				if err := s.LobbyToken.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"lobby_token\"")
 			}
 		default:
 			return d.Skip()

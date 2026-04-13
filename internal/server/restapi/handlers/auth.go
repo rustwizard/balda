@@ -55,7 +55,19 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 			}, nil
 		}
 		player.Sid = baldaapi.NewOptString(sidStr)
-		return &baldaapi.AuthResponse{Player: baldaapi.NewOptPlayer(player)}, nil
+		cfToken, lobbyToken, err := h.generateCentrifugoTokens(uid)
+		if err != nil {
+			return &baldaapi.ErrorResponse{
+				Message: baldaapi.NewOptString(""),
+				Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+				Type:    baldaapi.NewOptString("Auth Error"),
+			}, nil
+		}
+		return &baldaapi.AuthResponse{
+			Player:          baldaapi.NewOptPlayer(player),
+			CentrifugoToken: baldaapi.NewOptString(cfToken),
+			LobbyToken:      baldaapi.NewOptString(lobbyToken),
+		}, nil
 	}
 	if err != nil {
 		slog.Error("auth: get sid", slog.Any("error", err))
@@ -67,5 +79,17 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 	}
 
 	player.Sid = baldaapi.NewOptString(sid.Sid)
-	return &baldaapi.AuthResponse{Player: baldaapi.NewOptPlayer(player)}, nil
+	cfToken, lobbyToken, err := h.generateCentrifugoTokens(uid)
+	if err != nil {
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString(""),
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Type:    baldaapi.NewOptString("Auth Error"),
+		}, nil
+	}
+	return &baldaapi.AuthResponse{
+		Player:          baldaapi.NewOptPlayer(player),
+		CentrifugoToken: baldaapi.NewOptString(cfToken),
+		LobbyToken:      baldaapi.NewOptString(lobbyToken),
+	}, nil
 }

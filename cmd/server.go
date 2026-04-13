@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/rustwizard/balda/api/openapi"
+	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
@@ -64,12 +65,19 @@ type PgConfig struct {
 	SSL          string
 }
 
+type CentrifugoConfig struct {
+	APIURL          string
+	APIKey          string
+	TokenHMACSecret string
+}
+
 type Config struct {
-	ServerAddr string
-	ServerPort int
-	Pg         PgConfig
-	Session    session.Config
-	XAPIToken  string
+	ServerAddr  string
+	ServerPort  int
+	Pg          PgConfig
+	Session     session.Config
+	XAPIToken   string
+	Centrifugo  CentrifugoConfig
 }
 
 // serverCmd represents the server command
@@ -119,7 +127,9 @@ var serverCmd = &cobra.Command{
 
 		svc := service.New(lby, mm, s, n)
 
-		h := handlers.New(svc, sess, cfg.XAPIToken)
+		cf := centrifugo.NewClient(cfg.Centrifugo.APIURL, cfg.Centrifugo.APIKey)
+
+		h := handlers.New(svc, sess, cfg.XAPIToken, cf, cfg.Centrifugo.TokenHMACSecret)
 
 		srv, err := baldaapi.NewServer(h, h, baldaapi.WithPathPrefix("/balda/api/v1"))
 		if err != nil {
@@ -163,6 +173,9 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	f.IntVar(&c.Pg.MaxPoolSize, "pg.max_pool_size", 10, "postgres max pool size")
 	f.StringVar(&c.Pg.SSL, "pg.ssl", "disable", "postgres ssl")
 	f.StringVar(&c.XAPIToken, prefix+"x_api_token", "", "x-api-token for header or query param")
+	f.StringVar(&c.Centrifugo.APIURL, "centrifugo.api_url", "http://127.0.0.1:8000/api", "centrifugo api url")
+	f.StringVar(&c.Centrifugo.APIKey, "centrifugo.api_key", "", "centrifugo api key")
+	f.StringVar(&c.Centrifugo.TokenHMACSecret, "centrifugo.token_hmac_secret_key", "", "centrifugo token hmac secret")
 	return f
 }
 
