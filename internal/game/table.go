@@ -52,6 +52,20 @@ func (lt *LettersTable) InitialWord() string {
 	return word
 }
 
+// AsStrings converts the board to a 5x5 string matrix suitable for JSON serialization.
+// Empty cells are represented as empty strings.
+func (lt *LettersTable) AsStrings() [5][5]string {
+	var result [5][5]string
+	for r := range lt.Table {
+		for c, l := range lt.Table[r] {
+			if l != nil {
+				result[r][c] = l.Char
+			}
+		}
+	}
+	return result
+}
+
 func (lt *LettersTable) isPlaceForLetterTaken(l *Letter) bool {
 	char := lt.Table[l.RowID][l.ColID]
 	if char != nil {

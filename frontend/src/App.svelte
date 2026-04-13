@@ -5,15 +5,30 @@
   import GameScreen from './components/GameScreen.svelte';
   import { gameState } from './stores/game.svelte';
   import { centrifugo } from './lib/centrifugo';
+  import { ping } from './lib/api';
   import type { CentrifugoEvent } from './types';
 
   // API key for demo - normally from env or config
   const DEMO_API_KEY = import.meta.env.VITE_API_KEY || 'abcdefuvwxyz';
   const CENTRIFUGO_WS_URL = import.meta.env.VITE_CENTRIFUGO_WS_URL || 'ws://localhost:8080/connection/websocket';
 
-  // Connect to Centrifugo after auth
+  let pingCounter = 0;
+
+  // Keep session alive with periodic pings every 5 seconds
   $effect(() => {
-    if (gameState.phase !== 'auth' && gameState.centrifugoToken) {
+    if (gameState.phase === 'auth') return;
+    const interval = setInterval(() => {
+      ping(gameState.apiKey, gameState.sessionId, ++pingCounter).catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  });
+
+  let connected = $state(false);
+
+  // Connect to Centrifugo once after auth
+  $effect(() => {
+    if (!connected && gameState.phase !== 'auth' && gameState.centrifugoToken) {
+      connected = true;
       centrifugo.connect(CENTRIFUGO_WS_URL, gameState.centrifugoToken);
       return () => centrifugo.disconnect();
     }
@@ -29,8 +44,13 @@
         gameState.finishGame(ev);
         break;
       case 'game_started':
-        if (gameState.game?.id === ev.game.id) {
-          gameState.startGame(ev.game);
+        if (gameState.game?.id === ev.game_id) {
+          gameState.startGame({
+            id: ev.game_id,
+            player_ids: ev.player_ids,
+            status: ev.status,
+            started_at: ev.started_at,
+          });
         }
         break;
       case 'game_created':

@@ -88,12 +88,17 @@ export interface EvGameOver {
 
 export interface EvGameCreated {
   type: 'game_created';
-  game: GameSummary;
+  game_id: string;
+  status: GameStatus;
+  player_ids: string[];
 }
 
 export interface EvGameStarted {
   type: 'game_started';
-  game: GameSummary;
+  game_id: string;
+  status: GameStatus;
+  player_ids: string[];
+  started_at: number;
 }
 
 export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted;
