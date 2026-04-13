@@ -15,3 +15,15 @@ func GenerateConnectionToken(uid, secret string, ttl time.Duration) (string, err
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
 }
+
+// GenerateSubscriptionToken returns a Centrifugo subscription JWT
+// that authorizes the given user to subscribe to the given channel.
+func GenerateSubscriptionToken(uid, channel, secret string, ttl time.Duration) (string, error) {
+	claims := jwt.MapClaims{
+		"sub":     uid,
+		"channel": channel,
+		"exp":     jwt.NewNumericDate(time.Now().Add(ttl)),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString([]byte(secret))
+}

@@ -294,6 +294,9 @@ components:
         centrifugo_token:
           description: JWT for connecting to the Centrifugo WebSocket
           type: string
+        lobby_token:
+          description: Centrifugo subscription JWT for the lobby channel
+          type: string
 
     Player:
       type: object
@@ -342,6 +345,9 @@ components:
         centrifugo_token:
           description: JWT for connecting to the Centrifugo WebSocket
           type: string
+        lobby_token:
+          description: Centrifugo subscription JWT for the lobby channel
+          type: string
 
     GameStatus:
       type: string
@@ -378,6 +384,9 @@ components:
       properties:
         game:
           $ref: "#/components/schemas/GameSummary"
+        game_token:
+          description: Centrifugo subscription JWT for the game channel
+          type: string
 
     ListGamesResponse:
       type: object
@@ -392,6 +401,9 @@ components:
       properties:
         game:
           $ref: "#/components/schemas/GameSummary"
+        game_token:
+          description: Centrifugo subscription JWT for the game channel
+          type: string
 
     PlayerScore:
       type: object

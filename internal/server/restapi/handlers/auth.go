@@ -4,10 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/google/uuid"
-	"github.com/rustwizard/balda/internal/centrifugo"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/session"
 )
@@ -57,9 +55,8 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 			}, nil
 		}
 		player.Sid = baldaapi.NewOptString(sidStr)
-		cfToken, err := centrifugo.GenerateConnectionToken(playerID.String(), h.centrifugoTokenHMACSecret, 24*time.Hour)
+		cfToken, lobbyToken, err := h.generateCentrifugoTokens(uid)
 		if err != nil {
-			slog.Error("auth: generate centrifugo token", slog.Any("error", err))
 			return &baldaapi.ErrorResponse{
 				Message: baldaapi.NewOptString(""),
 				Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
@@ -69,6 +66,7 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 		return &baldaapi.AuthResponse{
 			Player:          baldaapi.NewOptPlayer(player),
 			CentrifugoToken: baldaapi.NewOptString(cfToken),
+			LobbyToken:      baldaapi.NewOptString(lobbyToken),
 		}, nil
 	}
 	if err != nil {
@@ -81,9 +79,8 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 	}
 
 	player.Sid = baldaapi.NewOptString(sid.Sid)
-	cfToken, err := centrifugo.GenerateConnectionToken(playerID.String(), h.centrifugoTokenHMACSecret, 24*time.Hour)
+	cfToken, lobbyToken, err := h.generateCentrifugoTokens(uid)
 	if err != nil {
-		slog.Error("auth: generate centrifugo token", slog.Any("error", err))
 		return &baldaapi.ErrorResponse{
 			Message: baldaapi.NewOptString(""),
 			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
@@ -93,5 +90,6 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 	return &baldaapi.AuthResponse{
 		Player:          baldaapi.NewOptPlayer(player),
 		CentrifugoToken: baldaapi.NewOptString(cfToken),
+		LobbyToken:      baldaapi.NewOptString(lobbyToken),
 	}, nil
 }

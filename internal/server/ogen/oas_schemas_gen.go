@@ -90,6 +90,8 @@ type AuthResponse struct {
 	Player OptPlayer `json:"player"`
 	// JWT for connecting to the Centrifugo WebSocket.
 	CentrifugoToken OptString `json:"centrifugo_token"`
+	// Centrifugo subscription JWT for the lobby channel.
+	LobbyToken OptString `json:"lobby_token"`
 }
 
 // GetPlayer returns the value of Player.
@@ -102,6 +104,11 @@ func (s *AuthResponse) GetCentrifugoToken() OptString {
 	return s.CentrifugoToken
 }
 
+// GetLobbyToken returns the value of LobbyToken.
+func (s *AuthResponse) GetLobbyToken() OptString {
+	return s.LobbyToken
+}
+
 // SetPlayer sets the value of Player.
 func (s *AuthResponse) SetPlayer(val OptPlayer) {
 	s.Player = val
@@ -112,11 +119,18 @@ func (s *AuthResponse) SetCentrifugoToken(val OptString) {
 	s.CentrifugoToken = val
 }
 
+// SetLobbyToken sets the value of LobbyToken.
+func (s *AuthResponse) SetLobbyToken(val OptString) {
+	s.LobbyToken = val
+}
+
 func (*AuthResponse) authRes() {}
 
 // Ref: #/components/schemas/CreateGameResponse
 type CreateGameResponse struct {
 	Game OptGameSummary `json:"game"`
+	// Centrifugo subscription JWT for the game channel.
+	GameToken OptString `json:"game_token"`
 }
 
 // GetGame returns the value of Game.
@@ -124,9 +138,19 @@ func (s *CreateGameResponse) GetGame() OptGameSummary {
 	return s.Game
 }
 
+// GetGameToken returns the value of GameToken.
+func (s *CreateGameResponse) GetGameToken() OptString {
+	return s.GameToken
+}
+
 // SetGame sets the value of Game.
 func (s *CreateGameResponse) SetGame(val OptGameSummary) {
 	s.Game = val
+}
+
+// SetGameToken sets the value of GameToken.
+func (s *CreateGameResponse) SetGameToken(val OptString) {
+	s.GameToken = val
 }
 
 func (*CreateGameResponse) createGameRes() {}
@@ -290,6 +314,8 @@ func (*JoinGameNotFound) joinGameRes() {}
 // Ref: #/components/schemas/JoinGameResponse
 type JoinGameResponse struct {
 	Game OptGameSummary `json:"game"`
+	// Centrifugo subscription JWT for the game channel.
+	GameToken OptString `json:"game_token"`
 }
 
 // GetGame returns the value of Game.
@@ -297,9 +323,19 @@ func (s *JoinGameResponse) GetGame() OptGameSummary {
 	return s.Game
 }
 
+// GetGameToken returns the value of GameToken.
+func (s *JoinGameResponse) GetGameToken() OptString {
+	return s.GameToken
+}
+
 // SetGame sets the value of Game.
 func (s *JoinGameResponse) SetGame(val OptGameSummary) {
 	s.Game = val
+}
+
+// SetGameToken sets the value of GameToken.
+func (s *JoinGameResponse) SetGameToken(val OptString) {
+	s.GameToken = val
 }
 
 func (*JoinGameResponse) joinGameRes() {}
@@ -874,6 +910,8 @@ type SignupResponse struct {
 	User OptPlayer `json:"user"`
 	// JWT for connecting to the Centrifugo WebSocket.
 	CentrifugoToken OptString `json:"centrifugo_token"`
+	// Centrifugo subscription JWT for the lobby channel.
+	LobbyToken OptString `json:"lobby_token"`
 }
 
 // GetUser returns the value of User.
@@ -886,6 +924,11 @@ func (s *SignupResponse) GetCentrifugoToken() OptString {
 	return s.CentrifugoToken
 }
 
+// GetLobbyToken returns the value of LobbyToken.
+func (s *SignupResponse) GetLobbyToken() OptString {
+	return s.LobbyToken
+}
+
 // SetUser sets the value of User.
 func (s *SignupResponse) SetUser(val OptPlayer) {
 	s.User = val
@@ -894,6 +937,11 @@ func (s *SignupResponse) SetUser(val OptPlayer) {
 // SetCentrifugoToken sets the value of CentrifugoToken.
 func (s *SignupResponse) SetCentrifugoToken(val OptString) {
 	s.CentrifugoToken = val
+}
+
+// SetLobbyToken sets the value of LobbyToken.
+func (s *SignupResponse) SetLobbyToken(val OptString) {
+	s.LobbyToken = val
 }
 
 func (*SignupResponse) signupRes() {}

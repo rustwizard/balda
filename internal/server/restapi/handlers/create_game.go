@@ -5,6 +5,8 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rustwizard/balda/internal/centrifugo"
@@ -71,6 +73,17 @@ func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGamePar
 		slog.Error("create_game: publish to centrifugo", slog.Any("error", err))
 	}
 
+	gameToken, err := centrifugo.GenerateSubscriptionToken(
+		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,
+	)
+	if err != nil {
+		slog.Error("create_game: generate game token", slog.Any("error", err))
+		return &baldaapi.ErrorResponse{
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Message: baldaapi.NewOptString("internal error"),
+		}, nil
+	}
+
 	return &baldaapi.CreateGameResponse{
 		Game: baldaapi.NewOptGameSummary(baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
@@ -78,5 +91,6 @@ func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGamePar
 			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatusWaiting),
 			StartedAt: baldaapi.NewOptInt64(rec.StartedAt.UnixMilli()),
 		}),
+		GameToken: baldaapi.NewOptString(gameToken),
 	}, nil
 }

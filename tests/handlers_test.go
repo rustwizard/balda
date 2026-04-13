@@ -60,11 +60,17 @@ func startRedis(ctx context.Context, t *testing.T) (addr string, cleanup func())
 	return addr, cleanup
 }
 
-// setupHandlers starts postgres + redis containers, runs migrations,
-// and returns a ready Handlers instance.
-func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
+type coreSetup struct {
+	svc     *service.Balda
+	sess    *session.Service
+	lby     *lobby.Lobby
+	cleanup func()
+}
+
+// setupCore starts postgres + redis containers, runs migrations, and returns
+// the shared service layer. Call cleanup when done.
+func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 	t.Helper()
-	ctx := context.Background()
 
 	pgc, pgCleanup := startPG(ctx, t)
 
@@ -99,18 +105,27 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 	})
 
 	s := storage.New(pool, 10*time.Second)
-
 	svc := service.New(lby, mm, s, &notifier.Noop{})
 
-	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(svc, sess, testAPIToken, cf, "test-secret")
-
-	cleanup := func() {
-		pool.Close()
-		pgCleanup()
-		redisCleanup()
+	return &coreSetup{
+		svc:  svc,
+		sess: sess,
+		lby:  lby,
+		cleanup: func() {
+			pool.Close()
+			pgCleanup()
+			redisCleanup()
+		},
 	}
-	return h, cleanup
+}
+
+func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
+	t.Helper()
+	ctx := context.Background()
+	core := setupCore(ctx, t)
+	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
+	h := handlers.New(core.svc, core.sess, testAPIToken, cf, "test-secret")
+	return h, core.cleanup
 }
 
 func TestSignupHandler(t *testing.T) {
@@ -273,49 +288,10 @@ func TestGetUsersStateUIDHandler(t *testing.T) {
 func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 	t.Helper()
 	ctx := context.Background()
-
-	pgc, pgCleanup := startPG(ctx, t)
-
-	connStr, err := pgc.ConnectionString(ctx, "sslmode=disable")
-	require.NoError(t, err)
-
-	require.NoError(t, os.Setenv("MIGRATION_CONN_STRING", connStr))
-
-	pool, err := pgxpool.New(ctx, connStr)
-	require.NoError(t, err)
-
-	_, err = pool.Exec(ctx, "CREATE EXTENSION IF NOT EXISTS pgcrypto")
-	require.NoError(t, err)
-
-	_, err = migrations.Migrate(10 * time.Second)
-	require.NoError(t, err)
-
-	redisAddr, redisCleanup := startRedis(ctx, t)
-
-	sess := session.NewService(session.Config{
-		Addr:       redisAddr,
-		Expiration: 30 * time.Second,
-	})
-
-	lby := lobby.New(func(ctx context.Context, players []*game.Player, n game.Notifier) (*game.Game, error) {
-		return game.NewGame(players, n)
-	})
-	mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-		_, err := lby.StartGame(ctx, players, &notifier.Noop{})
-		return err
-	})
-
-	s := storage.New(pool, 10*time.Second)
-	svc := service.New(lby, mm, s, &notifier.Noop{})
+	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(svc, sess, testAPIToken, cf, "test-secret")
-
-	cleanup := func() {
-		pool.Close()
-		pgCleanup()
-		redisCleanup()
-	}
-	return h, lby, cleanup
+	h := handlers.New(core.svc, core.sess, testAPIToken, cf, "test-secret")
+	return h, core.lby, core.cleanup
 }
 
 func TestGetPlayerStateUID_GameID(t *testing.T) {

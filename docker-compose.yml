@@ -53,9 +53,11 @@ services:
     ports:
       - "127.0.0.1:8000:8000"
     environment:
-      CENTRIFUGO_TOKEN_HMAC_SECRET_KEY: "balda-centrifugo-secret"
-      CENTRIFUGO_API_KEY: "balda-centrifugo-api-key"
-      CENTRIFUGO_ALLOWED_ORIGINS: "*"
+      CENTRIFUGO_CLIENT_TOKEN_HMAC_SECRET_KEY: "balda-centrifugo-secret"
+      CENTRIFUGO_HTTP_API_KEY: "balda-centrifugo-api-key"
+      CENTRIFUGO_CLIENT_ALLOWED_ORIGINS: "*"
+      CENTRIFUGO_HEALTH_ENABLED: "true"
+      CENTRIFUGO_CHANNEL_NAMESPACES: '[{"name":"game"}]'
     command: centrifugo
 
 volumes:
