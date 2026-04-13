@@ -49,6 +49,8 @@ export interface CreateGameResponse {
 export interface JoinGameResponse {
   game: GameSummary;
   game_token?: string;
+  board?: string[][];
+  current_turn_uid?: string;
 }
 
 export interface ListGamesResponse {

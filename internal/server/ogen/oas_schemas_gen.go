@@ -316,6 +316,12 @@ type JoinGameResponse struct {
 	Game OptGameSummary `json:"game"`
 	// Centrifugo subscription JWT for the game channel.
 	GameToken OptString `json:"game_token"`
+	// Initial 5x5 board state. Each row is an array of 5 single-character strings
+	// (empty string means empty cell). Included so the joining player can render
+	// the board immediately without waiting for the Centrifugo game_state event.
+	Board [][]string `json:"board"`
+	// ID of the player whose turn it is first (the game creator).
+	CurrentTurnUID OptString `json:"current_turn_uid"`
 }
 
 // GetGame returns the value of Game.
@@ -328,6 +334,16 @@ func (s *JoinGameResponse) GetGameToken() OptString {
 	return s.GameToken
 }
 
+// GetBoard returns the value of Board.
+func (s *JoinGameResponse) GetBoard() [][]string {
+	return s.Board
+}
+
+// GetCurrentTurnUID returns the value of CurrentTurnUID.
+func (s *JoinGameResponse) GetCurrentTurnUID() OptString {
+	return s.CurrentTurnUID
+}
+
 // SetGame sets the value of Game.
 func (s *JoinGameResponse) SetGame(val OptGameSummary) {
 	s.Game = val
@@ -336,6 +352,16 @@ func (s *JoinGameResponse) SetGame(val OptGameSummary) {
 // SetGameToken sets the value of GameToken.
 func (s *JoinGameResponse) SetGameToken(val OptString) {
 	s.GameToken = val
+}
+
+// SetBoard sets the value of Board.
+func (s *JoinGameResponse) SetBoard(val [][]string) {
+	s.Board = val
+}
+
+// SetCurrentTurnUID sets the value of CurrentTurnUID.
+func (s *JoinGameResponse) SetCurrentTurnUID(val OptString) {
+	s.CurrentTurnUID = val
 }
 
 func (*JoinGameResponse) joinGameRes() {}

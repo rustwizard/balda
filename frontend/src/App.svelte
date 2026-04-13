@@ -10,7 +10,8 @@
 
   // API key for demo - normally from env or config
   const DEMO_API_KEY = import.meta.env.VITE_API_KEY || 'abcdefuvwxyz';
-  const CENTRIFUGO_WS_URL = import.meta.env.VITE_CENTRIFUGO_WS_URL || 'ws://localhost:8080/connection/websocket';
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const CENTRIFUGO_WS_URL = import.meta.env.VITE_CENTRIFUGO_WS_URL || `${protocol}//${window.location.host}/connection/websocket`;
 
   let pingCounter = 0;
 
@@ -27,15 +28,15 @@
 
   // Connect to Centrifugo once after auth
   $effect(() => {
-    if (!connected && gameState.phase !== 'auth' && gameState.centrifugoToken) {
+    if (!connected && gameState.centrifugoToken) {
       connected = true;
       centrifugo.connect(CENTRIFUGO_WS_URL, gameState.centrifugoToken);
-      return () => centrifugo.disconnect();
     }
   });
 
   // Handle Centrifugo events
   centrifugo.onEvent((ev: CentrifugoEvent) => {
+    console.log('[app] centrifugo event', ev.type, ev);
     switch (ev.type) {
       case 'game_state':
         gameState.applyGameState(ev);
@@ -44,7 +45,9 @@
         gameState.finishGame(ev);
         break;
       case 'game_started':
-        if (gameState.game?.id === ev.game_id) {
+        // Only the creator (waiting phase) needs this event to transition.
+        // The joiner already called startGame() synchronously in join().
+        if (gameState.phase === 'waiting' && gameState.game?.id === ev.game_id) {
           gameState.startGame({
             id: ev.game_id,
             player_ids: ev.player_ids,

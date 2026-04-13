@@ -9,6 +9,7 @@ export class CentrifugoClient {
   private subscriptions: Map<string, any> = new Map();
 
   connect(wsUrl: string, token: string) {
+    console.log('[centrifugo] connect called', wsUrl);
     this.centrifuge = new Centrifuge(wsUrl, {
       token,
     });
@@ -21,22 +22,36 @@ export class CentrifugoClient {
       console.log('[centrifugo] connected');
     });
 
-    this.centrifuge.on('disconnected', () => {
-      console.log('[centrifugo] disconnected');
+    this.centrifuge.on('disconnected', (ctx) => {
+      console.log('[centrifugo] disconnected', ctx);
+    });
+
+    this.centrifuge.on('error', (ctx) => {
+      console.error('[centrifugo] error', ctx);
     });
 
     this.centrifuge.connect();
   }
 
   subscribe(channel: string, token: string) {
-    if (!this.centrifuge) return;
-    if (this.subscriptions.has(channel)) return;
+    console.log('[centrifugo] subscribe', channel);
+    if (!this.centrifuge) {
+      console.warn('[centrifugo] no centrifuge instance, skipping subscribe');
+      return;
+    }
+    if (this.subscriptions.has(channel)) {
+      console.log('[centrifugo] already subscribed to', channel);
+      return;
+    }
 
     const sub = this.centrifuge.newSubscription(channel, { token });
 
+    sub.on('subscribing', () => console.log('[centrifugo] subscribing to', channel));
+    sub.on('subscribed', () => console.log('[centrifugo] subscribed to', channel));
+    sub.on('unsubscribed', (ctx) => console.log('[centrifugo] unsubscribed from', channel, ctx));
     sub.on('publication', (ctx) => {
       const data = ctx.data as CentrifugoEvent;
-      console.log('[centrifugo]', channel, data);
+      console.log('[centrifugo] publication on', channel, data);
       this.handlers.forEach((h) => h(data));
     });
 
@@ -53,6 +68,7 @@ export class CentrifugoClient {
   }
 
   disconnect() {
+    console.log('[centrifugo] disconnect');
     this.subscriptions.forEach((sub) => sub.unsubscribe());
     this.subscriptions.clear();
     this.centrifuge?.disconnect();

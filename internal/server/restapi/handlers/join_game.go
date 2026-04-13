@@ -133,6 +133,16 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 		}, nil
 	}
 
+	// Build the board as a slice-of-slices for the HTTP response so the joining
+	// player can render the initial word immediately without racing Centrifugo.
+	rawBoard := rec.Game.Board().AsStrings()
+	boardSlice := make([][]string, len(rawBoard))
+	for i, row := range rawBoard {
+		r := make([]string, len(row))
+		copy(r, row[:])
+		boardSlice[i] = r
+	}
+
 	return &baldaapi.JoinGameResponse{
 		Game: baldaapi.NewOptGameSummary(baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
@@ -140,6 +150,8 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),
 			StartedAt: baldaapi.NewOptInt64(rec.StartedAt.UnixMilli()),
 		}),
-		GameToken: baldaapi.NewOptString(gameToken),
+		GameToken:      baldaapi.NewOptString(gameToken),
+		Board:          boardSlice,
+		CurrentTurnUID: baldaapi.NewOptString(firstPlayerID),
 	}, nil
 }

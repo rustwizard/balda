@@ -43,6 +43,20 @@
         centrifugo.subscribe(`game:${res.game.id}`, res.game_token);
       }
       gameState.startGame(res.game);
+      // Apply initial board directly from the HTTP response to avoid racing
+      // against the Centrifugo game_state event (which was published before
+      // this client subscribed to the game channel).
+      if (res.board && res.current_turn_uid) {
+        gameState.applyGameState({
+          type: 'game_state',
+          game_id: res.game.id,
+          board: res.board,
+          current_turn_uid: res.current_turn_uid,
+          players: res.game.player_ids.map((uid) => ({ uid, score: 0 })),
+          status: 'in_progress',
+          move_number: 0,
+        });
+      }
     } catch (err: any) {
       error = err.message;
     } finally {
