@@ -1,0 +1,30 @@
+# Frontend
+frontend/node_modules
+frontend/dist
+frontend/.git
+
+# Git
+.git
+
+# IDE
+.vscode
+.idea
+
+# OS
+.DS_Store
+
+# Go build artifacts
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+coverage.out
+
+# Vendor (we copy it explicitly if needed)
+vendor/

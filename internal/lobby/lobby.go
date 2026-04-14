@@ -45,7 +45,8 @@ type GameSummary struct {
 }
 
 // GameFactory abstracts game construction so the Lobby is testable.
-type GameFactory func(ctx context.Context, players []*game.Player, n game.Notifier) (*game.Game, error)
+// gameID is the lobby-assigned UUID for the game being created.
+type GameFactory func(ctx context.Context, gameID string, players []*game.Player, n game.Notifier) (*game.Game, error)
 
 // Lobby tracks all currently active games. Safe for concurrent use.
 type Lobby struct {
@@ -119,8 +120,10 @@ func (l *Lobby) Join(ctx context.Context, gameID string, playerID string, n game
 	// Build the full player list: creator(s) first, joiner last.
 	allPlayers := append(existing, &game.Player{ID: playerID})
 
-	gameCtx, cancel := context.WithCancel(ctx)
-	g, err := l.factory(gameCtx, allPlayers, n)
+	// Use a background context so the game goroutine outlives the HTTP request
+	// that triggered the join. The lobby cancels it via rec.cancel when needed.
+	gameCtx, cancel := context.WithCancel(context.Background())
+	g, err := l.factory(gameCtx, gameID, allPlayers, n)
 	if err != nil {
 		cancel()
 		return nil, err
@@ -177,14 +180,14 @@ func (l *Lobby) StartGame(ctx context.Context, players []*game.Player, n game.No
 	}
 	l.mu.Unlock()
 
+	id := uuid.New().String()
+
 	gameCtx, cancel := context.WithCancel(ctx)
-	g, err := l.factory(gameCtx, players, n)
+	g, err := l.factory(gameCtx, id, players, n)
 	if err != nil {
 		cancel()
 		return nil, err
 	}
-
-	id := uuid.New().String()
 	rec := &GameRecord{
 		ID:        id,
 		Game:      g,
@@ -302,7 +305,7 @@ func summaryOf(rec *GameRecord) GameSummary {
 /*
 Пример интеграции в сервер
 
-lby := lobby.New(func(ctx context.Context, players []*game.Player, n game.Notifier) (*game.Game, error) {
+lby := lobby.New(func(ctx context.Context, gameID string, players []*game.Player, n game.Notifier) (*game.Game, error) {
     return game.NewGame(players, n)
 })
 queue := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {

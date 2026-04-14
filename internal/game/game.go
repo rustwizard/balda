@@ -323,6 +323,41 @@ func (g *Game) Board() *LettersTable {
 	return g.board
 }
 
+// PlayerScore holds a player's UID and current score for external consumers.
+type PlayerScore struct {
+	UID   string
+	Score int
+}
+
+// PlayerScores returns a snapshot of each player's score.
+func (g *Game) PlayerScores() []PlayerScore {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	out := make([]PlayerScore, len(g.players))
+	for i, p := range g.players {
+		out[i] = PlayerScore{UID: p.ID, Score: p.Score}
+	}
+	return out
+}
+
+// CurrentPlayerID returns the ID of the player whose turn it currently is.
+func (g *Game) CurrentPlayerID() string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.currentPlayer().ID
+}
+
+// MoveNumber returns the total number of accepted moves across all players.
+func (g *Game) MoveNumber() int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	total := 0
+	for _, p := range g.players {
+		total += len(p.Words)
+	}
+	return total
+}
+
 // Skip signals that playerID passes their turn without placing a letter.
 func (g *Game) Skip(playerID string) error {
 	g.mu.Lock()

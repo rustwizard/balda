@@ -404,6 +404,19 @@ components:
         game_token:
           description: Centrifugo subscription JWT for the game channel
           type: string
+        board:
+          description: |
+            Initial 5x5 board state. Each row is an array of 5 single-character strings
+            (empty string means empty cell). Included so the joining player can render
+            the board immediately without waiting for the Centrifugo game_state event.
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        current_turn_uid:
+          description: ID of the player whose turn it is first (the game creator)
+          type: string
 
     PlayerScore:
       type: object

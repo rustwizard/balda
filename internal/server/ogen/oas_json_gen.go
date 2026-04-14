@@ -666,11 +666,33 @@ func (s *JoinGameResponse) encodeFields(e *jx.Encoder) {
 			s.GameToken.Encode(e)
 		}
 	}
+	{
+		if s.Board != nil {
+			e.FieldStart("board")
+			e.ArrStart()
+			for _, elem := range s.Board {
+				e.ArrStart()
+				for _, elem := range elem {
+					e.Str(elem)
+				}
+				e.ArrEnd()
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.CurrentTurnUID.Set {
+			e.FieldStart("current_turn_uid")
+			s.CurrentTurnUID.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfJoinGameResponse = [2]string{
+var jsonFieldsNameOfJoinGameResponse = [4]string{
 	0: "game",
 	1: "game_token",
+	2: "board",
+	3: "current_turn_uid",
 }
 
 // Decode decodes JoinGameResponse from json.
@@ -700,6 +722,43 @@ func (s *JoinGameResponse) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"game_token\"")
+			}
+		case "board":
+			if err := func() error {
+				s.Board = make([][]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem []string
+					elem = make([]string, 0)
+					if err := d.Arr(func(d *jx.Decoder) error {
+						var elemElem string
+						v, err := d.Str()
+						elemElem = string(v)
+						if err != nil {
+							return err
+						}
+						elem = append(elem, elemElem)
+						return nil
+					}); err != nil {
+						return err
+					}
+					s.Board = append(s.Board, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"board\"")
+			}
+		case "current_turn_uid":
+			if err := func() error {
+				s.CurrentTurnUID.Reset()
+				if err := s.CurrentTurnUID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"current_turn_uid\"")
 			}
 		default:
 			return d.Skip()

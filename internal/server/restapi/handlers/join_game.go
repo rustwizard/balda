@@ -99,6 +99,29 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 		slog.Error("join_game: publish to game channel", slog.Any("error", err))
 	}
 
+	// Publish the initial board state so clients render the starting word immediately.
+	players := make([]centrifugo.PlayerScore, 0, len(rec.Players))
+	for _, p := range rec.Players {
+		players = append(players, centrifugo.PlayerScore{UID: p.ID, Score: 0})
+	}
+	// The creator (index 0) always moves first.
+	firstPlayerID := ""
+	if len(rec.Players) > 0 {
+		firstPlayerID = rec.Players[0].ID
+	}
+	gameState := centrifugo.EvGameState{
+		Type:           "game_state",
+		GameID:         rec.ID,
+		Board:          rec.Game.Board().AsStrings(),
+		CurrentTurnUID: firstPlayerID,
+		Players:        players,
+		Status:         "in_progress",
+		MoveNumber:     0,
+	}
+	if err := h.cf.Publish(ctx, centrifugo.ChannelGame(rec.ID), gameState); err != nil {
+		slog.Error("join_game: publish initial game state", slog.Any("error", err))
+	}
+
 	gameToken, err := centrifugo.GenerateSubscriptionToken(
 		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,
 	)
@@ -110,6 +133,16 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 		}, nil
 	}
 
+	// Build the board as a slice-of-slices for the HTTP response so the joining
+	// player can render the initial word immediately without racing Centrifugo.
+	rawBoard := rec.Game.Board().AsStrings()
+	boardSlice := make([][]string, len(rawBoard))
+	for i, row := range rawBoard {
+		r := make([]string, len(row))
+		copy(r, row[:])
+		boardSlice[i] = r
+	}
+
 	return &baldaapi.JoinGameResponse{
 		Game: baldaapi.NewOptGameSummary(baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
@@ -117,6 +150,8 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),
 			StartedAt: baldaapi.NewOptInt64(rec.StartedAt.UnixMilli()),
 		}),
-		GameToken: baldaapi.NewOptString(gameToken),
+		GameToken:      baldaapi.NewOptString(gameToken),
+		Board:          boardSlice,
+		CurrentTurnUID: baldaapi.NewOptString(firstPlayerID),
 	}, nil
 }

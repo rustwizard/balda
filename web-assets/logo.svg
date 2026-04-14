@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" width="240" height="60">
+  <defs>
+    <linearGradient id="tileGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f3e9d8"/>
+      <stop offset="100%" stop-color="#e6d5b8"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+  <!-- Tile B -->
+  <rect x="4" y="8" width="40" height="44" rx="8" fill="url(#tileGrad)" filter="url(#shadow)"/>
+  <text x="24" y="44" font-family="Segoe UI, Roboto, sans-serif" font-size="28" font-weight="800" fill="#2c2c2c" text-anchor="middle">Б</text>
+  <!-- Tile A -->
+  <rect x="52" y="8" width="40" height="44" rx="8" fill="url(#tileGrad)" filter="url(#shadow)"/>
+  <text x="72" y="44" font-family="Segoe UI, Roboto, sans-serif" font-size="28" font-weight="800" fill="#2c2c2c" text-anchor="middle">А</text>
+  <!-- Tile L -->
+  <rect x="100" y="8" width="40" height="44" rx="8" fill="url(#tileGrad)" filter="url(#shadow)"/>
+  <text x="120" y="44" font-family="Segoe UI, Roboto, sans-serif" font-size="28" font-weight="800" fill="#2c2c2c" text-anchor="middle">Л</text>
+  <!-- Tile D -->
+  <rect x="148" y="8" width="40" height="44" rx="8" fill="url(#tileGrad)" filter="url(#shadow)"/>
+  <text x="168" y="44" font-family="Segoe UI, Roboto, sans-serif" font-size="28" font-weight="800" fill="#2c2c2c" text-anchor="middle">Д</text>
+  <!-- Tile A -->
+  <rect x="196" y="8" width="40" height="44" rx="8" fill="url(#tileGrad)" filter="url(#shadow)"/>
+  <text x="216" y="44" font-family="Segoe UI, Roboto, sans-serif" font-size="28" font-weight="800" fill="#2c2c2c" text-anchor="middle">А</text>
+</svg>
