@@ -1,6 +1,6 @@
 # Balda
 
-A multiplayer turn-based word game server written in Go. Players compete on a 5×5 letter grid, placing letters to form valid Russian words and score points.
+A multiplayer turn-based word game server written in Go, with a real-time Svelte 5 frontend. Players compete on a 5×5 letter grid, placing letters to form valid Russian words and score points.
 
 > Work in progress — personal "just for fun" project.
 
@@ -22,40 +22,115 @@ The player with the most words when the game ends wins.
 | REST API | [ogen](https://github.com/ogen-go/ogen) (code-generated from OpenAPI 3.0 spec) |
 | CLI | [cobra](https://github.com/spf13/cobra) |
 | Database | PostgreSQL 16 (pgx/v5 driver) |
-| Runtime image | Debian trixie-slim |
 | Session store | Redis 8 |
+| Real-time events | [Centrifugo v6](https://centrifugal.dev) (WebSocket pub/sub) |
+| Frontend | Svelte 5 (runes API) + Tailwind CSS, served via Nginx |
 | Migrations | [tern](https://github.com/jackc/tern) (embedded SQL, runs on server start) |
 | Logging | `log/slog` (standard library) |
-| IDs | UUID (games and sessions) |
+| Runtime image | Debian trixie-slim |
 
 ## Project Structure
 
 ```
 balda/
-├── cmd/                  # CLI entry points (server, migrate)
+├── cmd/                    # CLI entry points (server)
 ├── internal/
-│   ├── game/             # Core game logic, FSM, letter table, dictionary
+│   ├── game/               # Core game logic, FSM, letter table, dictionary
+│   ├── gamecoord/          # Coordinator: bridges game events → Centrifugo
+│   ├── lobby/              # In-memory active game registry
+│   ├── matchmaking/        # Rating-based matchmaking queue
+│   ├── centrifugo/         # Centrifugo HTTP API client + event types
+│   ├── notifier/           # Notifier abstraction (Redis sender)
 │   ├── server/
-│   │   ├── ogen/         # ogen-generated server code (do not edit)
+│   │   ├── ogen/           # ogen-generated server code (do not edit)
 │   │   └── restapi/
-│   │       └── handlers/ # HTTP request handlers
-│   ├── session/          # Redis-backed session management
-│   ├── storage/          # Storage abstraction
-│   ├── flname/           # Auto-generated player nicknames
-│   └── rnd/              # RNG utilities
-├── api/openapi/          # OpenAPI 3.0 specification
-├── migrations/           # SQL migration files
-├── tests/                # Integration tests (testcontainers)
-├── main.go
+│   │       └── handlers/   # HTTP request handlers
+│   ├── session/            # Redis-backed session management
+│   ├── service/            # Application service layer
+│   ├── storage/            # PostgreSQL access
+│   ├── flname/             # Auto-generated player nicknames
+│   └── rnd/                # RNG utilities
+├── frontend/               # Svelte 5 frontend
+│   └── src/
+│       ├── App.svelte      # Root: Centrifugo connection + event dispatch
+│       ├── components/     # AuthForm, Lobby, GameScreen, Board, …
+│       ├── stores/         # Reactive game state (game.svelte.ts)
+│       ├── lib/            # api.ts, centrifugo.ts
+│       └── types.ts        # TypeScript interfaces
+├── api/openapi/            # OpenAPI 3.0 specification
+├── migrations/             # SQL migration files
+├── tests/                  # Integration tests (testcontainers)
 ├── Makefile
 └── docker-compose.yml
 ```
+
+## Getting Started
+
+### Prerequisites
+
+- Docker and Docker Compose
+
+### Run with Docker Compose
+
+```bash
+docker-compose up
+```
+
+Starts PostgreSQL, Redis, Centrifugo, the game server on port `9666`, and the frontend on port `8080`.
+
+Open `http://localhost:8080` to play.
+
+### Rebuild and restart
+
+```bash
+make restart
+```
+
+### Build the server binary manually
+
+```bash
+make build
+```
+
+```bash
+export MIGRATION_CONN_STRING="postgres://balda:password@localhost:5432/balda"
+
+./bin/balda server \
+  --server.addr 0.0.0.0 \
+  --server.port 9666 \
+  --server.x_api_token your-api-token \
+  --pg.host localhost --pg.port 5432 \
+  --pg.user balda --pg.database balda --pg.password password \
+  --redis.addr localhost:6379
+```
+
+All flags can also be set via environment variables (e.g., `SERVER_ADDR`, `PG_HOST`, `REDIS_ADDR`).
+
+> **Note:** `MIGRATION_CONN_STRING` must be set before starting the server. Migrations are applied automatically at startup.
+
+### Regenerate API Code
+
+```bash
+make code-gen
+```
+
+Regenerates the typed Go server code from [api/openapi/http-api.yaml](api/openapi/http-api.yaml) using [ogen](https://github.com/ogen-go/ogen) and vendors the result.
+
+### Run Tests
+
+```bash
+make test
+```
+
+Integration tests in `tests/` spin up ephemeral PostgreSQL and Redis containers via [testcontainers-go](https://golang.testcontainers.org/) — Docker must be running.
+
+---
 
 ## API
 
 Base path: `/balda/api/v1`
 
-Authentication uses an `X-API-Key` header (or `api_key` query parameter).
+Authentication uses an `X-API-Key` header (or `api_key` query parameter). Session-sensitive endpoints also require `X-API-Session`.
 
 Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 
@@ -73,22 +148,13 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 
 ```json
 // Request
-{
-  "firstname": "Ivan",
-  "lastname": "Petrov",
-  "email": "ivan@example.com",
-  "password": "secret"
-}
+{ "firstname": "Ivan", "lastname": "Petrov", "email": "ivan@example.com", "password": "secret" }
 
 // Response
 {
-  "user": {
-    "uid": "<player-uuid>",
-    "firstname": "Ivan",
-    "lastname": "Petrov",
-    "sid": "<session-uuid>",
-    "key": "<api-key-uuid>"
-  }
+  "user": { "uid": "…", "firstname": "Ivan", "lastname": "Petrov", "sid": "…", "key": "…" },
+  "centrifugo_token": "…",
+  "lobby_token": "…"
 }
 ```
 
@@ -96,111 +162,85 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 
 ```json
 // Request
-{
-  "email": "ivan@example.com",
-  "password": "secret"
-}
+{ "email": "ivan@example.com", "password": "secret" }
 
 // Response
 {
-  "player": {
-    "uid": "<player-uuid>",
-    "firstname": "Ivan",
-    "lastname": "Petrov",
-    "sid": "<session-uuid>",
-    "key": "<api-key-uuid>"
-  }
-}
-```
-
-### POST /session/ping
-
-Refreshes the session TTL. Returns `204` with `X-Server-Time` and echoed `X-Request-ID` headers.
-
-**Required headers:** `X-API-Key`, `X-API-Session` (session `sid`), `X-Request-ID` (monotonic int).
-
----
-
-### GET /player/state/{uid}
-
-`game_id` is present only when the player is in an active game. When absent, the player is in the lobby (not in any game).
-
-```json
-// Response — player not in a game
-{
-  "uid": "<player-uuid>",
-  "nickname": "BlackShearCougar",
-  "exp": 0,
-  "flags": 0,
-  "lives": 5
-}
-
-// Response — player in an active game
-{
-  "uid": "<player-uuid>",
-  "nickname": "BlackShearCougar",
-  "exp": 0,
-  "flags": 0,
-  "lives": 5,
-  "game_id": "<game-uuid>"
+  "player": { "uid": "…", "firstname": "Ivan", "lastname": "Petrov", "sid": "…", "key": "…" },
+  "centrifugo_token": "…",
+  "lobby_token": "…"
 }
 ```
 
 ### POST /games
 
-Creates a new game in `waiting` status with the caller as the only player. Requires `X-API-Key` and `X-API-Session`.
+Creates a new game in `waiting` status. Returns a `game_token` for subscribing to the game's Centrifugo channel.
 
 ```json
 // Response
 {
-  "game": {
-    "id": "<game-uuid>",
-    "player_ids": ["<creator-uuid>"],
-    "status": "waiting",
-    "started_at": 1712600000000
-  }
+  "game": { "id": "…", "player_ids": ["<creator>"], "status": "waiting", "started_at": 1712600000000 },
+  "game_token": "…"
 }
 ```
-
-Returns `409` if the player is already in a game.
 
 ### POST /games/{id}/join
 
-Joins a waiting game by its ID. When the second player joins, the game transitions to `in_progress` and the creator gets the first move. Requires `X-API-Key` and `X-API-Session`.
+Joins a waiting game. When the second player joins, the game starts immediately. Returns the initial board state to avoid a publish-before-subscribe race with Centrifugo.
 
 ```json
 // Response
 {
-  "game": {
-    "id": "<game-uuid>",
-    "player_ids": ["<creator-uuid>", "<joiner-uuid>"],
-    "status": "in_progress",
-    "started_at": 1712600000000
-  }
+  "game": { "id": "…", "player_ids": ["<creator>", "<joiner>"], "status": "in_progress", "started_at": 1712600000000 },
+  "game_token": "…",
+  "board": [["","","","",""],["","","","",""],["с","л","о","в","о"],["","","","",""],["","","","",""]],
+  "current_turn_uid": "<creator-uid>"
 }
 ```
 
-Returns `404` if the game does not exist. Returns `409` if the player is already in a game or the game is not in `waiting` status.
+---
 
-### GET /games
+## Real-time Events (Centrifugo)
 
-Returns a snapshot of all currently active games. Requires `X-API-Key`.
+After auth, the client connects to Centrifugo using `centrifugo_token`. Events flow over channels:
+
+| Channel | Event type | When |
+|---------|-----------|------|
+| `lobby` | `game_created` | After `POST /games` |
+| `lobby` + `game:{id}` | `game_started` | After `POST /games/{id}/join` |
+| `game:{id}` | `game_state` | On turn start and after each accepted move |
+| `game:{id}` | `turn_change` | On every turn change (any reason) |
+| `game:{id}` | `game_over` | When the game ends |
+
+### `game_state`
+
+Full board snapshot — sent after game start and after each move.
 
 ```json
-// Response
-{
-  "games": [
-    {
-      "id": "<game-uuid>",
-      "player_ids": ["<uuid>", "<uuid>"],
-      "status": "in_progress",
-      "started_at": 1712600000000
-    }
-  ]
-}
+{ "type": "game_state", "game_id": "…", "board": [["","…"]],
+  "current_turn_uid": "…", "players": [{"uid":"…","score":0}],
+  "status": "in_progress", "move_number": 0 }
 ```
 
-`started_at` is a Unix timestamp in milliseconds. `games` is an empty array when no games are active.
+### `turn_change`
+
+General turn change notification — sent on every turn start. The `reason` field identifies why the turn changed.
+
+```json
+{ "type": "turn_change", "game_id": "…", "current_turn_uid": "…",
+  "reason": "game_start" }
+```
+
+Possible `reason` values: `game_start`, `move`, `skip`, `timeout`.
+
+### `game_over`
+
+```json
+{ "type": "game_over", "game_id": "…", "winner_uid": "…",
+  "players": [{"uid":"…","score":5}] }
+```
+
+`winner_uid` is absent on a draw.
 
 ---
 
@@ -218,16 +258,10 @@ A 5×5 grid. The starting word occupies the center row (row index 2). Coordinate
 [ ][ ][ ][ ][ ]   row 4
 ```
 
-### Placement Rules
-
-- New letters must be placed adjacent (horizontally or vertically) to an existing letter.
-- Rows 0–1: the cell directly below must already contain a letter.
-- Rows 3–4: the cell directly above must already contain a letter.
-- Row 2 (center): no additional adjacency constraint.
-
 ### Turn
 
 - Each player has **60 seconds** per turn.
+- On timeout the turn passes to the other player automatically; no action from either client is needed.
 - After **3 consecutive timeouts**, the player is kicked and the game ends.
 - A player can skip a turn voluntarily.
 
@@ -236,7 +270,7 @@ A 5×5 grid. The starting word occupies the center row (row index 2). Coordinate
 Submitted words must:
 - Be **3 or more letters** long
 - Include the newly placed letter
-- Consist of letters traceable on the board
+- Consist of letters traceable on the board (adjacent cells only)
 - Exist in the embedded Russian nouns dictionary
 - Not have been submitted before in this game
 
@@ -257,9 +291,11 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 └─────────────────────┴────────────────────┴─────────────────────┘
 ```
 
-- On each turn start, a 60-second timer fires `TurnTimeout` automatically.
-- `MoveSubmitted` and `TurnSkipped` reset the player's consecutive-timeout counter and advance to the next player.
-- `TurnTimeout` increments the counter and notifies via `Notifier`. On the third consecutive timeout the game auto-queues `Kick`, transitioning to `GameOver`.
+- A 60-second timer fires `TurnTimeout` automatically. The `Coordinator` (`internal/gamecoord/`) acknowledges it via `AckTimeout`, advancing to the next player.
+- `MoveSubmitted` and `TurnSkipped` reset the consecutive-timeout counter.
+- On the third consecutive timeout the game auto-queues `Kick` → `GameOver`.
+
+---
 
 ## Database Schema
 
@@ -289,58 +325,7 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | created_at | timestamp | |
 | updated_at | timestamp | |
 
-## Getting Started
-
-### Prerequisites
-
-- Go 1.26+
-- Docker and Docker Compose
-
-### Run with Docker Compose
-
-```bash
-docker-compose up
-```
-
-This starts PostgreSQL, Redis, and the game server on port `9666`.
-
-### Build and Run Manually
-
-```bash
-# Build
-make build
-
-# Start server (migrations run automatically on startup)
-export MIGRATION_CONN_STRING="postgres://balda:password@localhost:5432/balda"
-
-./bin/balda server \
-  --server.addr 0.0.0.0 \
-  --server.port 9666 \
-  --server.x_api_token your-api-token \
-  --pg.host localhost --pg.port 5432 \
-  --pg.user balda --pg.database balda --pg.password password \
-  --redis.addr localhost:6379
-```
-
-All flags can also be set via environment variables (e.g., `SERVER_ADDR`, `PG_HOST`, `REDIS_ADDR`).
-
-> **Note:** `MIGRATION_CONN_STRING` must be set before starting the server. Migrations are applied automatically at startup using [tern](https://github.com/jackc/tern).
-
-### Regenerate API Code
-
-```bash
-make code-gen
-```
-
-This regenerates the typed Go server code from [api/openapi/http-api.yaml](api/openapi/http-api.yaml) using [ogen](https://github.com/ogen-go/ogen) and vendors the result.
-
-### Run Tests
-
-```bash
-make test
-```
-
-Integration tests in `tests/` spin up ephemeral PostgreSQL and Redis containers via [testcontainers-go](https://golang.testcontainers.org/) — Docker must be running. Handler test coverage is ~70%.
+---
 
 ## Configuration Reference
 
@@ -354,13 +339,16 @@ Integration tests in `tests/` spin up ephemeral PostgreSQL and Redis containers 
 | `--pg.user` | | PostgreSQL user |
 | `--pg.database` | | PostgreSQL database |
 | `--pg.password` | | PostgreSQL password |
-| `--pg.max_pool_size` | `10` | PostgreSQL max connection pool size |
+| `--pg.max_pool_size` | `10` | Max connection pool size |
 | `--pg.ssl` | `disable` | PostgreSQL SSL mode |
 | `--redis.addr` | `127.0.0.1:6379` | Redis address |
 | `--redis.username` | | Redis username |
 | `--redis.password` | | Redis password |
 | `--redis.db_num` | `0` | Redis database number |
 | `--redis.expiration` | `30s` | Session expiration duration |
+| `--centrifugo.api_url` | | Centrifugo HTTP API URL |
+| `--centrifugo.api_key` | | Centrifugo API key |
+| `--centrifugo.token_hmac_secret_key` | | Secret for signing Centrifugo tokens |
 | `MIGRATION_CONN_STRING` | | PostgreSQL DSN for migrations (env var) |
 
 ## License
