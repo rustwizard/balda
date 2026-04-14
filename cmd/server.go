@@ -11,6 +11,7 @@ import (
 	"github.com/rustwizard/balda/api/openapi"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
+	"github.com/rustwizard/balda/internal/gamecoord"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
 	"github.com/rustwizard/balda/internal/notifier"
@@ -115,8 +116,16 @@ var serverCmd = &cobra.Command{
 		})
 		n := notifier.New(notifier.WithRedisSender(redisClient))
 
-		lby := lobby.New(func(ctx context.Context, players []*game.Player, n game.Notifier) (*game.Game, error) {
-			return game.NewGame(players, n)
+		cf := centrifugo.NewClient(cfg.Centrifugo.APIURL, cfg.Centrifugo.APIKey)
+
+		lby := lobby.New(func(ctx context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
+			coord := gamecoord.New(gameID, players, cf)
+			g, err := game.NewGame(players, coord)
+			if err != nil {
+				return nil, err
+			}
+			coord.SetGame(g)
+			return g, nil
 		})
 		mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
 			_, err := lby.StartGame(cmd.Context(), players, n)
@@ -126,8 +135,6 @@ var serverCmd = &cobra.Command{
 		s := storage.New(pool, 10*time.Second)
 
 		svc := service.New(lby, mm, s, n)
-
-		cf := centrifugo.NewClient(cfg.Centrifugo.APIURL, cfg.Centrifugo.APIKey)
 
 		h := handlers.New(svc, sess, cfg.XAPIToken, cf, cfg.Centrifugo.TokenHMACSecret)
 

@@ -31,11 +31,29 @@ type PlayerScore struct {
 
 // EvGameState carries the full board snapshot sent after game_started and after each move.
 type EvGameState struct {
-	Type           string       `json:"type"`
-	GameID         string       `json:"game_id"`
-	Board          [5][5]string `json:"board"`
-	CurrentTurnUID string       `json:"current_turn_uid"`
+	Type           string        `json:"type"`
+	GameID         string        `json:"game_id"`
+	Board          [5][5]string  `json:"board"`
+	CurrentTurnUID string        `json:"current_turn_uid"`
 	Players        []PlayerScore `json:"players"`
-	Status         string       `json:"status"`
-	MoveNumber     int          `json:"move_number"`
+	Status         string        `json:"status"`
+	MoveNumber     int           `json:"move_number"`
+}
+
+// EvTurnChange is published when the turn advances due to a timeout.
+// It is a lightweight alternative to a full game_state snapshot: the board has
+// not changed, only the active player and the timer need to be updated.
+type EvTurnChange struct {
+	Type           string `json:"type"`    // always "turn_change"
+	GameID         string `json:"game_id"`
+	CurrentTurnUID string `json:"current_turn_uid"`
+	Reason         string `json:"reason"` // "timeout"
+}
+
+// EvGameOver is published to the game channel when the game ends.
+type EvGameOver struct {
+	Type      string        `json:"type"`
+	GameID    string        `json:"game_id"`
+	WinnerUID string        `json:"winner_uid,omitempty"`
+	Players   []PlayerScore `json:"players"`
 }

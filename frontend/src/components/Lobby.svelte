@@ -26,7 +26,8 @@
       if (res.game_token) {
         centrifugo.subscribe(`game:${res.game.id}`, res.game_token);
       }
-      gameState.setWaiting(res.game);
+      // Go straight to the game board; the board is empty until the opponent joins
+      gameState.startGame(res.game);
     } catch (err: any) {
       error = err.message;
     } finally {

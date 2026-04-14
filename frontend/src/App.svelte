@@ -56,6 +56,9 @@
           });
         }
         break;
+      case 'turn_change':
+        gameState.applyTurnChange(ev);
+        break;
       case 'game_created':
         // Lobby will refresh via its own polling or we could trigger refresh here
         break;

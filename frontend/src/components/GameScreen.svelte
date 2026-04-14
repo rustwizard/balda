@@ -40,10 +40,10 @@
     gameState.clearSelection();
   }
 
-  // Timer tick
+  // Timer tick: only count down once both players are in the game
   $effect(() => {
     const interval = setInterval(() => {
-      if (gameState.phase === 'playing') {
+      if (gameState.phase === 'playing' && gameState.opponent) {
         gameState.tickTimer();
       }
     }, 1000);
@@ -52,10 +52,23 @@
 </script>
 
 <div class="mx-auto flex w-full max-w-lg flex-col gap-4 p-4">
+  <!-- Waiting overlay: shown until the opponent joins -->
+  {#if !gameState.opponent}
+    <div class="rounded-2xl bg-blue-50 p-5 text-center">
+      <div class="mb-1 h-6 w-6 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600 mx-auto"></div>
+      <div class="mt-2 font-semibold text-blue-800">Ожидание соперника…</div>
+      <div class="mt-1 text-sm text-blue-600">
+        ID игры: <span class="font-mono">{gameState.game?.id}</span>
+      </div>
+    </div>
+  {/if}
+
   <!-- Header -->
   <div class="flex items-center justify-between">
     <div class="text-2xl font-extrabold tracking-tight text-stone-700">БАЛДА</div>
-    <Timer seconds={gameState.turnSecondsLeft} maxSeconds={60} isRunning={gameState.phase === 'playing'} />
+    {#if gameState.opponent}
+      <Timer seconds={gameState.turnSecondsLeft} maxSeconds={60} isRunning={gameState.phase === 'playing'} />
+    {/if}
   </div>
 
   <!-- Players -->

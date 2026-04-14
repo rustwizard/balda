@@ -103,4 +103,11 @@ export interface EvGameStarted {
   started_at: number;
 }
 
-export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted;
+export interface EvTurnChange {
+  type: 'turn_change';
+  game_id: string;
+  current_turn_uid: string;
+  reason: 'game_start' | 'move' | 'skip' | 'timeout';
+}
+
+export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange;

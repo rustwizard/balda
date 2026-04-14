@@ -1,4 +1,4 @@
-import type { GameSummary, PlayerState, EvGameState, EvGameOver } from '../types';
+import type { GameSummary, PlayerState, EvGameState, EvGameOver, EvTurnChange } from '../types';
 
 export type GamePhase = 'auth' | 'lobby' | 'waiting' | 'playing' | 'finished';
 
@@ -119,6 +119,14 @@ export function createGameState() {
     });
   }
 
+  function applyTurnChange(ev: EvTurnChange) {
+    currentTurnUid = ev.current_turn_uid;
+    turnSecondsLeft = 60;
+    selectedPath = [];
+    newLetterCell = null;
+    currentWord = '';
+  }
+
   function setTurnTimer(seconds: number) {
     turnSecondsLeft = seconds;
   }
@@ -195,6 +203,7 @@ export function createGameState() {
     setWaiting,
     startGame,
     applyGameState,
+    applyTurnChange,
     finishGame,
     setTurnTimer,
     tickTimer,

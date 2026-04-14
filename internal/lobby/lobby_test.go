@@ -25,7 +25,7 @@ func makePlayers(ids ...string) []*game.Player {
 }
 
 // realFactory creates a real game (using a fixed initial word to skip random dict lookup).
-func realFactory(_ context.Context, players []*game.Player, n game.Notifier) (*game.Game, error) {
+func realFactory(_ context.Context, _ string, players []*game.Player, n game.Notifier) (*game.Game, error) {
 	return game.NewGameWithWord(players, "волна", n)
 }
 
