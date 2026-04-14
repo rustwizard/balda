@@ -21,10 +21,18 @@ type ListGamesRes interface {
 	listGamesRes()
 }
 
+type MoveGameRes interface {
+	moveGameRes()
+}
+
 type PingRes interface {
 	pingRes()
 }
 
 type SignupRes interface {
 	signupRes()
+}
+
+type SkipGameRes interface {
+	skipGameRes()
 }

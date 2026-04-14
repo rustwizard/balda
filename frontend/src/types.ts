@@ -60,6 +60,7 @@ export interface ListGamesResponse {
 export interface PlayerScore {
   uid: string;
   score: number;
+  words_count: number;
 }
 
 export interface PlayerState {
@@ -108,6 +109,28 @@ export interface EvTurnChange {
   game_id: string;
   current_turn_uid: string;
   reason: 'game_start' | 'move' | 'skip' | 'timeout';
+}
+
+export interface BoardCell {
+  row: number;
+  col: number;
+}
+
+export interface MoveRequest {
+  new_letter: {
+    row: number;
+    col: number;
+    char: string;
+  };
+  word_path: BoardCell[];
+}
+
+export interface MoveResponse {
+  board: string[][];
+  current_turn_uid: string;
+  players: PlayerScore[];
+  status: GameStatus;
+  move_number: number;
 }
 
 export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange;

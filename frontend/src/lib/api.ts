@@ -7,6 +7,8 @@ import type {
   JoinGameResponse,
   ListGamesResponse,
   PlayerState,
+  MoveRequest,
+  MoveResponse,
 } from '../types';
 
 const API_BASE = '/balda/api/v1';
@@ -49,7 +51,10 @@ export function auth(data: AuthRequest, apiKey: string): Promise<AuthResponse> {
 }
 
 export function ping(apiKey: string, sessionId: string, requestId: number): Promise<void> {
-  return apiFetch('/session/ping', { method: 'POST' }, apiKey, sessionId);
+  return apiFetch('/session/ping', {
+    method: 'POST',
+    headers: { 'X-Request-ID': String(requestId) },
+  }, apiKey, sessionId);
 }
 
 export function getPlayerState(uid: string): Promise<PlayerState> {
@@ -66,4 +71,12 @@ export function createGame(apiKey: string, sessionId: string): Promise<CreateGam
 
 export function joinGame(gameId: string, apiKey: string, sessionId: string): Promise<JoinGameResponse> {
   return apiFetch(`/games/${gameId}/join`, { method: 'POST' }, apiKey, sessionId);
+}
+
+export function submitMove(gameId: string, apiKey: string, sessionId: string, payload: MoveRequest): Promise<MoveResponse> {
+  return apiFetch(`/games/${gameId}/move`, { method: 'POST', body: JSON.stringify(payload) }, apiKey, sessionId);
+}
+
+export function skipTurn(gameId: string, apiKey: string, sessionId: string): Promise<void> {
+  return apiFetch(`/games/${gameId}/skip`, { method: 'POST' }, apiKey, sessionId);
 }

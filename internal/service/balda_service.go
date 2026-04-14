@@ -67,3 +67,81 @@ func (s *Balda) JoinGame(ctx context.Context, uid int64, gameID string) (*lobby.
 	}
 	return s.lby.Join(ctx, gameID, playerID.String(), s.notifier)
 }
+
+func (s *Balda) playerIDByUID(ctx context.Context, uid int64) (string, error) {
+	var playerID uuid.UUID
+	err := s.s.Pool().QueryRow(ctx,
+		`SELECT player_id FROM player_state WHERE user_id = $1`, uid,
+	).Scan(&playerID)
+	if err != nil {
+		return "", fmt.Errorf("fetch player: %w", err)
+	}
+	return playerID.String(), nil
+}
+
+func (s *Balda) isPlayerInGame(rec *lobby.GameRecord, playerID string) bool {
+	for _, p := range rec.Players {
+		if p.ID == playerID {
+			return true
+		}
+	}
+	return false
+}
+
+// SubmitMove validates and applies a player's move.
+// Returns the game record and the player ID who made the move.
+func (s *Balda) SubmitMove(ctx context.Context, uid int64, gameID string, newLetter game.Letter, wordPath []game.Letter) (*lobby.GameRecord, string, error) {
+	playerID, err := s.playerIDByUID(ctx, uid)
+	if err != nil {
+		return nil, "", err
+	}
+
+	rec, err := s.lby.Get(gameID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if !s.isPlayerInGame(rec, playerID) {
+		return nil, "", fmt.Errorf("player is not in this game")
+	}
+
+	// Resolve characters for the word path from the current board state.
+	board := rec.Game.Board().AsStrings()
+	for i := range wordPath {
+		if wordPath[i].RowID == newLetter.RowID && wordPath[i].ColID == newLetter.ColID {
+			wordPath[i].Char = newLetter.Char
+		} else {
+			wordPath[i].Char = board[wordPath[i].RowID][wordPath[i].ColID]
+		}
+	}
+
+	if err := rec.Game.SubmitWord(playerID, &newLetter, wordPath); err != nil {
+		return nil, "", err
+	}
+
+	return rec, playerID, nil
+}
+
+// SkipTurn ends the current turn without a move.
+// Returns the game record and the player ID who skipped.
+func (s *Balda) SkipTurn(ctx context.Context, uid int64, gameID string) (*lobby.GameRecord, string, error) {
+	playerID, err := s.playerIDByUID(ctx, uid)
+	if err != nil {
+		return nil, "", err
+	}
+
+	rec, err := s.lby.Get(gameID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if !s.isPlayerInGame(rec, playerID) {
+		return nil, "", fmt.Errorf("player is not in this game")
+	}
+
+	if err := rec.Game.Skip(playerID); err != nil {
+		return nil, "", err
+	}
+
+	return rec, playerID, nil
+}

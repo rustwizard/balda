@@ -41,6 +41,13 @@ type Handler interface {
 	//
 	// GET /games
 	ListGames(ctx context.Context, params ListGamesParams) (ListGamesRes, error)
+	// MoveGame implements moveGame operation.
+	//
+	// Places a new letter on the board and submits a word. If the word is valid,
+	// the player's score is updated and the turn passes to the opponent.
+	//
+	// POST /games/{id}/move
+	MoveGame(ctx context.Context, req *MoveRequest, params MoveGameParams) (MoveGameRes, error)
 	// Ping implements ping operation.
 	//
 	// POST not GET — mutates session TTL.
@@ -55,6 +62,12 @@ type Handler interface {
 	//
 	// POST /signup
 	Signup(ctx context.Context, req *SignupRequest) (SignupRes, error)
+	// SkipGame implements skipGame operation.
+	//
+	// Ends the current turn without making a move. The turn passes to the opponent.
+	//
+	// POST /games/{id}/skip
+	SkipGame(ctx context.Context, params SkipGameParams) (SkipGameRes, error)
 }
 
 // Server implements http server based on OpenAPI v3 specification and

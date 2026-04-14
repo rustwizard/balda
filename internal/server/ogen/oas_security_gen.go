@@ -40,7 +40,9 @@ var operationRolesAPIKeyHeader = map[string][]string{
 	CreateGameOperation: []string{},
 	JoinGameOperation:   []string{},
 	ListGamesOperation:  []string{},
+	MoveGameOperation:   []string{},
 	PingOperation:       []string{},
+	SkipGameOperation:   []string{},
 }
 
 // GetRolesForAPIKeyHeader returns the required roles for the given operation.
@@ -70,7 +72,9 @@ var operationRolesAPIKeyQueryParam = map[string][]string{
 	CreateGameOperation: []string{},
 	JoinGameOperation:   []string{},
 	ListGamesOperation:  []string{},
+	MoveGameOperation:   []string{},
 	PingOperation:       []string{},
+	SkipGameOperation:   []string{},
 }
 
 // GetRolesForAPIKeyQueryParam returns the required roles for the given operation.

@@ -28,6 +28,24 @@ func TestMakeWord_MultipleLetters(t *testing.T) {
 	assert.Equal(t, "кот", game.MakeWord(letters))
 }
 
+func TestMakeWord_NormalizesYoToE(t *testing.T) {
+	letters := []game.Letter{
+		{Char: "е"},
+		{Char: "л"},
+		{Char: "к"},
+		{Char: "а"},
+	}
+	assert.Equal(t, "елка", game.MakeWord(letters))
+
+	lettersYo := []game.Letter{
+		{Char: "ё"},
+		{Char: "л"},
+		{Char: "к"},
+		{Char: "а"},
+	}
+	assert.Equal(t, "елка", game.MakeWord(lettersYo))
+}
+
 // ─── GapsBetweenLetters ─────────────────────────────────────────────────────
 
 func TestGapsBetweenLetters_AlwaysTrue(t *testing.T) {
@@ -49,6 +67,19 @@ func TestCheckWordExistence_WordNotInDictionary(t *testing.T) {
 	g, err := game.NewGame(nil, nil)
 	require.NoError(t, err)
 	assert.False(t, g.СheckWordExistence("zzzzzznotaword"))
+}
+
+func TestCheckWordExistence_YoMatchesE(t *testing.T) {
+	g, err := game.NewGame(nil, nil)
+	require.NoError(t, err)
+
+	// Runtime dictionary insertion (not from JSON) still uses normalized keys
+	// because addTestWord normalizes, but here we test the lookup directly.
+	game.Dict.Definition["елка"] = "test"
+	t.Cleanup(func() { delete(game.Dict.Definition, "елка") })
+
+	assert.True(t, g.СheckWordExistence("ёлка"), "ё should match е in dictionary")
+	assert.True(t, g.СheckWordExistence("елка"), "е should match е in dictionary")
 }
 
 // ─── Game.AddWordToCurrentPlayer ────────────────────────────────────────────
@@ -111,6 +142,17 @@ func TestGame_IsTakenWord_AcrossMultiplePlayers(t *testing.T) {
 	assert.True(t, g.IsTakenWord("кот"))
 	assert.True(t, g.IsTakenWord("дом"))
 	assert.False(t, g.IsTakenWord("лес"))
+}
+
+func TestGame_IsTakenWord_YoMatchesE(t *testing.T) {
+	players := []*game.Player{
+		{ID: "p1", Words: []string{"елка"}},
+	}
+	g, err := game.NewGame(players, nil)
+	require.NoError(t, err)
+
+	assert.True(t, g.IsTakenWord("ёлка"), "stored word with е should match query with ё")
+	assert.True(t, g.IsTakenWord("елка"), "stored word with е should match query with е")
 }
 
 func TestGapsBetweenLetters(t *testing.T) {

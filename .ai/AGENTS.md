@@ -67,6 +67,8 @@ balda/
 │   │       ├── player_state.go
 │   │       ├── create_game.go
 │   │       ├── join_game.go
+│   │       ├── move_game.go
+│   │       ├── skip_game.go
 │   │       └── list_games.go
 │   ├── service/                      # Application service layer
 │   │   └── balda_service.go          # Orchestrates lobby, matchmaking, storage, notifier
@@ -77,7 +79,10 @@ balda/
 │   │   ├── storage.go                # Thin wrapper over *pgxpool.Pool
 │   │   └── config.go
 │   ├── centrifugo/                   # Centrifugo real-time client
-│   │   └── client.go
+│   │   ├── client.go
+│   │   └── events.go                 # Real-time event payload structs
+│   ├── gamecoord/                    # Bridges game FSM events to Centrifugo
+│   │   └── coord.go                  # Notifier implementation (turn_change, game_state, game_over)
 │   ├── flname/                       # Auto-generated player nicknames
 │   │   └── flname.go
 │   └── rnd/                          # RNG utilities
@@ -209,6 +214,8 @@ Key endpoints:
 | GET | `/games` | List active games |
 | POST | `/games` | Create a new waiting game |
 | POST | `/games/{id}/join` | Join a waiting game |
+| POST | `/games/{id}/move` | Submit a move (place letter + word) |
+| POST | `/games/{id}/skip` | Skip the current turn |
 
 ---
 
@@ -260,7 +267,7 @@ Events are published by HTTP handlers (`internal/server/restapi/handlers/`) dire
 **`game_state` payload** (`internal/centrifugo/events.go`):
 ```json
 { "type": "game_state", "game_id": "…", "board": [["","","","",""],…],
-  "current_turn_uid": "…", "players": [{"uid":"…","score":0}],
+  "current_turn_uid": "…", "players": [{"uid":"…","score":0,"words_count":0}],
   "status": "in_progress", "move_number": 0 }
 ```
 Board is a 5×5 string array (empty string = empty cell; initial word is in row 2).

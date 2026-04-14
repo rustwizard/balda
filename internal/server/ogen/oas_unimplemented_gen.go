@@ -61,6 +61,16 @@ func (UnimplementedHandler) ListGames(ctx context.Context, params ListGamesParam
 	return r, ht.ErrNotImplemented
 }
 
+// MoveGame implements moveGame operation.
+//
+// Places a new letter on the board and submits a word. If the word is valid,
+// the player's score is updated and the turn passes to the opponent.
+//
+// POST /games/{id}/move
+func (UnimplementedHandler) MoveGame(ctx context.Context, req *MoveRequest, params MoveGameParams) (r MoveGameRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // Ping implements ping operation.
 //
 // POST not GET — mutates session TTL.
@@ -78,5 +88,14 @@ func (UnimplementedHandler) Ping(ctx context.Context, params PingParams) (r Ping
 //
 // POST /signup
 func (UnimplementedHandler) Signup(ctx context.Context, req *SignupRequest) (r SignupRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// SkipGame implements skipGame operation.
+//
+// Ends the current turn without making a move. The turn passes to the opponent.
+//
+// POST /games/{id}/skip
+func (UnimplementedHandler) SkipGame(ctx context.Context, params SkipGameParams) (r SkipGameRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
