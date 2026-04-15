@@ -300,6 +300,115 @@ func decodeListGamesParams(args [0]string, argsEscaped bool, r *http.Request) (p
 	return params, nil
 }
 
+// MoveGameParams is parameters of moveGame operation.
+type MoveGameParams struct {
+	XAPISession string
+	// ID of the game.
+	ID uuid.UUID
+}
+
+func unpackMoveGameParams(packed middleware.Parameters) (params MoveGameParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-API-Session",
+			In:   "header",
+		}
+		params.XAPISession = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeMoveGameParams(args [1]string, argsEscaped bool, r *http.Request) (params MoveGameParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-API-Session.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-API-Session",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XAPISession = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-API-Session",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // PingParams is parameters of ping operation.
 type PingParams struct {
 	XRequestID  int64
@@ -409,6 +518,115 @@ func decodePingParams(args [0]string, argsEscaped bool, r *http.Request) (params
 		return params, &ogenerrors.DecodeParamError{
 			Name: "X-API-Session",
 			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// SkipGameParams is parameters of skipGame operation.
+type SkipGameParams struct {
+	XAPISession string
+	// ID of the game.
+	ID uuid.UUID
+}
+
+func unpackSkipGameParams(packed middleware.Parameters) (params SkipGameParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-API-Session",
+			In:   "header",
+		}
+		params.XAPISession = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeSkipGameParams(args [1]string, argsEscaped bool, r *http.Request) (params SkipGameParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-API-Session.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-API-Session",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XAPISession = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-API-Session",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
 			Err:  err,
 		}
 	}

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 )
@@ -17,6 +18,7 @@ var (
 	ErrNewLetterNotInWord  = errors.New("game: new letter must be included in the word")
 	ErrWordAlreadyUsed     = errors.New("game: word already used")
 	ErrWordNotInDictionary = errors.New("game: word not found in dictionary")
+	ErrWordIsInitialWord   = errors.New("game: word is the initial board word")
 )
 
 const (
@@ -67,7 +69,7 @@ type Game struct {
 }
 
 func (g *Game) СheckWordExistence(word string) bool {
-	if _, ok := Dict.Definition[word]; !ok {
+	if _, ok := Dict.Definition[normalizeWord(word)]; !ok {
 		return false
 	}
 	return true
@@ -78,7 +80,15 @@ func MakeWord(word []Letter) string {
 	for _, v := range word {
 		w += v.Char
 	}
-	return w
+	return normalizeWord(w)
+}
+
+// normalizeWord replaces ё/Ё with е/Е so that words differing only by
+// this letter are treated as identical.
+func normalizeWord(word string) string {
+	word = strings.ReplaceAll(word, "ё", "е")
+	word = strings.ReplaceAll(word, "Ё", "Е")
+	return word
 }
 
 // GapsBetweenLetters reports whether there are gaps between consecutive letters
@@ -275,11 +285,17 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 			return ErrWordAlreadyUsed
 		}
 	}
+	if wordStr == g.board.InitialWord() {
+		g.mu.Unlock()
+		return ErrWordIsInitialWord
+	}
 	if !g.СheckWordExistence(wordStr) {
 		g.mu.Unlock()
 		return ErrWordNotInDictionary
 	}
-	if err := g.board.PutLetterOnTable(newLetter); err != nil {
+	normalizedLetter := *newLetter
+	normalizedLetter.Char = normalizeWord(normalizedLetter.Char)
+	if err := g.board.PutLetterOnTable(&normalizedLetter); err != nil {
 		g.mu.Unlock()
 		return err
 	}
@@ -325,17 +341,18 @@ func (g *Game) Board() *LettersTable {
 
 // PlayerScore holds a player's UID and current score for external consumers.
 type PlayerScore struct {
-	UID   string
-	Score int
+	UID        string
+	Score      int
+	WordsCount int
 }
 
-// PlayerScores returns a snapshot of each player's score.
+// PlayerScores returns a snapshot of each player's score and word count.
 func (g *Game) PlayerScores() []PlayerScore {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	out := make([]PlayerScore, len(g.players))
 	for i, p := range g.players {
-		out[i] = PlayerScore{UID: p.ID, Score: p.Score}
+		out[i] = PlayerScore{UID: p.ID, Score: p.Score, WordsCount: len(p.Words)}
 	}
 	return out
 }
@@ -410,9 +427,10 @@ func (g *Game) AddWordToCurrentPlayer(word string) {
 }
 
 func (g *Game) IsTakenWord(word string) bool {
+	word = normalizeWord(word)
 	for _, player := range g.players {
 		for _, pword := range player.Words {
-			if pword == word {
+			if normalizeWord(pword) == word {
 				return true
 			}
 		}

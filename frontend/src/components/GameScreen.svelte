@@ -4,40 +4,86 @@
   import Timer from './Timer.svelte';
   import WordBar from './WordBar.svelte';
   import Icon from './Icon.svelte';
+  import Alphabet from './Alphabet.svelte';
   import { gameState } from '../stores/game.svelte';
+  import * as api from '../lib/api';
 
-  let newLetter = $state('');
+  let showAlphabet = $state(false);
 
   function handleCellClick(row: number, col: number) {
-    if (!gameState.isMyTurn) return;
+    if (!gameState.isMyTurn || gameState.moveLoading) return;
 
     const cell = gameState.board[row][col];
     if (!cell) {
-      // Empty cell - set as new letter placement
+      // Clicking the same empty cell again cancels the selection
+      if (gameState.newLetterCell?.row === row && gameState.newLetterCell?.col === col) {
+        gameState.undoNewLetter();
+        showAlphabet = false;
+        return;
+      }
+      // Empty cell - set as new letter placement and show alphabet
       gameState.setNewLetterCell(row, col);
+      showAlphabet = true;
       return;
     }
 
     gameState.selectCell(row, col);
   }
 
-  function handlePlaceLetter() {
-    const char = newLetter.trim().toLowerCase();
-    if (char.length === 1 && /^[а-яё]$/i.test(char)) {
-      gameState.setLetterAtCell(char);
-      newLetter = '';
+  function handleAlphabetSelect(char: string) {
+    gameState.setLetterAtCell(char);
+    showAlphabet = false;
+  }
+
+  function handleAlphabetCancel() {
+    gameState.undoNewLetter();
+    showAlphabet = false;
+  }
+
+  async function handleSkip() {
+    if (!gameState.isMyTurn || gameState.moveLoading || !gameState.game) return;
+    gameState.setMoveLoading(true);
+    try {
+      await api.skipTurn(gameState.game.id, gameState.apiKey, gameState.sessionId);
+      gameState.clearSelection();
+      gameState.undoNewLetter();
+    } catch (err: any) {
+      alert(err?.message || 'Не удалось пропустить ход');
+    } finally {
+      gameState.setMoveLoading(false);
     }
   }
 
-  function handleSkip() {
-    // TODO: call API to skip turn
-    alert('Пропуск хода (заглушка)');
-  }
+  async function handleSubmit() {
+    if (!gameState.isMyTurn || gameState.moveLoading || !gameState.game) return;
+    if (!gameState.newLetterCell) {
+      alert('Выберите клетку для новой буквы');
+      return;
+    }
+    if (gameState.currentWord.length < 3) {
+      alert('Слово должно состоять минимум из 3 букв');
+      return;
+    }
 
-  function handleSubmit() {
-    // TODO: call API to submit word
-    alert(`Отправлено слово: ${gameState.currentWord} (заглушка)`);
-    gameState.clearSelection();
+    const payload = {
+      new_letter: {
+        row: gameState.newLetterCell.row,
+        col: gameState.newLetterCell.col,
+        char: gameState.board[gameState.newLetterCell.row][gameState.newLetterCell.col],
+      },
+      word_path: gameState.selectedPath.map((p) => ({ row: p.row, col: p.col })),
+    };
+
+    gameState.setMoveLoading(true);
+    try {
+      const resp = await api.submitMove(gameState.game.id, gameState.apiKey, gameState.sessionId, payload);
+      gameState.applyMoveResponse(resp);
+    } catch (err: any) {
+      alert(err?.message || 'Не удалось отправить слово');
+      gameState.undoNewLetter();
+    } finally {
+      gameState.setMoveLoading(false);
+    }
   }
 
   // Timer tick: only count down once both players are in the game
@@ -93,22 +139,9 @@
     onCellClick={handleCellClick}
   />
 
-  <!-- New letter input -->
-  {#if gameState.isMyTurn && gameState.newLetterCell}
-    <div class="flex items-center justify-center gap-2 rounded-xl bg-blue-50 p-3">
-      <span class="text-sm text-stone-600">Новая буква:</span>
-      <input
-        type="text"
-        maxlength="1"
-        bind:value={newLetter}
-        oninput={handlePlaceLetter}
-        class="h-10 w-10 rounded-lg border-2 border-blue-300 text-center text-xl font-bold uppercase outline-none focus:border-blue-500"
-        placeholder="?"
-      />
-      <span class="text-xs text-stone-500">
-        ({gameState.newLetterCell.row + 1}, {gameState.newLetterCell.col + 1})
-      </span>
-    </div>
+  <!-- Alphabet panel -->
+  {#if gameState.isMyTurn && gameState.newLetterCell && showAlphabet}
+    <Alphabet onSelect={handleAlphabetSelect} onCancel={handleAlphabetCancel} />
   {/if}
 
   <!-- Word bar -->
@@ -118,7 +151,7 @@
   <div class="grid grid-cols-2 gap-3">
     <button
       onclick={handleSkip}
-      disabled={!gameState.isMyTurn}
+      disabled={!gameState.isMyTurn || gameState.moveLoading}
       class="flex items-center justify-center gap-2 rounded-xl bg-stone-200 px-4 py-3 font-bold text-stone-700 transition hover:bg-stone-300 disabled:opacity-50"
     >
       <Icon name="skip" size={18} />
@@ -126,7 +159,7 @@
     </button>
     <button
       onclick={handleSubmit}
-      disabled={!gameState.isMyTurn || gameState.currentWord.length < 3}
+      disabled={!gameState.isMyTurn || gameState.moveLoading || gameState.currentWord.length < 3}
       class="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
     >
       <Icon name="send" size={18} />

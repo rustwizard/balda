@@ -27,6 +27,7 @@ type LettersTable struct {
 
 func NewLettersTable(w string) (*LettersTable, error) {
 	lt := &LettersTable{Table: [5][5]*Letter{}}
+	w = normalizeWord(w)
 	if utf8.RuneCountInString(w) > InitWordLengthMax {
 		return lt, ErrInitWordLength
 	}

@@ -21,10 +21,16 @@ var (
 	rn8AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session",
 	}
-	rn9AllowedHeaders = map[string]string{
-		"POST": "X-Api-Key,X-Api-Session,X-Request-Id",
+	rn10AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Api-Key,X-Api-Session",
+	}
+	rn14AllowedHeaders = map[string]string{
+		"POST": "X-Api-Key,X-Api-Session",
 	}
 	rn11AllowedHeaders = map[string]string{
+		"POST": "X-Api-Key,X-Api-Session,X-Request-Id",
+	}
+	rn13AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 )
@@ -152,31 +158,99 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						break
 					}
 					switch elem[0] {
-					case '/': // Prefix: "/join"
+					case '/': // Prefix: "/"
 
-						if l := len("/join"); len(elem) >= l && elem[0:l] == "/join" {
+						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
 						if len(elem) == 0 {
-							// Leaf node.
-							switch r.Method {
-							case "POST":
-								s.handleJoinGameRequest([1]string{
-									args[0],
-								}, elemIsEscaped, w, r)
-							default:
-								s.notAllowed(w, r, notAllowedParams{
-									allowedMethods: "POST",
-									allowedHeaders: rn8AllowedHeaders,
-									acceptPost:     "",
-									acceptPatch:    "",
-								})
+							break
+						}
+						switch elem[0] {
+						case 'j': // Prefix: "join"
+
+							if l := len("join"); len(elem) >= l && elem[0:l] == "join" {
+								elem = elem[l:]
+							} else {
+								break
 							}
 
-							return
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleJoinGameRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn8AllowedHeaders,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						case 'm': // Prefix: "move"
+
+							if l := len("move"); len(elem) >= l && elem[0:l] == "move" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleMoveGameRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn10AllowedHeaders,
+										acceptPost:     "application/json",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						case 's': // Prefix: "skip"
+
+							if l := len("skip"); len(elem) >= l && elem[0:l] == "skip" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleSkipGameRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn14AllowedHeaders,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
 						}
 
 					}
@@ -247,7 +321,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn9AllowedHeaders,
+								allowedHeaders: rn11AllowedHeaders,
 								acceptPost:     "",
 								acceptPatch:    "",
 							})
@@ -272,7 +346,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn11AllowedHeaders,
+								allowedHeaders: rn13AllowedHeaders,
 								acceptPost:     "application/json",
 								acceptPatch:    "",
 							})
@@ -462,29 +536,93 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						break
 					}
 					switch elem[0] {
-					case '/': // Prefix: "/join"
+					case '/': // Prefix: "/"
 
-						if l := len("/join"); len(elem) >= l && elem[0:l] == "/join" {
+						if l := len("/"); len(elem) >= l && elem[0:l] == "/" {
 							elem = elem[l:]
 						} else {
 							break
 						}
 
 						if len(elem) == 0 {
-							// Leaf node.
-							switch method {
-							case "POST":
-								r.name = JoinGameOperation
-								r.summary = "Join an existing waiting game"
-								r.operationID = "joinGame"
-								r.operationGroup = ""
-								r.pathPattern = "/games/{id}/join"
-								r.args = args
-								r.count = 1
-								return r, true
-							default:
-								return
+							break
+						}
+						switch elem[0] {
+						case 'j': // Prefix: "join"
+
+							if l := len("join"); len(elem) >= l && elem[0:l] == "join" {
+								elem = elem[l:]
+							} else {
+								break
 							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = JoinGameOperation
+									r.summary = "Join an existing waiting game"
+									r.operationID = "joinGame"
+									r.operationGroup = ""
+									r.pathPattern = "/games/{id}/join"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
+							}
+
+						case 'm': // Prefix: "move"
+
+							if l := len("move"); len(elem) >= l && elem[0:l] == "move" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = MoveGameOperation
+									r.summary = "Submit a move"
+									r.operationID = "moveGame"
+									r.operationGroup = ""
+									r.pathPattern = "/games/{id}/move"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
+							}
+
+						case 's': // Prefix: "skip"
+
+							if l := len("skip"); len(elem) >= l && elem[0:l] == "skip" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = SkipGameOperation
+									r.summary = "Skip turn"
+									r.operationID = "skipGame"
+									r.operationGroup = ""
+									r.pathPattern = "/games/{id}/skip"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
+							}
+
 						}
 
 					}

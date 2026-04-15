@@ -46,10 +46,11 @@ func NewDictionary() (*Dictionary, error) {
 		i := 0
 		for k, v := range words {
 			def := v.(map[string]interface{})
-			dict.Definition[k] = def["definition"].(string)
+			normK := normalizeWord(k)
+			dict.Definition[normK] = def["definition"].(string)
 
-			if utf8.RuneCountInString(k) == 5 {
-				dict.FiveLetters[i] = k
+			if utf8.RuneCountInString(normK) == 5 {
+				dict.FiveLetters[i] = normK
 				i++
 			}
 		}

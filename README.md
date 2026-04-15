@@ -44,7 +44,7 @@ balda/
 │   ├── server/
 │   │   ├── ogen/           # ogen-generated server code (do not edit)
 │   │   └── restapi/
-│   │       └── handlers/   # HTTP request handlers
+│   │       └── handlers/   # HTTP request handlers (move_game.go, skip_game.go, etc.)
 │   ├── session/            # Redis-backed session management
 │   ├── service/            # Application service layer
 │   ├── storage/            # PostgreSQL access
@@ -53,7 +53,7 @@ balda/
 ├── frontend/               # Svelte 5 frontend
 │   └── src/
 │       ├── App.svelte      # Root: Centrifugo connection + event dispatch
-│       ├── components/     # AuthForm, Lobby, GameScreen, Board, …
+│       ├── components/     # AuthForm, Lobby, GameScreen, Board, Alphabet, …
 │       ├── stores/         # Reactive game state (game.svelte.ts)
 │       ├── lib/            # api.ts, centrifugo.ts
 │       └── types.ts        # TypeScript interfaces
@@ -143,6 +143,8 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 | GET | `/games` | List all currently active games |
 | POST | `/games` | Create a new waiting game |
 | POST | `/games/{id}/join` | Join an existing waiting game |
+| POST | `/games/{id}/move` | Submit a move (place letter + word) |
+| POST | `/games/{id}/skip` | Skip the current turn |
 
 ### POST /signup
 
@@ -198,6 +200,37 @@ Joins a waiting game. When the second player joins, the game starts immediately.
 }
 ```
 
+### POST /games/{id}/move
+
+Submits a move: places one new letter on the board and specifies the word path.
+
+```json
+// Request
+{
+  "new_letter": { "row": 3, "col": 3, "char": "е" },
+  "word_path": [
+    { "row": 2, "col": 0 },
+    { "row": 2, "col": 1 },
+    { "row": 2, "col": 2 },
+    { "row": 2, "col": 3 },
+    { "row": 3, "col": 3 }
+  ]
+}
+
+// Response
+{
+  "board": [["","","","",""],…],
+  "current_turn_uid": "…",
+  "players": [{"uid":"…","score":5,"words_count":1}],
+  "status": "in_progress",
+  "move_number": 1
+}
+```
+
+### POST /games/{id}/skip
+
+Skips the current turn. Returns `204 No Content` on success.
+
 ---
 
 ## Real-time Events (Centrifugo)
@@ -218,7 +251,7 @@ Full board snapshot — sent after game start and after each move.
 
 ```json
 { "type": "game_state", "game_id": "…", "board": [["","…"]],
-  "current_turn_uid": "…", "players": [{"uid":"…","score":0}],
+  "current_turn_uid": "…", "players": [{"uid":"…","score":0,"words_count":0}],
   "status": "in_progress", "move_number": 0 }
 ```
 
@@ -237,7 +270,7 @@ Possible `reason` values: `game_start`, `move`, `skip`, `timeout`.
 
 ```json
 { "type": "game_over", "game_id": "…", "winner_uid": "…",
-  "players": [{"uid":"…","score":5}] }
+  "players": [{"uid":"…","score":5,"words_count":2}] }
 ```
 
 `winner_uid` is absent on a draw.
@@ -263,7 +296,7 @@ A 5×5 grid. The starting word occupies the center row (row index 2). Coordinate
 - Each player has **60 seconds** per turn.
 - On timeout the turn passes to the other player automatically; no action from either client is needed.
 - After **3 consecutive timeouts**, the player is kicked and the game ends.
-- A player can skip a turn voluntarily.
+- A player can skip a turn voluntarily via `POST /games/{id}/skip`.
 
 ### Word Validation
 
@@ -273,6 +306,9 @@ Submitted words must:
 - Consist of letters traceable on the board (adjacent cells only)
 - Exist in the embedded Russian nouns dictionary
 - Not have been submitted before in this game
+- Not be identical to the initial board word
+
+> **Note:** `е` and `ё` are treated as the same letter for dictionary lookup, word reuse checks, and board display. For example, a word spelled with `ё` will match a dictionary entry with `е`, and vice versa.
 
 ### State Machine
 

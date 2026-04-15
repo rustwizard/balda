@@ -25,8 +25,9 @@ type EvGameStarted struct {
 
 // PlayerScore holds a player's uid and current score for EvGameState.
 type PlayerScore struct {
-	UID   string `json:"uid"`
-	Score int    `json:"score"`
+	UID        string `json:"uid"`
+	Score      int    `json:"score"`
+	WordsCount int    `json:"words_count"`
 }
 
 // EvGameState carries the full board snapshot sent after game_started and after each move.

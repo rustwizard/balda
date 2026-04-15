@@ -126,6 +126,32 @@ func (s *AuthResponse) SetLobbyToken(val OptString) {
 
 func (*AuthResponse) authRes() {}
 
+// Ref: #/components/schemas/BoardCell
+type BoardCell struct {
+	Row int `json:"row"`
+	Col int `json:"col"`
+}
+
+// GetRow returns the value of Row.
+func (s *BoardCell) GetRow() int {
+	return s.Row
+}
+
+// GetCol returns the value of Col.
+func (s *BoardCell) GetCol() int {
+	return s.Col
+}
+
+// SetRow sets the value of Row.
+func (s *BoardCell) SetRow(val int) {
+	s.Row = val
+}
+
+// SetCol sets the value of Col.
+func (s *BoardCell) SetCol(val int) {
+	s.Col = val
+}
+
 // Ref: #/components/schemas/CreateGameResponse
 type CreateGameResponse struct {
 	Game OptGameSummary `json:"game"`
@@ -386,6 +412,148 @@ func (s *ListGamesResponse) SetGames(val []GameSummary) {
 }
 
 func (*ListGamesResponse) listGamesRes() {}
+
+type MoveGameBadRequest ErrorResponse
+
+func (*MoveGameBadRequest) moveGameRes() {}
+
+type MoveGameConflict ErrorResponse
+
+func (*MoveGameConflict) moveGameRes() {}
+
+type MoveGameNotFound ErrorResponse
+
+func (*MoveGameNotFound) moveGameRes() {}
+
+type MoveGameUnauthorized ErrorResponse
+
+func (*MoveGameUnauthorized) moveGameRes() {}
+
+// Ref: #/components/schemas/MoveRequest
+type MoveRequest struct {
+	NewLetter MoveRequestNewLetter `json:"new_letter"`
+	WordPath  []BoardCell          `json:"word_path"`
+}
+
+// GetNewLetter returns the value of NewLetter.
+func (s *MoveRequest) GetNewLetter() MoveRequestNewLetter {
+	return s.NewLetter
+}
+
+// GetWordPath returns the value of WordPath.
+func (s *MoveRequest) GetWordPath() []BoardCell {
+	return s.WordPath
+}
+
+// SetNewLetter sets the value of NewLetter.
+func (s *MoveRequest) SetNewLetter(val MoveRequestNewLetter) {
+	s.NewLetter = val
+}
+
+// SetWordPath sets the value of WordPath.
+func (s *MoveRequest) SetWordPath(val []BoardCell) {
+	s.WordPath = val
+}
+
+type MoveRequestNewLetter struct {
+	Row int `json:"row"`
+	Col int `json:"col"`
+	// Single Cyrillic letter to place.
+	Char string `json:"char"`
+}
+
+// GetRow returns the value of Row.
+func (s *MoveRequestNewLetter) GetRow() int {
+	return s.Row
+}
+
+// GetCol returns the value of Col.
+func (s *MoveRequestNewLetter) GetCol() int {
+	return s.Col
+}
+
+// GetChar returns the value of Char.
+func (s *MoveRequestNewLetter) GetChar() string {
+	return s.Char
+}
+
+// SetRow sets the value of Row.
+func (s *MoveRequestNewLetter) SetRow(val int) {
+	s.Row = val
+}
+
+// SetCol sets the value of Col.
+func (s *MoveRequestNewLetter) SetCol(val int) {
+	s.Col = val
+}
+
+// SetChar sets the value of Char.
+func (s *MoveRequestNewLetter) SetChar(val string) {
+	s.Char = val
+}
+
+// Ref: #/components/schemas/MoveResponse
+type MoveResponse struct {
+	// Updated 5x5 board state.
+	Board [][]string `json:"board"`
+	// ID of the player whose turn it is now.
+	CurrentTurnUID OptUUID       `json:"current_turn_uid"`
+	Players        []PlayerScore `json:"players"`
+	Status         OptGameStatus `json:"status"`
+	MoveNumber     OptInt        `json:"move_number"`
+}
+
+// GetBoard returns the value of Board.
+func (s *MoveResponse) GetBoard() [][]string {
+	return s.Board
+}
+
+// GetCurrentTurnUID returns the value of CurrentTurnUID.
+func (s *MoveResponse) GetCurrentTurnUID() OptUUID {
+	return s.CurrentTurnUID
+}
+
+// GetPlayers returns the value of Players.
+func (s *MoveResponse) GetPlayers() []PlayerScore {
+	return s.Players
+}
+
+// GetStatus returns the value of Status.
+func (s *MoveResponse) GetStatus() OptGameStatus {
+	return s.Status
+}
+
+// GetMoveNumber returns the value of MoveNumber.
+func (s *MoveResponse) GetMoveNumber() OptInt {
+	return s.MoveNumber
+}
+
+// SetBoard sets the value of Board.
+func (s *MoveResponse) SetBoard(val [][]string) {
+	s.Board = val
+}
+
+// SetCurrentTurnUID sets the value of CurrentTurnUID.
+func (s *MoveResponse) SetCurrentTurnUID(val OptUUID) {
+	s.CurrentTurnUID = val
+}
+
+// SetPlayers sets the value of Players.
+func (s *MoveResponse) SetPlayers(val []PlayerScore) {
+	s.Players = val
+}
+
+// SetStatus sets the value of Status.
+func (s *MoveResponse) SetStatus(val OptGameStatus) {
+	s.Status = val
+}
+
+// SetMoveNumber sets the value of MoveNumber.
+func (s *MoveResponse) SetMoveNumber(val OptInt) {
+	s.MoveNumber = val
+}
+
+func (*MoveResponse) moveGameRes() {}
 
 // NewOptGameStatus returns new OptGameStatus with value set to v.
 func NewOptGameStatus(v GameStatus) OptGameStatus {
@@ -801,6 +969,46 @@ func (s *Player) SetKey(val OptString) {
 	s.Key = val
 }
 
+// Ref: #/components/schemas/PlayerScore
+type PlayerScore struct {
+	// Player's ID.
+	UID OptUUID `json:"uid"`
+	// Number of points scored in the current game.
+	Score OptInt `json:"score"`
+	// Number of words submitted by the player.
+	WordsCount OptInt `json:"words_count"`
+}
+
+// GetUID returns the value of UID.
+func (s *PlayerScore) GetUID() OptUUID {
+	return s.UID
+}
+
+// GetScore returns the value of Score.
+func (s *PlayerScore) GetScore() OptInt {
+	return s.Score
+}
+
+// GetWordsCount returns the value of WordsCount.
+func (s *PlayerScore) GetWordsCount() OptInt {
+	return s.WordsCount
+}
+
+// SetUID sets the value of UID.
+func (s *PlayerScore) SetUID(val OptUUID) {
+	s.UID = val
+}
+
+// SetScore sets the value of Score.
+func (s *PlayerScore) SetScore(val OptInt) {
+	s.Score = val
+}
+
+// SetWordsCount sets the value of WordsCount.
+func (s *PlayerScore) SetWordsCount(val OptInt) {
+	s.WordsCount = val
+}
+
 // Ref: #/components/schemas/PlayerState
 type PlayerState struct {
 	// Player's ID in the system.
@@ -971,3 +1179,20 @@ func (s *SignupResponse) SetLobbyToken(val OptString) {
 }
 
 func (*SignupResponse) signupRes() {}
+
+type SkipGameConflict ErrorResponse
+
+func (*SkipGameConflict) skipGameRes() {}
+
+// SkipGameNoContent is response for SkipGame operation.
+type SkipGameNoContent struct{}
+
+func (*SkipGameNoContent) skipGameRes() {}
+
+type SkipGameNotFound ErrorResponse
+
+func (*SkipGameNotFound) skipGameRes() {}
+
+type SkipGameUnauthorized ErrorResponse
+
+func (*SkipGameUnauthorized) skipGameRes() {}

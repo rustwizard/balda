@@ -183,6 +183,99 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /games/{id}/move:
+    post:
+      operationId: moveGame
+      summary: Submit a move
+      description: |
+        Places a new letter on the board and submits a word. If the word is valid,
+        the player's score is updated and the turn passes to the opponent.
+      tags:
+        - Games
+      security:
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
+      parameters:
+        - $ref: '#/components/parameters/ApiSessionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveRequest"
+      responses:
+        "200":
+          description: Move accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoveResponse"
+        "400":
+          description: Invalid move (bad word placement, word not in dictionary, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Not the player's turn or game not in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /games/{id}/skip:
+    post:
+      operationId: skipGame
+      summary: Skip turn
+      description: |
+        Ends the current turn without making a move. The turn passes to the opponent.
+      tags:
+        - Games
+      security:
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
+      parameters:
+        - $ref: '#/components/parameters/ApiSessionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      responses:
+        "204":
+          description: Turn skipped successfully
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Not the player's turn or game not in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /player/state/{uid}:
     get:
       operationId: getPlayerStateUID
@@ -418,6 +511,76 @@ components:
           description: ID of the player whose turn it is first (the game creator)
           type: string
 
+    BoardCell:
+      type: object
+      required:
+        - row
+        - col
+      properties:
+        row:
+          type: integer
+          minimum: 0
+          maximum: 4
+        col:
+          type: integer
+          minimum: 0
+          maximum: 4
+
+    MoveRequest:
+      type: object
+      required:
+        - new_letter
+        - word_path
+      properties:
+        new_letter:
+          type: object
+          required:
+            - row
+            - col
+            - char
+          properties:
+            row:
+              type: integer
+              minimum: 0
+              maximum: 4
+            col:
+              type: integer
+              minimum: 0
+              maximum: 4
+            char:
+              type: string
+              maxLength: 1
+              description: Single Cyrillic letter to place
+        word_path:
+          type: array
+          minItems: 2
+          items:
+            $ref: "#/components/schemas/BoardCell"
+
+    MoveResponse:
+      type: object
+      properties:
+        board:
+          description: Updated 5x5 board state
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+              maxLength: 1
+        current_turn_uid:
+          description: ID of the player whose turn it is now
+          type: string
+          format: uuid
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerScore"
+        status:
+          $ref: "#/components/schemas/GameStatus"
+        move_number:
+          type: integer
+
     PlayerScore:
       type: object
       properties:
@@ -427,6 +590,9 @@ components:
           format: uuid
         score:
           description: Number of points scored in the current game
+          type: integer
+        words_count:
+          description: Number of words submitted by the player
           type: integer
 
     EvGameCreated:

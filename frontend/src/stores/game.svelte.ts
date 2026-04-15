@@ -1,4 +1,4 @@
-import type { GameSummary, PlayerState, EvGameState, EvGameOver, EvTurnChange } from '../types';
+import type { GameSummary, PlayerState, EvGameState, EvGameOver, EvTurnChange, MoveResponse } from '../types';
 
 export type GamePhase = 'auth' | 'lobby' | 'waiting' | 'playing' | 'finished';
 
@@ -32,6 +32,7 @@ export function createGameState() {
   let newLetterCell = $state<{ row: number; col: number } | null>(null);
   let currentWord = $state<string>('');
   let turnSecondsLeft = $state<number>(60);
+  let moveLoading = $state<boolean>(false);
 
   // Derived
   const isMyTurn = $derived(currentTurnUid === playerUid);
@@ -93,7 +94,7 @@ export function createGameState() {
         uid: p.uid,
         nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
         score: p.score,
-        wordsCount: p.score > 0 ? Math.floor(p.score / 4) : 0,
+        wordsCount: p.words_count ?? 0,
       };
     });
     if (ev.status === 'finished') {
@@ -114,7 +115,7 @@ export function createGameState() {
         uid: p.uid,
         nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
         score: p.score,
-        wordsCount: p.score > 0 ? Math.floor(p.score / 4) : 0,
+        wordsCount: p.words_count ?? 0,
       };
     });
   }
@@ -125,6 +126,28 @@ export function createGameState() {
     selectedPath = [];
     newLetterCell = null;
     currentWord = '';
+  }
+
+  function applyMoveResponse(resp: MoveResponse) {
+    board = resp.board;
+    currentTurnUid = resp.current_turn_uid;
+    moveNumber = resp.move_number;
+    players = resp.players.map((p) => {
+      const existing = players.find((ep) => ep.uid === p.uid);
+      return {
+        uid: p.uid,
+        nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
+        score: p.score,
+        wordsCount: p.words_count ?? 0,
+      };
+    });
+    if (resp.status === 'finished') {
+      phase = 'finished';
+    }
+    selectedPath = [];
+    newLetterCell = null;
+    currentWord = '';
+    turnSecondsLeft = 60;
   }
 
   function setTurnTimer(seconds: number) {
@@ -171,6 +194,14 @@ export function createGameState() {
     }
   }
 
+  function undoNewLetter() {
+    if (newLetterCell) {
+      board[newLetterCell.row][newLetterCell.col] = '';
+      newLetterCell = null;
+      rebuildWord();
+    }
+  }
+
   function clearSelection() {
     selectedPath = [];
     currentWord = '';
@@ -194,6 +225,7 @@ export function createGameState() {
     get newLetterCell() { return newLetterCell; },
     get currentWord() { return currentWord; },
     get turnSecondsLeft() { return turnSecondsLeft; },
+    get moveLoading() { return moveLoading; },
     get isMyTurn() { return isMyTurn; },
     get myPlayer() { return myPlayer; },
     get opponent() { return opponent; },
@@ -203,6 +235,7 @@ export function createGameState() {
     setWaiting,
     startGame,
     applyGameState,
+    applyMoveResponse,
     applyTurnChange,
     finishGame,
     setTurnTimer,
@@ -210,7 +243,9 @@ export function createGameState() {
     selectCell,
     setNewLetterCell,
     setLetterAtCell,
+    undoNewLetter,
     clearSelection,
+    setMoveLoading(value: boolean) { moveLoading = value; },
   };
 }
 

@@ -19,7 +19,9 @@
   $effect(() => {
     if (gameState.phase === 'auth') return;
     const interval = setInterval(() => {
-      ping(gameState.apiKey, gameState.sessionId, ++pingCounter).catch(() => {});
+      ping(gameState.apiKey, gameState.sessionId, ++pingCounter).catch((err) => {
+        console.error('ping failed', err);
+      });
     }, 5000);
     return () => clearInterval(interval);
   });
