@@ -98,6 +98,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	if err := h.cf.Publish(ctx, centrifugo.ChannelGame(rec.ID), ev); err != nil {
 		slog.Error("join_game: publish to game channel", slog.Any("error", err))
 	}
+	h.publishLobbyUpdate(ctx)
 
 	// Publish the initial board state so clients render the starting word immediately.
 	players := make([]centrifugo.PlayerScore, 0, len(rec.Players))

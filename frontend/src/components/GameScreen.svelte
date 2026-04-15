@@ -27,15 +27,6 @@
       return;
     }
 
-    // If this is the new letter cell and not yet in the path, show alphabet
-    // so the user can change or cancel the letter
-    const isNewLetter = gameState.newLetterCell?.row === row && gameState.newLetterCell?.col === col;
-    const isInPath = gameState.selectedPath.some((p) => p.row === row && p.col === col);
-    if (isNewLetter && !isInPath) {
-      showAlphabet = true;
-      return;
-    }
-
     gameState.selectCell(row, col);
   }
 
@@ -149,9 +140,19 @@
     onCellClick={handleCellClick}
   />
 
-  <!-- Alphabet panel -->
-  {#if gameState.isMyTurn && gameState.newLetterCell && showAlphabet}
-    <Alphabet onSelect={handleAlphabetSelect} onCancel={handleAlphabetCancel} />
+  <!-- Alphabet panel or cancel-letter button -->
+  {#if gameState.isMyTurn && gameState.newLetterCell}
+    {#if showAlphabet}
+      <Alphabet onSelect={handleAlphabetSelect} onCancel={handleAlphabetCancel} />
+    {:else if gameState.board[gameState.newLetterCell.row][gameState.newLetterCell.col]}
+      <button
+        type="button"
+        onclick={handleAlphabetCancel}
+        class="w-full rounded-xl bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 ring-1 ring-blue-300 transition hover:bg-blue-100"
+      >
+        ✕ Удалить букву
+      </button>
+    {/if}
   {/if}
 
   <!-- Word bar -->

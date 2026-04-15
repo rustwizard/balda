@@ -42,6 +42,27 @@ func (h *Handlers) generateCentrifugoTokens(uid int64) (cfToken, lobbyToken stri
 	return
 }
 
+// publishLobbyUpdate fetches the current game list and publishes EvLobbyUpdate
+// to the lobby channel so all connected clients refresh without an API call.
+func (h *Handlers) publishLobbyUpdate(ctx context.Context) {
+	games := h.svc.ListGames()
+	ev := centrifugo.EvLobbyUpdate{
+		Type:  "lobby_update",
+		Games: make([]centrifugo.GameEntry, 0, len(games)),
+	}
+	for _, g := range games {
+		ev.Games = append(ev.Games, centrifugo.GameEntry{
+			ID:        g.ID,
+			PlayerIDs: g.PlayerIDs,
+			Status:    string(g.Status),
+			StartedAt: g.StartedAt.UnixMilli(),
+		})
+	}
+	if err := h.cf.Publish(ctx, centrifugo.ChannelLobby, ev); err != nil {
+		slog.Error("publish lobby_update", slog.Any("error", err))
+	}
+}
+
 // HandleAPIKeyHeader implements baldaapi.SecurityHandler.
 func (h *Handlers) HandleAPIKeyHeader(ctx context.Context, _ baldaapi.OperationName, t baldaapi.APIKeyHeader) (context.Context, error) {
 	slog.Info("KeyAuth header handler called")

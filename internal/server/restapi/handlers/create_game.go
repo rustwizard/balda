@@ -70,8 +70,10 @@ func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGamePar
 		ev.Players = append(ev.Players, p.ID)
 	}
 	if err := h.cf.Publish(ctx, centrifugo.ChannelLobby, ev); err != nil {
-		slog.Error("create_game: publish to centrifugo", slog.Any("error", err))
+		slog.Error("create_game: publish game_created", slog.Any("error", err))
 	}
+
+	h.publishLobbyUpdate(ctx)
 
 	gameToken, err := centrifugo.GenerateSubscriptionToken(
 		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,

@@ -133,6 +133,11 @@ export interface MoveResponse {
   move_number: number;
 }
 
+export interface EvLobbyUpdate {
+  type: 'lobby_update';
+  games: GameSummary[];
+}
+
 export interface EvSkipWarn {
   type: 'skip_warn';
   game_id: string;
@@ -141,4 +146,4 @@ export interface EvSkipWarn {
   skips_left: number;
 }
 
-export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange | EvSkipWarn;
+export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange | EvSkipWarn | EvLobbyUpdate;

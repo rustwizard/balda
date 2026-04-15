@@ -15,6 +15,21 @@ type EvGameCreated struct {
 	Players []string `json:"player_ids"`
 }
 
+// GameEntry is a single game item inside EvLobbyUpdate.
+type GameEntry struct {
+	ID        string   `json:"id"`
+	PlayerIDs []string `json:"player_ids"`
+	Status    string   `json:"status"`
+	StartedAt int64    `json:"started_at"`
+}
+
+// EvLobbyUpdate is published to the lobby channel whenever the game list changes.
+// The client replaces its local list with the received Games slice.
+type EvLobbyUpdate struct {
+	Type  string      `json:"type"` // "lobby_update"
+	Games []GameEntry `json:"games"`
+}
+
 type EvGameStarted struct {
 	Type      string   `json:"type"`
 	GameID    string   `json:"game_id"`

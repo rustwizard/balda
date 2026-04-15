@@ -64,8 +64,10 @@
       case 'skip_warn':
         gameState.applySkipWarn(ev);
         break;
+      case 'lobby_update':
+        gameState.applyLobbyUpdate(ev);
+        break;
       case 'game_created':
-        // Lobby will refresh via its own polling or we could trigger refresh here
         break;
     }
   });
