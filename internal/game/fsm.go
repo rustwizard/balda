@@ -43,6 +43,7 @@ var fsmTable = map[GameState]map[TurnEvent]transition{
 		EventMoveSubmitted: {StateWaitingForMove, (*Game).onMoveAccepted},
 		EventTurnSkipped:   {StateWaitingForMove, (*Game).onSkip},
 		EventTurnTimeout:   {StatePlayerTimedOut, (*Game).onTurnTimeout},
+		EventKick:          {StateGameOver, (*Game).onKick},
 	},
 	StatePlayerTimedOut: {
 		EventAckTimeout: {StateWaitingForMove, (*Game).onTimeoutAck},

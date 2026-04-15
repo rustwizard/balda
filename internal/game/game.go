@@ -25,6 +25,7 @@ var (
 const (
 	TurnDuration           = 60 * time.Second
 	MaxConsecutiveTimeouts = 3
+	MaxConsecutiveSkips    = 3
 )
 
 // Option configures a Game at construction time.
@@ -43,6 +44,7 @@ type Turn struct {
 
 type Notifier interface {
 	NotifyTimeout(playerID string, consecutive int, willKick bool)
+	NotifySkip(playerID string, consecutive int, willEnd bool)
 	NotifyKick(playerID string)
 	NotifyTurnStart(playerID string)
 }
@@ -53,6 +55,7 @@ type Player struct {
 	Score               int
 	Words               []string
 	ConsecutiveTimeouts int
+	ConsecutiveSkips    int
 	Kicked              bool
 }
 
@@ -185,14 +188,24 @@ func (g *Game) dispatch(ev TurnEvent) {
 // --- WaitingForMove actions ---
 
 func (g *Game) onMoveAccepted() {
-	g.currentPlayer().ConsecutiveTimeouts = 0
+	p := g.currentPlayer()
+	p.ConsecutiveTimeouts = 0
+	p.ConsecutiveSkips = 0
 	g.cancelTimer()
 	g.advanceTurn()
 }
 
 func (g *Game) onSkip() {
-	g.currentPlayer().ConsecutiveTimeouts = 0
+	p := g.currentPlayer()
+	p.ConsecutiveTimeouts = 0
+	p.ConsecutiveSkips++
+	willEnd := p.ConsecutiveSkips >= MaxConsecutiveSkips
+	g.notifier.NotifySkip(p.ID, p.ConsecutiveSkips, willEnd)
 	g.cancelTimer()
+	if willEnd {
+		g.eventCh <- EventKick
+		return
+	}
 	g.advanceTurn()
 }
 

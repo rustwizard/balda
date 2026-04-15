@@ -9,6 +9,7 @@ const (
 	EventTimeout   EventType = "timeout"
 	EventKick      EventType = "kick"
 	EventTurnStart EventType = "turn_start"
+	EventSkip      EventType = "skip"
 )
 
 // Event is the transport-agnostic representation of a game notification.
@@ -21,6 +22,12 @@ type Event struct {
 type TimeoutPayload struct {
 	Consecutive int  `json:"consecutive"`
 	WillKick    bool `json:"will_kick"`
+}
+
+// SkipPayload carries details for EventSkip.
+type SkipPayload struct {
+	Consecutive int  `json:"consecutive"`
+	WillEnd     bool `json:"will_end"`
 }
 
 // Sender delivers events to a player. Implementations are responsible for
@@ -68,6 +75,13 @@ func (n *GameNotifier) NotifyTimeout(playerID string, consecutive int, willKick 
 	})
 }
 
+func (n *GameNotifier) NotifySkip(playerID string, consecutive int, willEnd bool) {
+	n.sender.Send(playerID, Event{
+		Type:    EventSkip,
+		Payload: SkipPayload{Consecutive: consecutive, WillEnd: willEnd},
+	})
+}
+
 func (n *GameNotifier) NotifyKick(playerID string) {
 	n.sender.Send(playerID, Event{Type: EventKick})
 }
@@ -80,5 +94,6 @@ func (n *GameNotifier) NotifyTurnStart(playerID string) {
 type Noop struct{}
 
 func (n *Noop) NotifyTimeout(_ string, _ int, _ bool) {}
+func (n *Noop) NotifySkip(_ string, _ int, _ bool)    {}
 func (n *Noop) NotifyKick(_ string)                   {}
 func (n *Noop) NotifyTurnStart(_ string)              {}
