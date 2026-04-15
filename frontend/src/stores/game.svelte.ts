@@ -1,4 +1,4 @@
-import type { GameSummary, PlayerState, EvGameState, EvGameOver, EvTurnChange, MoveResponse } from '../types';
+import type { GameSummary, PlayerState, EvGameState, EvGameOver, EvTurnChange, EvSkipWarn, MoveResponse } from '../types';
 
 export type GamePhase = 'auth' | 'lobby' | 'waiting' | 'playing' | 'finished';
 
@@ -7,6 +7,7 @@ export interface PlayerInfo {
   nickname: string;
   score: number;
   wordsCount: number;
+  consecutiveSkips: number;
 }
 
 export function createGameState() {
@@ -26,6 +27,9 @@ export function createGameState() {
   let players = $state<PlayerInfo[]>([]);
   let moveNumber = $state<number>(0);
   let winnerUid = $state<string | null | undefined>(null);
+
+  // In-game notification (replaces browser alert)
+  let notif = $state<{ message: string; kind: 'error' | 'warn' } | null>(null);
 
   // Turn interaction
   let selectedPath = $state<{ row: number; col: number }[]>([]);
@@ -81,6 +85,7 @@ export function createGameState() {
       nickname: uid === playerUid ? nickname : 'Соперник',
       score: 0,
       wordsCount: 0,
+      consecutiveSkips: 0,
     }));
   }
 
@@ -95,6 +100,7 @@ export function createGameState() {
         nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
         score: p.score,
         wordsCount: p.words_count ?? 0,
+        consecutiveSkips: existing?.consecutiveSkips ?? 0,
       };
     });
     if (ev.status === 'finished') {
@@ -104,6 +110,7 @@ export function createGameState() {
     newLetterCell = null;
     currentWord = '';
     turnSecondsLeft = 60;
+    notif = null;
   }
 
   function finishGame(ev: EvGameOver) {
@@ -116,8 +123,15 @@ export function createGameState() {
         nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
         score: p.score,
         wordsCount: p.words_count ?? 0,
+        consecutiveSkips: existing?.consecutiveSkips ?? 0,
       };
     });
+  }
+
+  function applySkipWarn(ev: EvSkipWarn) {
+    players = players.map((p) =>
+      p.uid === ev.player_uid ? { ...p, consecutiveSkips: ev.skips_used } : p
+    );
   }
 
   function applyTurnChange(ev: EvTurnChange) {
@@ -139,6 +153,7 @@ export function createGameState() {
         nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
         score: p.score,
         wordsCount: p.words_count ?? 0,
+        consecutiveSkips: 0,
       };
     });
     if (resp.status === 'finished') {
@@ -148,6 +163,7 @@ export function createGameState() {
     newLetterCell = null;
     currentWord = '';
     turnSecondsLeft = 60;
+    notif = null;
   }
 
   function setTurnTimer(seconds: number) {
@@ -207,6 +223,14 @@ export function createGameState() {
     currentWord = '';
   }
 
+  function showNotif(message: string, kind: 'error' | 'warn' = 'error') {
+    notif = { message, kind };
+  }
+
+  function clearNotif() {
+    notif = null;
+  }
+
   return {
     get apiKey() { return apiKey; },
     get sessionId() { return sessionId; },
@@ -229,6 +253,7 @@ export function createGameState() {
     get isMyTurn() { return isMyTurn; },
     get myPlayer() { return myPlayer; },
     get opponent() { return opponent; },
+    get notif() { return notif; },
 
     setAuth,
     setLobby,
@@ -237,6 +262,7 @@ export function createGameState() {
     applyGameState,
     applyMoveResponse,
     applyTurnChange,
+    applySkipWarn,
     finishGame,
     setTurnTimer,
     tickTimer,
@@ -245,6 +271,8 @@ export function createGameState() {
     setLetterAtCell,
     undoNewLetter,
     clearSelection,
+    showNotif,
+    clearNotif,
     setMoveLoading(value: boolean) { moveLoading = value; },
   };
 }

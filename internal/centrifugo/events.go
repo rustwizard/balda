@@ -51,6 +51,16 @@ type EvTurnChange struct {
 	Reason         string `json:"reason"` // "timeout"
 }
 
+// EvSkipWarn is published each time the current player skips a turn.
+// SkipsLeft reaches 0 on the final skip; game_over follows immediately after.
+type EvSkipWarn struct {
+	Type      string `json:"type"`       // "skip_warn"
+	GameID    string `json:"game_id"`
+	PlayerUID string `json:"player_uid"` // who skipped
+	SkipsUsed int    `json:"skips_used"`
+	SkipsLeft int    `json:"skips_left"`
+}
+
 // EvGameOver is published to the game channel when the game ends.
 type EvGameOver struct {
 	Type      string        `json:"type"`

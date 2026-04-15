@@ -74,6 +74,16 @@ func (c *Coordinator) NotifyTimeout(_ string, _ int, willKick bool) {
 	}
 }
 
+// NotifySkip is called each time the current player skips a turn.
+// When willEnd is true, EventKick has already been queued; game_over follows.
+func (c *Coordinator) NotifySkip(playerID string, consecutive int, willEnd bool) {
+	skipsLeft := game.MaxConsecutiveSkips - consecutive
+	go c.publishSkipWarn(playerID, consecutive, skipsLeft)
+	if !willEnd {
+		c.nextReason = "skip"
+	}
+}
+
 // NotifyKick is called when a player is kicked (3 consecutive timeouts).
 // It publishes game_over and the lobby will remove the game when Run exits.
 func (c *Coordinator) NotifyKick(kickedPlayerID string) {
@@ -119,6 +129,21 @@ func (c *Coordinator) publishGameState() {
 	defer cancel()
 	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
 		slog.Error("gamecoord: publish game_state", slog.String("gameID", c.gameID), slog.Any("error", err))
+	}
+}
+
+func (c *Coordinator) publishSkipWarn(playerID string, skipsUsed, skipsLeft int) {
+	ev := centrifugo.EvSkipWarn{
+		Type:      "skip_warn",
+		GameID:    c.gameID,
+		PlayerUID: playerID,
+		SkipsUsed: skipsUsed,
+		SkipsLeft: skipsLeft,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
+		slog.Error("gamecoord: publish skip_warn", slog.String("gameID", c.gameID), slog.Any("error", err))
 	}
 }
 

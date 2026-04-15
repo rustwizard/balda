@@ -80,6 +80,20 @@ func TestSubmitWord_WrongPlayer(t *testing.T) {
 	assert.ErrorIs(t, err, game.ErrNotYourTurn)
 }
 
+func TestSubmitWord_DuplicateCell(t *testing.T) {
+	n := &mockNotifier{}
+	g, _ := makeGameWithBoard(t, n, testBoardWord, "p1", "p2")
+
+	// в(2,0)→о(2,1)→в(2,0): second step revisits the first cell.
+	dup := []game.Letter{
+		{RowID: 2, ColID: 0, Char: "в"},
+		{RowID: 2, ColID: 1, Char: "о"},
+		{RowID: 2, ColID: 0, Char: "в"},
+	}
+	err := g.SubmitWord("p1", &testNewLetter, dup)
+	assert.ErrorIs(t, err, game.ErrDuplicateCell)
+}
+
 func TestSubmitWord_WordHasGaps(t *testing.T) {
 	n := &mockNotifier{}
 	g, _ := makeGameWithBoard(t, n, testBoardWord, "p1", "p2")

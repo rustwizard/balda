@@ -27,6 +27,15 @@
       return;
     }
 
+    // If this is the new letter cell and not yet in the path, show alphabet
+    // so the user can change or cancel the letter
+    const isNewLetter = gameState.newLetterCell?.row === row && gameState.newLetterCell?.col === col;
+    const isInPath = gameState.selectedPath.some((p) => p.row === row && p.col === col);
+    if (isNewLetter && !isInPath) {
+      showAlphabet = true;
+      return;
+    }
+
     gameState.selectCell(row, col);
   }
 
@@ -48,7 +57,7 @@
       gameState.clearSelection();
       gameState.undoNewLetter();
     } catch (err: any) {
-      alert(err?.message || 'Не удалось пропустить ход');
+      gameState.showNotif(err?.message || 'Не удалось пропустить ход');
     } finally {
       gameState.setMoveLoading(false);
     }
@@ -57,11 +66,11 @@
   async function handleSubmit() {
     if (!gameState.isMyTurn || gameState.moveLoading || !gameState.game) return;
     if (!gameState.newLetterCell) {
-      alert('Выберите клетку для новой буквы');
+      gameState.showNotif('Выберите клетку для новой буквы', 'warn');
       return;
     }
     if (gameState.currentWord.length < 3) {
-      alert('Слово должно состоять минимум из 3 букв');
+      gameState.showNotif('Слово должно быть минимум из 3 букв', 'warn');
       return;
     }
 
@@ -79,7 +88,7 @@
       const resp = await api.submitMove(gameState.game.id, gameState.apiKey, gameState.sessionId, payload);
       gameState.applyMoveResponse(resp);
     } catch (err: any) {
-      alert(err?.message || 'Не удалось отправить слово');
+      gameState.showNotif(err?.message || 'Не удалось отправить слово');
       gameState.undoNewLetter();
     } finally {
       gameState.setMoveLoading(false);
@@ -124,6 +133,7 @@
         name={p.nickname}
         score={p.score}
         wordsCount={p.wordsCount}
+        consecutiveSkips={p.consecutiveSkips}
         isActive={gameState.currentTurnUid === p.uid}
         isWinner={gameState.phase === 'finished' && gameState.winnerUid === p.uid}
       />
@@ -146,6 +156,24 @@
 
   <!-- Word bar -->
   <WordBar word={gameState.currentWord} />
+
+  <!-- In-game notification -->
+  {#if gameState.notif}
+    <div
+      class="flex items-center justify-between gap-2 rounded-xl px-4 py-2 text-sm font-medium
+        {gameState.notif.kind === 'warn'
+          ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-300'
+          : 'bg-red-50 text-red-800 ring-1 ring-red-300'}"
+    >
+      <span>{gameState.notif.message}</span>
+      <button
+        type="button"
+        onclick={() => gameState.clearNotif()}
+        class="shrink-0 text-current opacity-50 hover:opacity-100"
+        aria-label="Закрыть"
+      >✕</button>
+    </div>
+  {/if}
 
   <!-- Actions -->
   <div class="grid grid-cols-2 gap-3">
