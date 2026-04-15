@@ -15,6 +15,7 @@ var (
 	ErrNotYourTurn         = errors.New("game: not your turn")
 	ErrWrongState          = errors.New("game: wrong state for this action")
 	ErrWordHasGaps         = errors.New("game: word path has gaps between letters")
+	ErrDuplicateCell       = errors.New("game: word path uses the same cell twice")
 	ErrNewLetterNotInWord  = errors.New("game: new letter must be included in the word")
 	ErrWordAlreadyUsed     = errors.New("game: word already used")
 	ErrWordNotInDictionary = errors.New("game: word not found in dictionary")
@@ -89,6 +90,19 @@ func normalizeWord(word string) string {
 	word = strings.ReplaceAll(word, "ё", "е")
 	word = strings.ReplaceAll(word, "Ё", "Е")
 	return word
+}
+
+// HasDuplicateCells reports whether any cell position appears more than once in the path.
+func HasDuplicateCells(word []Letter) bool {
+	seen := make(map[[2]uint8]struct{}, len(word))
+	for _, l := range word {
+		key := [2]uint8{l.RowID, l.ColID}
+		if _, ok := seen[key]; ok {
+			return true
+		}
+		seen[key] = struct{}{}
+	}
+	return false
 }
 
 // GapsBetweenLetters reports whether there are gaps between consecutive letters
@@ -260,6 +274,10 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 	if g.currentPlayer().ID != playerID {
 		g.mu.Unlock()
 		return ErrNotYourTurn
+	}
+	if HasDuplicateCells(word) {
+		g.mu.Unlock()
+		return ErrDuplicateCell
 	}
 	if GapsBetweenLetters(word) {
 		g.mu.Unlock()
