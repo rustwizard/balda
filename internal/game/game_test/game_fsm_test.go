@@ -31,6 +31,8 @@ func (m *mockNotifier) NotifyTimeout(playerID string, consecutive int, willKick 
 	m.timeouts = append(m.timeouts, timeoutCall{playerID, consecutive, willKick})
 }
 
+func (m *mockNotifier) NotifySkip(_ string, _ int, _ bool) {}
+
 func (m *mockNotifier) NotifyKick(playerID string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
