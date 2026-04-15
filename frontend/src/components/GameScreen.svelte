@@ -27,6 +27,15 @@
       return;
     }
 
+    // If this is the new letter cell and not yet in the path, show alphabet
+    // so the user can change or cancel the letter
+    const isNewLetter = gameState.newLetterCell?.row === row && gameState.newLetterCell?.col === col;
+    const isInPath = gameState.selectedPath.some((p) => p.row === row && p.col === col);
+    if (isNewLetter && !isInPath) {
+      showAlphabet = true;
+      return;
+    }
+
     gameState.selectCell(row, col);
   }
 
