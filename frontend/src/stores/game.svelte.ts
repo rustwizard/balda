@@ -1,4 +1,4 @@
-import type { GameSummary, PlayerState, EvGameState, EvGameOver, EvTurnChange, EvSkipWarn, MoveResponse } from '../types';
+import type { GameSummary, PlayerState, EvGameState, EvGameOver, EvTurnChange, EvSkipWarn, EvLobbyUpdate, MoveResponse } from '../types';
 
 export type GamePhase = 'auth' | 'lobby' | 'waiting' | 'playing' | 'finished';
 
@@ -30,6 +30,9 @@ export function createGameState() {
 
   // In-game notification (replaces browser alert)
   let notif = $state<{ message: string; kind: 'error' | 'warn' } | null>(null);
+
+  // Lobby game list — updated via lobby_update Centrifugo events
+  let lobbyGames = $state<GameSummary[]>([]);
 
   // Turn interaction
   let selectedPath = $state<{ row: number; col: number }[]>([]);
@@ -223,6 +226,14 @@ export function createGameState() {
     currentWord = '';
   }
 
+  function applyLobbyUpdate(ev: EvLobbyUpdate) {
+    lobbyGames = ev.games;
+  }
+
+  function setLobbyGames(gs: GameSummary[]) {
+    lobbyGames = gs;
+  }
+
   function showNotif(message: string, kind: 'error' | 'warn' = 'error') {
     notif = { message, kind };
   }
@@ -254,6 +265,7 @@ export function createGameState() {
     get myPlayer() { return myPlayer; },
     get opponent() { return opponent; },
     get notif() { return notif; },
+    get lobbyGames() { return lobbyGames; },
 
     setAuth,
     setLobby,
@@ -263,6 +275,8 @@ export function createGameState() {
     applyMoveResponse,
     applyTurnChange,
     applySkipWarn,
+    applyLobbyUpdate,
+    setLobbyGames,
     finishGame,
     setTurnTimer,
     tickTimer,

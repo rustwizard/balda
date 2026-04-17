@@ -146,9 +146,10 @@ func nextPlayerID(moverID string, players []game.PlayerScore) string {
 }
 
 func buildGameState(rec *lobby.GameRecord, currentTurnUID string) centrifugo.EvGameState {
-	players := make([]centrifugo.PlayerScore, 0, len(rec.Players))
-	for _, p := range rec.Players {
-		players = append(players, centrifugo.PlayerScore{UID: p.ID, Score: p.Score, WordsCount: len(p.Words)})
+	scores := rec.Game.PlayerScores()
+	players := make([]centrifugo.PlayerScore, 0, len(scores))
+	for _, s := range scores {
+		players = append(players, centrifugo.PlayerScore{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount})
 	}
 	if currentTurnUID == "" {
 		currentTurnUID = rec.Game.CurrentPlayerID()

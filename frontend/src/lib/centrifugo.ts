@@ -7,6 +7,7 @@ export class CentrifugoClient {
   private centrifuge: Centrifuge | null = null;
   private handlers: EventHandler[] = [];
   private subscriptions: Map<string, any> = new Map();
+  private pendingSubscriptions: Array<{ channel: string; token: string }> = [];
 
   connect(wsUrl: string, token: string) {
     console.log('[centrifugo] connect called', wsUrl);
@@ -31,12 +32,18 @@ export class CentrifugoClient {
     });
 
     this.centrifuge.connect();
+
+    // Process any subscriptions requested before connect()
+    const pending = this.pendingSubscriptions;
+    this.pendingSubscriptions = [];
+    pending.forEach(({ channel, token }) => this.subscribe(channel, token));
   }
 
   subscribe(channel: string, token: string) {
     console.log('[centrifugo] subscribe', channel);
     if (!this.centrifuge) {
-      console.warn('[centrifugo] no centrifuge instance, skipping subscribe');
+      console.warn('[centrifugo] no centrifuge instance, queuing subscribe');
+      this.pendingSubscriptions.push({ channel, token });
       return;
     }
     if (this.subscriptions.has(channel)) {
