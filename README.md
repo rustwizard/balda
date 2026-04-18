@@ -306,7 +306,7 @@ Sent when the game ends — either because the board became full or a player was
 A 5×5 grid. The starting word occupies the center row (row index 2). Coordinates are `(RowID, ColID)` from `(0,0)` to `(4,4)`.
 
 <p align="center">
-  <img src="docs/screenshots/board-start.svg" width="320" alt="Initial board state">
+  <img src="docs/screenshots/board-start.png" width="320" alt="Initial board state">
   <br>
   <em>Initial board — the 5-letter word is placed in the centre row.</em>
 </p>
@@ -328,7 +328,7 @@ A 5×5 grid. The starting word occupies the center row (row index 2). Coordinate
 - The game also ends automatically when the board is full (all 25 cells are filled).
 
 <p align="center">
-  <img src="docs/screenshots/board-midgame.svg" width="320" alt="Mid-game state">
+  <img src="docs/screenshots/board-midgame.png" width="320" alt="Mid-game state">
   <br>
   <em>Mid-game — the selected path (blue outline) includes the newly placed letter.</em>
 </p>
@@ -346,7 +346,7 @@ Submitted words must:
 > **Note:** `е` and `ё` are treated as the same letter for dictionary lookup, word reuse checks, and board display. For example, a word spelled with `ё` will match a dictionary entry with `е`, and vice versa.
 
 <p align="center">
-  <img src="docs/screenshots/board-full.svg" width="320" alt="Full board">
+  <img src="docs/screenshots/board-full.png" width="320" alt="Full board">
   <br>
   <em>Game over — the board is completely filled and no more moves are possible.</em>
 </p>
