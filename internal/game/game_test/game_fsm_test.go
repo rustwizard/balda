@@ -232,6 +232,61 @@ func TestGame_Run_ExplicitKickEndsGame(t *testing.T) {
 	assert.True(t, players[0].Kicked)
 }
 
+func TestGame_Run_BoardFullEndsGame(t *testing.T) {
+	n := &mockNotifier{}
+	players := makePlayers("p1", "p2")
+	g, err := game.NewGameWithWord(players, testBoardWord, n)
+	require.NoError(t, err)
+	addTestWord(t, "аб")
+
+	// Fill the entire board except one cell (3,3).
+	board := g.Board()
+	for r := range board.Table {
+		for c := range board.Table[r] {
+			if board.Table[r][c] == nil {
+				board.Table[r][c] = &game.Letter{RowID: uint8(r), ColID: uint8(c), Char: "я"}
+			}
+		}
+	}
+	// Clear the target cell so the final move can place a letter there.
+	board.Table[3][3] = nil
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		g.Run(ctx)
+	}()
+
+	require.Eventually(t, func() bool {
+		return n.turnStartCount() >= 1
+	}, time.Second, 5*time.Millisecond)
+	assert.Equal(t, "p1", n.lastTurnStart())
+
+	// Submit a word that fills the last empty cell (3,3).
+	// Word path: н(2,3) → new letter б(3,3). Word is "аб" where 'а' is existing 'н'???
+	// Wait, MakeWord uses Char from letters. Let's use actual chars.
+	// Actually let's just use letters with Char matching the word "аб".
+	// But (2,3) has Char 'н'. So the word formed by the path would be "нб", not "аб".
+	// We need the word formed by the path to be in the dictionary.
+	// So let's add "нб" to the dictionary instead.
+	addTestWord(t, "нб")
+	lastLetter := game.Letter{RowID: 3, ColID: 3, Char: "б"}
+	word := []game.Letter{
+		{RowID: 2, ColID: 3, Char: "н"},
+		{RowID: 3, ColID: 3, Char: "б"},
+	}
+	require.NoError(t, g.SubmitWord("p1", &lastLetter, word))
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("game did not end after board became full")
+	}
+}
+
 func TestGame_Run_ContextCancellationStopsGame(t *testing.T) {
 	n := &mockNotifier{}
 	g, err := game.NewGame(makePlayers("p1", "p2"), n)
