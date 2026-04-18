@@ -46,6 +46,6 @@
     <rect x="105" y="375" width="80" height="80" rx="14" fill="url(#tileGrad)" filter="url(#shadow)"/><text x="145" y="430">О</text>
     <rect x="195" y="375" width="80" height="80" rx="14" fill="url(#tileGrad)" filter="url(#shadow)"/><text x="235" y="430">М</text>
     <rect x="285" y="375" width="80" height="80" rx="14" fill="url(#tileGrad)" filter="url(#shadow)"/><text x="325" y="430">А</text>
-    <rect x="375" y="375" width="80" height="80" rx="14" fill="url(#tileGrad)" filter="url(#shadow)"/><text x="415" y="430">!</text>
+    <rect x="375" y="375" width="80" height="80" rx="14" fill="url(#tileGrad)" filter="url(#shadow)"/><text x="415" y="430">Й</text>
   </g>
 </svg>
