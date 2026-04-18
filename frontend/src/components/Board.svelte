@@ -18,7 +18,7 @@
   }
 
   function getCellClasses(row: number, col: number, hasLetter: boolean) {
-    const base = 'relative flex items-center justify-center rounded-xl text-[clamp(20px,5vw,32px)] font-bold uppercase select-none transition-all active:scale-95';
+    const base = 'relative flex items-center justify-center aspect-square w-full rounded-xl text-[clamp(20px,5vw,32px)] font-bold uppercase select-none transition-all active:scale-95';
     
     if (hasLetter) {
       if (isSelected(row, col)) {

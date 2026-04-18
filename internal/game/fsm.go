@@ -15,6 +15,7 @@ const (
 	EventTurnTimeout
 	EventAckTimeout // player (or coordinator) acks the timeout; game continues
 	EventKick       // explicit kick decision; game ends
+	EventBoardFull  // board has no empty cells; game ends
 )
 
 /*
@@ -44,6 +45,7 @@ var fsmTable = map[GameState]map[TurnEvent]transition{
 		EventTurnSkipped:   {StateWaitingForMove, (*Game).onSkip},
 		EventTurnTimeout:   {StatePlayerTimedOut, (*Game).onTurnTimeout},
 		EventKick:          {StateGameOver, (*Game).onKick},
+		EventBoardFull:     {StateGameOver, (*Game).onBoardFull},
 	},
 	StatePlayerTimedOut: {
 		EventAckTimeout: {StateWaitingForMove, (*Game).onTimeoutAck},

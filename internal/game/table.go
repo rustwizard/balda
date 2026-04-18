@@ -75,6 +75,18 @@ func (lt *LettersTable) isPlaceForLetterTaken(l *Letter) bool {
 	return false
 }
 
+// IsFull reports whether every cell on the 5x5 board is occupied.
+func (lt *LettersTable) IsFull() bool {
+	for r := range lt.Table {
+		for _, l := range lt.Table[r] {
+			if l == nil {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
 	if l.RowID >= 5 || l.ColID >= 5 {
 		return ErrWrongLetterPlace
@@ -84,15 +96,8 @@ func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
 		return ErrLetterPlaceTaken
 	}
 
-	switch l.RowID {
-	case 0, 1:
-		if lt.downCharEmpty(l) {
-			return ErrWrongLetterPlace
-		}
-	case 3, 4:
-		if lt.upperCharEmpty(l) {
-			return ErrWrongLetterPlace
-		}
+	if !lt.hasAdjacentLetter(l) {
+		return ErrWrongLetterPlace
 	}
 
 	lt.Table[l.RowID][l.ColID] = l
@@ -100,18 +105,22 @@ func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
 	return nil
 }
 
-func (lt *LettersTable) downCharEmpty(l *Letter) bool {
-	char := lt.Table[l.RowID+1][l.ColID]
-	if char != nil {
-		return false
+// hasAdjacentLetter reports whether the cell has at least one occupied
+// neighbour (up, down, left or right). A letter must be placed adjacent to
+// an existing letter.
+func (lt *LettersTable) hasAdjacentLetter(l *Letter) bool {
+	r, c := l.RowID, l.ColID
+	if r > 0 && lt.Table[r-1][c] != nil {
+		return true
 	}
-	return true
-}
-
-func (lt *LettersTable) upperCharEmpty(l *Letter) bool {
-	char := lt.Table[l.RowID-1][l.ColID]
-	if char != nil {
-		return false
+	if r < 4 && lt.Table[r+1][c] != nil {
+		return true
 	}
-	return true
+	if c > 0 && lt.Table[r][c-1] != nil {
+		return true
+	}
+	if c < 4 && lt.Table[r][c+1] != nil {
+		return true
+	}
+	return false
 }

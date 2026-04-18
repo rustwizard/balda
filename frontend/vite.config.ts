@@ -6,15 +6,21 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [tailwindcss(), svelte()],
   server: {
+    host: true,
     port: 5173,
     proxy: {
       '/balda/api/v1': {
-        target: 'http://127.0.0.1:9666',
+        target: process.env.BALDA_API_PROXY_URL || 'http://127.0.0.1:9666',
         changeOrigin: true,
       },
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: process.env.BALDA_CENTRIFUGO_PROXY_URL || 'http://127.0.0.1:8000',
         changeOrigin: true,
+      },
+      '/connection/websocket': {
+        target: process.env.BALDA_CENTRIFUGO_PROXY_URL || 'http://127.0.0.1:8000',
+        changeOrigin: true,
+        ws: true,
       },
     },
   },

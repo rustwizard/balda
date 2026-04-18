@@ -240,6 +240,11 @@ func (g *Game) onKick() {
 	// StateGameOver committed by dispatch; shutdown follows in Run.
 }
 
+func (g *Game) onBoardFull() {
+	// Board is full; game ends naturally.
+	// StateGameOver committed by dispatch; shutdown follows in Run.
+}
+
 func (g *Game) currentPlayer() *Player { return g.players[g.current] }
 
 func (g *Game) advanceTurn() {
@@ -335,10 +340,15 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 	p.Words = append(p.Words, wordStr)
 	p.Score += len(word)
 
+	boardFull := g.board.IsFull()
 	g.mu.Unlock()
 
+	ev := EventMoveSubmitted
+	if boardFull {
+		ev = EventBoardFull
+	}
 	select {
-	case g.eventCh <- EventMoveSubmitted:
+	case g.eventCh <- ev:
 	case <-g.done:
 	}
 	return nil
