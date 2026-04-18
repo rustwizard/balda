@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="450" height="450" viewBox="0 0 450 450">
+  <defs>
+    <linearGradient id="tileGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f3e9d8"/>
+      <stop offset="100%" stop-color="#e6d5b8"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="2" flood-color="#c9b896" flood-opacity="0.8"/>
+    </filter>
+    <filter id="emptyShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="1" flood-color="#d4d0c8" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <!-- Board background -->
+  <rect x="0" y="0" width="450" height="450" rx="20" fill="#e0ddd5"/>
+
+  <!-- Grid cells -->
+  <!-- row 0 -->
+  <rect x="15" y="15" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="105" y="15" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="195" y="15" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="285" y="15" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="375" y="15" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+
+  <!-- row 1 -->
+  <rect x="15" y="105" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="105" y="105" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="195" y="105" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="285" y="105" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="375" y="105" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+
+  <!-- row 2 (initial word) -->
+  <rect x="15" y="195" width="80" height="80" rx="14" fill="url(#tileGrad)" filter="url(#shadow)"/>
+  <rect x="105" y="195" width="80" height="80" rx="14" fill="url(#tileGrad)" filter="url(#shadow)"/>
+  <rect x="195" y="195" width="80" height="80" rx="14" fill="url(#tileGrad)" filter="url(#shadow)"/>
+  <rect x="285" y="195" width="80" height="80" rx="14" fill="url(#tileGrad)" filter="url(#shadow)"/>
+  <rect x="375" y="195" width="80" height="80" rx="14" fill="url(#tileGrad)" filter="url(#shadow)"/>
+
+  <text x="55" y="250" text-anchor="middle" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="36" font-weight="700" fill="#2c2c2c">С</text>
+  <text x="145" y="250" text-anchor="middle" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="36" font-weight="700" fill="#2c2c2c">Л</text>
+  <text x="235" y="250" text-anchor="middle" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="36" font-weight="700" fill="#2c2c2c">О</text>
+  <text x="325" y="250" text-anchor="middle" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="36" font-weight="700" fill="#2c2c2c">В</text>
+  <text x="415" y="250" text-anchor="middle" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="36" font-weight="700" fill="#2c2c2c">О</text>
+
+  <!-- row 3 -->
+  <rect x="15" y="285" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="105" y="285" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="195" y="285" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="285" y="285" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="375" y="285" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+
+  <!-- row 4 -->
+  <rect x="15" y="375" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="105" y="375" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="195" y="375" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="285" y="375" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+  <rect x="375" y="375" width="80" height="80" rx="14" fill="#faf8f3" filter="url(#emptyShadow)"/>
+</svg>

@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="web-assets/og-image.png" width="600" alt="Balda">
+</p>
+
 # Balda
 
 A multiplayer turn-based word game server written in Go, with a real-time Svelte 5 frontend. Players compete on a 5×5 letter grid, placing letters to form valid Russian words and score points.
@@ -301,6 +305,12 @@ Sent when the game ends — either because the board became full or a player was
 
 A 5×5 grid. The starting word occupies the center row (row index 2). Coordinates are `(RowID, ColID)` from `(0,0)` to `(4,4)`.
 
+<p align="center">
+  <img src="docs/screenshots/board-start.svg" width="320" alt="Initial board state">
+  <br>
+  <em>Initial board — the 5-letter word is placed in the centre row.</em>
+</p>
+
 ```
 [ ][ ][ ][ ][ ]   row 0
 [ ][ ][ ][ ][ ]   row 1
@@ -317,6 +327,12 @@ A 5×5 grid. The starting word occupies the center row (row index 2). Coordinate
 - A player can skip a turn voluntarily via `POST /games/{id}/skip`.
 - The game also ends automatically when the board is full (all 25 cells are filled).
 
+<p align="center">
+  <img src="docs/screenshots/board-midgame.svg" width="320" alt="Mid-game state">
+  <br>
+  <em>Mid-game — the selected path (blue outline) includes the newly placed letter.</em>
+</p>
+
 ### Word Validation
 
 Submitted words must:
@@ -328,6 +344,12 @@ Submitted words must:
 - Not be identical to the initial board word
 
 > **Note:** `е` and `ё` are treated as the same letter for dictionary lookup, word reuse checks, and board display. For example, a word spelled with `ё` will match a dictionary entry with `е`, and vice versa.
+
+<p align="center">
+  <img src="docs/screenshots/board-full.svg" width="320" alt="Full board">
+  <br>
+  <em>Game over — the board is completely filled and no more moves are possible.</em>
+</p>
 
 ### State Machine
 
