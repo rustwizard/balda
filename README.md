@@ -73,12 +73,30 @@ balda/
 ### Run with Docker Compose
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 Starts PostgreSQL, Redis, Centrifugo, the game server on port `9666`, and the frontend on port `8080`.
 
-Open `http://localhost:8080` to play.
+Open `http://localhost:8080` to play. The frontend is also reachable from other devices on your local network via `http://<host-ip>:8080` (e.g. `http://192.168.1.42:8080`).
+
+### Frontend development
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite dev server listens on all interfaces (`0.0.0.0:5173`), so you can open the game from a phone or another computer on the same Wi-Fi network at `http://<host-ip>:5173`.
+
+Proxy targets for the backend and Centrifugo can be configured via environment variables (see `frontend/.env.example`):
+
+```bash
+BALDA_API_PROXY_URL=http://127.0.0.1:9666 \
+BALDA_CENTRIFUGO_PROXY_URL=http://127.0.0.1:8000 \
+npm run dev
+```
 
 ### Rebuild and restart
 
@@ -273,7 +291,7 @@ Possible `reason` values: `game_start`, `move`, `skip`, `timeout`.
   "players": [{"uid":"…","score":5,"words_count":2}] }
 ```
 
-`winner_uid` is absent on a draw.
+Sent when the game ends — either because the board became full or a player was kicked. `winner_uid` is absent on a draw.
 
 ---
 
@@ -322,6 +340,7 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 │ WaitingForMove      │ MoveSubmitted      │ WaitingForMove      │
 │ WaitingForMove      │ TurnSkipped        │ WaitingForMove      │
 │ WaitingForMove      │ TurnTimeout        │ PlayerTimedOut      │
+│ WaitingForMove      │ BoardFull          │ GameOver            │
 ├─────────────────────┼────────────────────┼─────────────────────┤
 │ PlayerTimedOut      │ AckTimeout         │ WaitingForMove      │
 │ PlayerTimedOut      │ Kick               │ GameOver            │
