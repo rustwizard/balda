@@ -297,6 +297,7 @@ A 5×5 grid. The starting word occupies the center row (row index 2). Coordinate
 - On timeout the turn passes to the other player automatically; no action from either client is needed.
 - After **3 consecutive timeouts**, the player is kicked and the game ends.
 - A player can skip a turn voluntarily via `POST /games/{id}/skip`.
+- The game also ends automatically when the board is full (all 25 cells are filled).
 
 ### Word Validation
 
