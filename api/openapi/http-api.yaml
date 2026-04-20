@@ -575,13 +575,13 @@ components:
         players:
           type: array
           items:
-            $ref: "#/components/schemas/PlayerScore"
+            $ref: "#/components/schemas/PlayerGameState"
         status:
           $ref: "#/components/schemas/GameStatus"
         move_number:
           type: integer
 
-    PlayerScore:
+    PlayerGameState:
       type: object
       properties:
         uid:
@@ -594,6 +594,11 @@ components:
         words_count:
           description: Number of words submitted by the player
           type: integer
+        words:
+          description: List of words submitted by the player in this game
+          type: array
+          items:
+            type: string
 
     EvGameCreated:
       type: object
@@ -646,7 +651,7 @@ components:
         players:
           type: array
           items:
-            $ref: "#/components/schemas/PlayerScore"
+            $ref: "#/components/schemas/PlayerGameState"
         status:
           $ref: "#/components/schemas/GameStatus"
         move_number:
@@ -671,7 +676,7 @@ components:
         players:
           type: array
           items:
-            $ref: "#/components/schemas/PlayerScore"
+            $ref: "#/components/schemas/PlayerGameState"
 
     PlayerState:
       type: object

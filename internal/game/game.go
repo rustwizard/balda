@@ -46,6 +46,7 @@ type Notifier interface {
 	NotifyTimeout(playerID string, consecutive int, willKick bool)
 	NotifySkip(playerID string, consecutive int, willEnd bool)
 	NotifyKick(playerID string)
+	NotifyBoardFull()
 	NotifyTurnStart(playerID string)
 }
 
@@ -241,8 +242,7 @@ func (g *Game) onKick() {
 }
 
 func (g *Game) onBoardFull() {
-	// Board is full; game ends naturally.
-	// StateGameOver committed by dispatch; shutdown follows in Run.
+	g.notifier.NotifyBoardFull()
 }
 
 func (g *Game) currentPlayer() *Player { return g.players[g.current] }
@@ -380,20 +380,23 @@ func (g *Game) Board() *LettersTable {
 	return g.board
 }
 
-// PlayerScore holds a player's UID and current score for external consumers.
-type PlayerScore struct {
+// PlayerState holds a player's UID and current score for external consumers.
+type PlayerState struct {
 	UID        string
 	Score      int
 	WordsCount int
+	Words      []string
 }
 
 // PlayerScores returns a snapshot of each player's score and word count.
-func (g *Game) PlayerScores() []PlayerScore {
+func (g *Game) PlayerScores() []PlayerState {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	out := make([]PlayerScore, len(g.players))
+	out := make([]PlayerState, len(g.players))
 	for i, p := range g.players {
-		out[i] = PlayerScore{UID: p.ID, Score: p.Score, WordsCount: len(p.Words)}
+		words := make([]string, len(p.Words))
+		copy(words, p.Words)
+		out[i] = PlayerState{UID: p.ID, Score: p.Score, WordsCount: len(p.Words), Words: words}
 	}
 	return out
 }

@@ -497,10 +497,10 @@ type MoveResponse struct {
 	// Updated 5x5 board state.
 	Board [][]string `json:"board"`
 	// ID of the player whose turn it is now.
-	CurrentTurnUID OptUUID       `json:"current_turn_uid"`
-	Players        []PlayerScore `json:"players"`
-	Status         OptGameStatus `json:"status"`
-	MoveNumber     OptInt        `json:"move_number"`
+	CurrentTurnUID OptUUID           `json:"current_turn_uid"`
+	Players        []PlayerGameState `json:"players"`
+	Status         OptGameStatus     `json:"status"`
+	MoveNumber     OptInt            `json:"move_number"`
 }
 
 // GetBoard returns the value of Board.
@@ -514,7 +514,7 @@ func (s *MoveResponse) GetCurrentTurnUID() OptUUID {
 }
 
 // GetPlayers returns the value of Players.
-func (s *MoveResponse) GetPlayers() []PlayerScore {
+func (s *MoveResponse) GetPlayers() []PlayerGameState {
 	return s.Players
 }
 
@@ -539,7 +539,7 @@ func (s *MoveResponse) SetCurrentTurnUID(val OptUUID) {
 }
 
 // SetPlayers sets the value of Players.
-func (s *MoveResponse) SetPlayers(val []PlayerScore) {
+func (s *MoveResponse) SetPlayers(val []PlayerGameState) {
 	s.Players = val
 }
 
@@ -969,44 +969,56 @@ func (s *Player) SetKey(val OptString) {
 	s.Key = val
 }
 
-// Ref: #/components/schemas/PlayerScore
-type PlayerScore struct {
+// Ref: #/components/schemas/PlayerGameState
+type PlayerGameState struct {
 	// Player's ID.
 	UID OptUUID `json:"uid"`
 	// Number of points scored in the current game.
 	Score OptInt `json:"score"`
 	// Number of words submitted by the player.
 	WordsCount OptInt `json:"words_count"`
+	// List of words submitted by the player in this game.
+	Words []string `json:"words"`
 }
 
 // GetUID returns the value of UID.
-func (s *PlayerScore) GetUID() OptUUID {
+func (s *PlayerGameState) GetUID() OptUUID {
 	return s.UID
 }
 
 // GetScore returns the value of Score.
-func (s *PlayerScore) GetScore() OptInt {
+func (s *PlayerGameState) GetScore() OptInt {
 	return s.Score
 }
 
 // GetWordsCount returns the value of WordsCount.
-func (s *PlayerScore) GetWordsCount() OptInt {
+func (s *PlayerGameState) GetWordsCount() OptInt {
 	return s.WordsCount
 }
 
+// GetWords returns the value of Words.
+func (s *PlayerGameState) GetWords() []string {
+	return s.Words
+}
+
 // SetUID sets the value of UID.
-func (s *PlayerScore) SetUID(val OptUUID) {
+func (s *PlayerGameState) SetUID(val OptUUID) {
 	s.UID = val
 }
 
 // SetScore sets the value of Score.
-func (s *PlayerScore) SetScore(val OptInt) {
+func (s *PlayerGameState) SetScore(val OptInt) {
 	s.Score = val
 }
 
 // SetWordsCount sets the value of WordsCount.
-func (s *PlayerScore) SetWordsCount(val OptInt) {
+func (s *PlayerGameState) SetWordsCount(val OptInt) {
 	s.WordsCount = val
+}
+
+// SetWords sets the value of Words.
+func (s *PlayerGameState) SetWords(val []string) {
+	s.Words = val
 }
 
 // Ref: #/components/schemas/PlayerState

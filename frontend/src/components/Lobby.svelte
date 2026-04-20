@@ -38,7 +38,7 @@
           game_id: res.game.id,
           board: res.board,
           current_turn_uid: res.current_turn_uid,
-          players: res.game.player_ids.map((uid) => ({ uid, score: 0 })),
+          players: res.game.player_ids.map((uid) => ({ uid, score: 0, words_count: 0, words: [] })),
           status: 'in_progress',
           move_number: 0,
         });

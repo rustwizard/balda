@@ -90,6 +90,12 @@ func (c *Coordinator) NotifyKick(kickedPlayerID string) {
 	go c.publishGameOver(kickedPlayerID)
 }
 
+// NotifyBoardFull is called when the last empty cell on the board is filled.
+// The winner is the player with the higher score; equal scores mean a draw.
+func (c *Coordinator) NotifyBoardFull() {
+	go c.publishBoardFullGameOver()
+}
+
 func (c *Coordinator) publishTurnChange(playerID, reason string) {
 	ev := centrifugo.EvTurnChange{
 		Type:           "turn_change",
@@ -110,9 +116,9 @@ func (c *Coordinator) publishGameState() {
 	currentTurn := c.g.CurrentPlayerID()
 	moveNum := c.g.MoveNumber()
 
-	players := make([]centrifugo.PlayerScore, len(scores))
+	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
-		players[i] = centrifugo.PlayerScore{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount}
+		players[i] = centrifugo.PlayerState{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
 	}
 
 	ev := centrifugo.EvGameState{
@@ -147,13 +153,44 @@ func (c *Coordinator) publishSkipWarn(playerID string, skipsUsed, skipsLeft int)
 	}
 }
 
+func (c *Coordinator) publishBoardFullGameOver() {
+	scores := c.g.PlayerScores()
+
+	winnerUID := ""
+	if len(scores) == 2 {
+		if scores[0].Score > scores[1].Score {
+			winnerUID = scores[0].UID
+		} else if scores[1].Score > scores[0].Score {
+			winnerUID = scores[1].UID
+		}
+	}
+
+	players := make([]centrifugo.PlayerState, len(scores))
+	for i, s := range scores {
+		players[i] = centrifugo.PlayerState{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
+	}
+
+	ev := centrifugo.EvGameOver{
+		Type:      "game_over",
+		GameID:    c.gameID,
+		WinnerUID: winnerUID,
+		Players:   players,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
+		slog.Error("gamecoord: publish game_over (board full)", slog.String("gameID", c.gameID), slog.Any("error", err))
+	}
+}
+
 func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 	scores := c.g.PlayerScores()
 
 	winnerUID := ""
-	players := make([]centrifugo.PlayerScore, len(scores))
+	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
-		players[i] = centrifugo.PlayerScore{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount}
+		players[i] = centrifugo.PlayerState{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
 		if s.UID != kickedPlayerID {
 			winnerUID = s.UID
 		}
