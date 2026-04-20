@@ -1,5 +1,7 @@
 # Balda
 
+[Русская версия](README.ru.md)
+
 A multiplayer turn-based word game server written in Go, with a real-time Svelte 5 frontend. Players compete on a 5×5 letter grid, placing letters to form valid Russian words and score points.
 
 > Work in progress — personal "just for fun" project.
