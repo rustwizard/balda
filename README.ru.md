@@ -64,6 +64,10 @@ balda/
 └── docker-compose.yml
 ```
 
+## Архитектура
+
+Архитектура системы описана в виде [модели C4](docs/architecture.md) (все четыре уровня: Context, Container, Component, Code).
+
 ## Быстрый старт
 
 ### Требования
