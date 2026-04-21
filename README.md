@@ -66,6 +66,10 @@ balda/
 └── docker-compose.yml
 ```
 
+## Architecture
+
+System architecture is documented as a [C4 model](docs/architecture.md) (all four levels: Context, Container, Component, Code).
+
 ## Getting Started
 
 ### Prerequisites
