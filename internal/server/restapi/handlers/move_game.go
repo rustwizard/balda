@@ -85,10 +85,23 @@ func (h *Handlers) MoveGame(ctx context.Context, req *baldaapi.MoveRequest, para
 		}
 	}
 
+	scores := rec.Game.PlayerScores()
+	boardFull := rec.Game.Board().IsFull()
+
+	if boardFull {
+		// gamecoord.NotifyBoardFull will publish game_over via Centrifugo.
+		return &baldaapi.MoveResponse{
+			Board:   boardToSlice(rec.Game.Board().AsStrings()),
+			Players: playerScoresToAPI(scores),
+			Status:  baldaapi.NewOptGameStatus(baldaapi.GameStatusFinished),
+			MoveNumber: baldaapi.NewOptInt(rec.Game.MoveNumber()),
+		}, nil
+	}
+
 	// The game's FSM processes the turn advance asynchronously.
 	// Compute the next player deterministically so the response matches the
 	// eventual server state even if the FSM hasn't advanced yet.
-	nextTurnUID := nextPlayerID(moverID, rec.Game.PlayerScores())
+	nextTurnUID := nextPlayerID(moverID, scores)
 
 	// Publish updated game state to the game channel.
 	gameState := buildGameState(rec, nextTurnUID)
@@ -104,7 +117,7 @@ func (h *Handlers) MoveGame(ctx context.Context, req *baldaapi.MoveRequest, para
 	return &baldaapi.MoveResponse{
 		Board:          boardToSlice(rec.Game.Board().AsStrings()),
 		CurrentTurnUID: baldaapi.NewOptUUID(nextUID),
-		Players:        playerScoresToAPI(rec.Game.PlayerScores()),
+		Players:        playerScoresToAPI(scores),
 		Status:         baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),
 		MoveNumber:     baldaapi.NewOptInt(rec.Game.MoveNumber()),
 	}, nil
@@ -120,23 +133,24 @@ func boardToSlice(board [5][5]string) [][]string {
 	return out
 }
 
-func playerScoresToAPI(scores []game.PlayerScore) []baldaapi.PlayerScore {
-	out := make([]baldaapi.PlayerScore, 0, len(scores))
+func playerScoresToAPI(scores []game.PlayerState) []baldaapi.PlayerGameState {
+	out := make([]baldaapi.PlayerGameState, 0, len(scores))
 	for _, ps := range scores {
 		pid, err := uuid.Parse(ps.UID)
 		if err != nil {
 			continue
 		}
-		out = append(out, baldaapi.PlayerScore{
+		out = append(out, baldaapi.PlayerGameState{
 			UID:        baldaapi.NewOptUUID(pid),
 			Score:      baldaapi.NewOptInt(ps.Score),
 			WordsCount: baldaapi.NewOptInt(ps.WordsCount),
+			Words:      ps.Words,
 		})
 	}
 	return out
 }
 
-func nextPlayerID(moverID string, players []game.PlayerScore) string {
+func nextPlayerID(moverID string, players []game.PlayerState) string {
 	for i, p := range players {
 		if p.UID == moverID {
 			return players[(i+1)%len(players)].UID
@@ -147,9 +161,9 @@ func nextPlayerID(moverID string, players []game.PlayerScore) string {
 
 func buildGameState(rec *lobby.GameRecord, currentTurnUID string) centrifugo.EvGameState {
 	scores := rec.Game.PlayerScores()
-	players := make([]centrifugo.PlayerScore, 0, len(scores))
+	players := make([]centrifugo.PlayerState, 0, len(scores))
 	for _, s := range scores {
-		players = append(players, centrifugo.PlayerScore{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount})
+		players = append(players, centrifugo.PlayerState{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words})
 	}
 	if currentTurnUID == "" {
 		currentTurnUID = rec.Game.CurrentPlayerID()

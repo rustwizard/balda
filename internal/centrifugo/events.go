@@ -38,11 +38,12 @@ type EvGameStarted struct {
 	StartedAt int64    `json:"started_at"`
 }
 
-// PlayerScore holds a player's uid and current score for EvGameState.
-type PlayerScore struct {
-	UID        string `json:"uid"`
-	Score      int    `json:"score"`
-	WordsCount int    `json:"words_count"`
+// PlayerState holds a player's uid and current score for EvGameState.
+type PlayerState struct {
+	UID        string   `json:"uid"`
+	Score      int      `json:"score"`
+	WordsCount int      `json:"words_count"`
+	Words      []string `json:"words"`
 }
 
 // EvGameState carries the full board snapshot sent after game_started and after each move.
@@ -51,7 +52,7 @@ type EvGameState struct {
 	GameID         string        `json:"game_id"`
 	Board          [5][5]string  `json:"board"`
 	CurrentTurnUID string        `json:"current_turn_uid"`
-	Players        []PlayerScore `json:"players"`
+	Players        []PlayerState `json:"players"`
 	Status         string        `json:"status"`
 	MoveNumber     int           `json:"move_number"`
 }
@@ -81,5 +82,5 @@ type EvGameOver struct {
 	Type      string        `json:"type"`
 	GameID    string        `json:"game_id"`
 	WinnerUID string        `json:"winner_uid,omitempty"`
-	Players   []PlayerScore `json:"players"`
+	Players   []PlayerState `json:"players"`
 }

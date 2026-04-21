@@ -86,6 +86,8 @@ func (n *GameNotifier) NotifyKick(playerID string) {
 	n.sender.Send(playerID, Event{Type: EventKick})
 }
 
+func (n *GameNotifier) NotifyBoardFull() {}
+
 func (n *GameNotifier) NotifyTurnStart(playerID string) {
 	n.sender.Send(playerID, Event{Type: EventTurnStart})
 }
@@ -96,4 +98,5 @@ type Noop struct{}
 func (n *Noop) NotifyTimeout(_ string, _ int, _ bool) {}
 func (n *Noop) NotifySkip(_ string, _ int, _ bool)    {}
 func (n *Noop) NotifyKick(_ string)                   {}
+func (n *Noop) NotifyBoardFull()                      {}
 func (n *Noop) NotifyTurnStart(_ string)              {}

@@ -1520,9 +1520,9 @@ func (s *MoveResponse) Decode(d *jx.Decoder) error {
 			}
 		case "players":
 			if err := func() error {
-				s.Players = make([]PlayerScore, 0)
+				s.Players = make([]PlayerGameState, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem PlayerScore
+					var elem PlayerGameState
 					if err := elem.Decode(d); err != nil {
 						return err
 					}
@@ -1950,14 +1950,14 @@ func (s *Player) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
-func (s *PlayerScore) Encode(e *jx.Encoder) {
+func (s *PlayerGameState) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
 	e.ObjEnd()
 }
 
 // encodeFields encodes fields.
-func (s *PlayerScore) encodeFields(e *jx.Encoder) {
+func (s *PlayerGameState) encodeFields(e *jx.Encoder) {
 	{
 		if s.UID.Set {
 			e.FieldStart("uid")
@@ -1976,18 +1976,29 @@ func (s *PlayerScore) encodeFields(e *jx.Encoder) {
 			s.WordsCount.Encode(e)
 		}
 	}
+	{
+		if s.Words != nil {
+			e.FieldStart("words")
+			e.ArrStart()
+			for _, elem := range s.Words {
+				e.Str(elem)
+			}
+			e.ArrEnd()
+		}
+	}
 }
 
-var jsonFieldsNameOfPlayerScore = [3]string{
+var jsonFieldsNameOfPlayerGameState = [4]string{
 	0: "uid",
 	1: "score",
 	2: "words_count",
+	3: "words",
 }
 
-// Decode decodes PlayerScore from json.
-func (s *PlayerScore) Decode(d *jx.Decoder) error {
+// Decode decodes PlayerGameState from json.
+func (s *PlayerGameState) Decode(d *jx.Decoder) error {
 	if s == nil {
-		return errors.New("invalid: unable to decode PlayerScore to nil")
+		return errors.New("invalid: unable to decode PlayerGameState to nil")
 	}
 
 	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
@@ -2022,26 +2033,45 @@ func (s *PlayerScore) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"words_count\"")
 			}
+		case "words":
+			if err := func() error {
+				s.Words = make([]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem string
+					v, err := d.Str()
+					elem = string(v)
+					if err != nil {
+						return err
+					}
+					s.Words = append(s.Words, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"words\"")
+			}
 		default:
 			return d.Skip()
 		}
 		return nil
 	}); err != nil {
-		return errors.Wrap(err, "decode PlayerScore")
+		return errors.Wrap(err, "decode PlayerGameState")
 	}
 
 	return nil
 }
 
 // MarshalJSON implements stdjson.Marshaler.
-func (s *PlayerScore) MarshalJSON() ([]byte, error) {
+func (s *PlayerGameState) MarshalJSON() ([]byte, error) {
 	e := jx.Encoder{}
 	s.Encode(&e)
 	return e.Bytes(), nil
 }
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
-func (s *PlayerScore) UnmarshalJSON(data []byte) error {
+func (s *PlayerGameState) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

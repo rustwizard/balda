@@ -1,4 +1,4 @@
-import type { GameSummary, PlayerState, EvGameState, EvGameOver, EvTurnChange, EvSkipWarn, EvLobbyUpdate, MoveResponse } from '../types';
+import type { GameSummary, PlayerState, PlayerGameState, EvGameState, EvGameOver, EvTurnChange, EvSkipWarn, EvLobbyUpdate, MoveResponse } from '../types';
 
 export type GamePhase = 'auth' | 'lobby' | 'waiting' | 'playing' | 'finished';
 
@@ -7,6 +7,7 @@ export interface PlayerInfo {
   nickname: string;
   score: number;
   wordsCount: number;
+  words: string[];
   consecutiveSkips: number;
 }
 
@@ -88,24 +89,28 @@ export function createGameState() {
       nickname: uid === playerUid ? nickname : 'Соперник',
       score: 0,
       wordsCount: 0,
+      words: [],
       consecutiveSkips: 0,
     }));
+  }
+
+  function mergePlayerState(p: PlayerGameState): PlayerInfo {
+    const existing = players.find((ep) => ep.uid === p.uid);
+    return {
+      uid: p.uid,
+      nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
+      score: p.score,
+      wordsCount: p.words_count ?? 0,
+      words: p.words ?? existing?.words ?? [],
+      consecutiveSkips: existing?.consecutiveSkips ?? 0,
+    };
   }
 
   function applyGameState(ev: EvGameState) {
     board = ev.board;
     currentTurnUid = ev.current_turn_uid;
     moveNumber = ev.move_number;
-    players = ev.players.map((p) => {
-      const existing = players.find((ep) => ep.uid === p.uid);
-      return {
-        uid: p.uid,
-        nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
-        score: p.score,
-        wordsCount: p.words_count ?? 0,
-        consecutiveSkips: existing?.consecutiveSkips ?? 0,
-      };
-    });
+    players = ev.players.map(mergePlayerState);
     if (ev.status === 'finished') {
       phase = 'finished';
     }
@@ -119,16 +124,7 @@ export function createGameState() {
   function finishGame(ev: EvGameOver) {
     phase = 'finished';
     winnerUid = ev.winner_uid;
-    players = ev.players.map((p) => {
-      const existing = players.find((ep) => ep.uid === p.uid);
-      return {
-        uid: p.uid,
-        nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
-        score: p.score,
-        wordsCount: p.words_count ?? 0,
-        consecutiveSkips: existing?.consecutiveSkips ?? 0,
-      };
-    });
+    players = ev.players.map(mergePlayerState);
   }
 
   function applySkipWarn(ev: EvSkipWarn) {
@@ -149,16 +145,7 @@ export function createGameState() {
     board = resp.board;
     currentTurnUid = resp.current_turn_uid;
     moveNumber = resp.move_number;
-    players = resp.players.map((p) => {
-      const existing = players.find((ep) => ep.uid === p.uid);
-      return {
-        uid: p.uid,
-        nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
-        score: p.score,
-        wordsCount: p.words_count ?? 0,
-        consecutiveSkips: 0,
-      };
-    });
+    players = resp.players.map((p) => ({ ...mergePlayerState(p), consecutiveSkips: 0 }));
     if (resp.status === 'finished') {
       phase = 'finished';
     }

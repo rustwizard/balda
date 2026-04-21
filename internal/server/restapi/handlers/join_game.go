@@ -101,9 +101,9 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	h.publishLobbyUpdate(ctx)
 
 	// Publish the initial board state so clients render the starting word immediately.
-	players := make([]centrifugo.PlayerScore, 0, len(rec.Players))
+	players := make([]centrifugo.PlayerState, 0, len(rec.Players))
 	for _, p := range rec.Players {
-		players = append(players, centrifugo.PlayerScore{UID: p.ID, Score: 0, WordsCount: 0})
+		players = append(players, centrifugo.PlayerState{UID: p.ID, Score: 0, WordsCount: 0, Words: []string{}})
 	}
 	// The creator (index 0) always moves first.
 	firstPlayerID := ""

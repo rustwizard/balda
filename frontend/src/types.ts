@@ -57,10 +57,11 @@ export interface ListGamesResponse {
   games: GameSummary[];
 }
 
-export interface PlayerScore {
+export interface PlayerGameState {
   uid: string;
   score: number;
   words_count: number;
+  words?: string[];
 }
 
 export interface PlayerState {
@@ -77,7 +78,7 @@ export interface EvGameState {
   game_id: string;
   board: string[][];
   current_turn_uid: string;
-  players: PlayerScore[];
+  players: PlayerGameState[];
   status: GameStatus;
   move_number: number;
 }
@@ -86,7 +87,7 @@ export interface EvGameOver {
   type: 'game_over';
   game_id: string;
   winner_uid?: string | null;
-  players: PlayerScore[];
+  players: PlayerGameState[];
 }
 
 export interface EvGameCreated {
@@ -128,7 +129,7 @@ export interface MoveRequest {
 export interface MoveResponse {
   board: string[][];
   current_turn_uid: string;
-  players: PlayerScore[];
+  players: PlayerGameState[];
   status: GameStatus;
   move_number: number;
 }

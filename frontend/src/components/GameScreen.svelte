@@ -124,6 +124,7 @@
         name={p.nickname}
         score={p.score}
         wordsCount={p.wordsCount}
+        words={p.words}
         consecutiveSkips={p.consecutiveSkips}
         isActive={gameState.currentTurnUid === p.uid}
         isWinner={gameState.phase === 'finished' && gameState.winnerUid === p.uid}

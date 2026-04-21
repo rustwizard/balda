@@ -13,10 +13,11 @@ import (
 
 // mockNotifier captures all notifications for assertion in tests.
 type mockNotifier struct {
-	mu         sync.Mutex
-	timeouts   []timeoutCall
-	kicks      []string
-	turnStarts []string
+	mu          sync.Mutex
+	timeouts    []timeoutCall
+	kicks       []string
+	turnStarts  []string
+	boardFulls  int
 }
 
 type timeoutCall struct {
@@ -32,6 +33,12 @@ func (m *mockNotifier) NotifyTimeout(playerID string, consecutive int, willKick 
 }
 
 func (m *mockNotifier) NotifySkip(_ string, _ int, _ bool) {}
+
+func (m *mockNotifier) NotifyBoardFull() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.boardFulls++
+}
 
 func (m *mockNotifier) NotifyKick(playerID string) {
 	m.mu.Lock()
@@ -58,6 +65,12 @@ func (m *mockNotifier) turnStartCount() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return len(m.turnStarts)
+}
+
+func (m *mockNotifier) boardFullCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.boardFulls
 }
 
 func (m *mockNotifier) timeoutCount() int {
@@ -232,59 +245,87 @@ func TestGame_Run_ExplicitKickEndsGame(t *testing.T) {
 	assert.True(t, players[0].Kicked)
 }
 
-func TestGame_Run_BoardFullEndsGame(t *testing.T) {
-	n := &mockNotifier{}
-	players := makePlayers("p1", "p2")
-	g, err := game.NewGameWithWord(players, testBoardWord, n)
-	require.NoError(t, err)
-	addTestWord(t, "аб")
-
-	// Fill the entire board except one cell (3,3).
+// fillBoardExcept fills every cell of the board with "я" except the given cell.
+// Must be called before g.Run to avoid data races.
+func fillBoardExcept(g *game.Game, skipRow, skipCol uint8) {
 	board := g.Board()
 	for r := range board.Table {
 		for c := range board.Table[r] {
-			if board.Table[r][c] == nil {
+			if board.Table[r][c] == nil && !(uint8(r) == skipRow && uint8(c) == skipCol) {
 				board.Table[r][c] = &game.Letter{RowID: uint8(r), ColID: uint8(c), Char: "я"}
 			}
 		}
 	}
-	// Clear the target cell so the final move can place a letter there.
-	board.Table[3][3] = nil
+}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		g.Run(ctx)
-	}()
-
-	require.Eventually(t, func() bool {
-		return n.turnStartCount() >= 1
-	}, time.Second, 5*time.Millisecond)
-	assert.Equal(t, "p1", n.lastTurnStart())
-
-	// Submit a word that fills the last empty cell (3,3).
-	// Word path: н(2,3) → new letter б(3,3). Word is "аб" where 'а' is existing 'н'???
-	// Wait, MakeWord uses Char from letters. Let's use actual chars.
-	// Actually let's just use letters with Char matching the word "аб".
-	// But (2,3) has Char 'н'. So the word formed by the path would be "нб", not "аб".
-	// We need the word formed by the path to be in the dictionary.
-	// So let's add "нб" to the dictionary instead.
+// submitLastMove places "б" at (3,3) adjacent to н(2,3), forming word "нб".
+func submitLastMove(t *testing.T, g *game.Game, playerID string) {
+	t.Helper()
 	addTestWord(t, "нб")
-	lastLetter := game.Letter{RowID: 3, ColID: 3, Char: "б"}
-	word := []game.Letter{
+	nl := game.Letter{RowID: 3, ColID: 3, Char: "б"}
+	path := []game.Letter{
 		{RowID: 2, ColID: 3, Char: "н"},
 		{RowID: 3, ColID: 3, Char: "б"},
 	}
-	require.NoError(t, g.SubmitWord("p1", &lastLetter, word))
+	require.NoError(t, g.SubmitWord(playerID, &nl, path))
+}
 
+// waitRunDone is a helper that asserts game.Run exits within 2 s.
+func waitRunDone(t *testing.T, done <-chan struct{}) {
+	t.Helper()
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
-		t.Fatal("game did not end after board became full")
+		t.Fatal("game did not stop")
 	}
+}
+
+func TestGame_Run_BoardFull_StopsGame(t *testing.T) {
+	n := &mockNotifier{}
+	g, err := game.NewGameWithWord(makePlayers("p1", "p2"), testBoardWord, n)
+	require.NoError(t, err)
+	fillBoardExcept(g, 3, 3)
+
+	done := make(chan struct{})
+	go func() { defer close(done); g.Run(t.Context()) }()
+
+	require.Eventually(t, func() bool { return n.turnStartCount() >= 1 }, time.Second, 5*time.Millisecond)
+	submitLastMove(t, g, "p1")
+
+	waitRunDone(t, done)
+}
+
+func TestGame_Run_BoardFull_CallsNotifyBoardFull(t *testing.T) {
+	n := &mockNotifier{}
+	g, err := game.NewGameWithWord(makePlayers("p1", "p2"), testBoardWord, n)
+	require.NoError(t, err)
+	fillBoardExcept(g, 3, 3)
+
+	done := make(chan struct{})
+	go func() { defer close(done); g.Run(t.Context()) }()
+
+	require.Eventually(t, func() bool { return n.turnStartCount() >= 1 }, time.Second, 5*time.Millisecond)
+	submitLastMove(t, g, "p1")
+
+	waitRunDone(t, done)
+	assert.Equal(t, 1, n.boardFullCount(), "NotifyBoardFull must be called exactly once")
+}
+
+func TestGame_Run_BoardFull_TurnDoesNotAdvance(t *testing.T) {
+	n := &mockNotifier{}
+	g, err := game.NewGameWithWord(makePlayers("p1", "p2"), testBoardWord, n)
+	require.NoError(t, err)
+	fillBoardExcept(g, 3, 3)
+
+	done := make(chan struct{})
+	go func() { defer close(done); g.Run(t.Context()) }()
+
+	require.Eventually(t, func() bool { return n.turnStartCount() >= 1 }, time.Second, 5*time.Millisecond)
+	turnsBeforeMove := n.turnStartCount()
+	submitLastMove(t, g, "p1")
+
+	waitRunDone(t, done)
+	assert.Equal(t, turnsBeforeMove, n.turnStartCount(), "turn must not advance after board is full")
 }
 
 func TestGame_Run_ContextCancellationStopsGame(t *testing.T) {
