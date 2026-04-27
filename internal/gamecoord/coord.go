@@ -98,6 +98,10 @@ func (c *Coordinator) NotifyBoardFull() {
 
 // NotifyEndProposed is called when the current player proposes to end the game.
 func (c *Coordinator) NotifyEndProposed(proposerID string) {
+	go c.publishEndProposal(proposerID)
+}
+
+func (c *Coordinator) publishEndProposal(proposerID string) {
 	ev := centrifugo.EvEndProposal{
 		Type:        "end_proposal",
 		GameID:      c.gameID,
