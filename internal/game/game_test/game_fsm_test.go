@@ -52,6 +52,10 @@ func (m *mockNotifier) NotifyTurnStart(playerID string) {
 	m.turnStarts = append(m.turnStarts, playerID)
 }
 
+func (m *mockNotifier) NotifyEndProposed(_ string)        {}
+func (m *mockNotifier) NotifyEndAccepted()                {}
+func (m *mockNotifier) NotifyEndRejected(_ time.Duration) {}
+
 func (m *mockNotifier) lastTurnStart() string {
 	m.mu.Lock()
 	defer m.mu.Unlock()

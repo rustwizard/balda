@@ -20,6 +20,7 @@ var (
 	ErrWordAlreadyUsed     = errors.New("game: word already used")
 	ErrWordNotInDictionary = errors.New("game: word not found in dictionary")
 	ErrWordIsInitialWord   = errors.New("game: word is the initial board word")
+	ErrNotOpponent         = errors.New("game: only the opponent can respond to an end proposal")
 )
 
 const (
@@ -48,6 +49,9 @@ type Notifier interface {
 	NotifyKick(playerID string)
 	NotifyBoardFull()
 	NotifyTurnStart(playerID string)
+	NotifyEndProposed(proposerID string)
+	NotifyEndAccepted()
+	NotifyEndRejected(remainingTurn time.Duration)
 }
 
 type Player struct {
@@ -61,16 +65,17 @@ type Player struct {
 }
 
 type Game struct {
-	mu           sync.Mutex
-	state        GameState
-	players      []*Player
-	board        *LettersTable
-	current      int
-	turn         *Turn
-	eventCh      chan TurnEvent
-	done         chan struct{}
-	notifier     Notifier
-	turnDuration time.Duration // 0 means use TurnDuration constant
+	mu                  sync.Mutex
+	state               GameState
+	players             []*Player
+	board               *LettersTable
+	current             int
+	turn                *Turn
+	eventCh             chan TurnEvent
+	done                chan struct{}
+	notifier            Notifier
+	turnDuration        time.Duration // 0 means use TurnDuration constant
+	pausedTurnRemaining time.Duration // remaining turn time when paused for end proposal
 }
 
 func (g *Game) СheckWordExistence(word string) bool {
@@ -243,6 +248,44 @@ func (g *Game) onKick() {
 
 func (g *Game) onBoardFull() {
 	g.notifier.NotifyBoardFull()
+}
+
+// --- EndProposed actions ---
+
+func (g *Game) onEndProposed() {
+	g.cancelTimer()
+	elapsed := time.Since(g.turn.StartedAt)
+	d := g.turnDuration
+	if d == 0 {
+		d = TurnDuration
+	}
+	remaining := d - elapsed
+	if remaining < 10*time.Second {
+		remaining = 10 * time.Second
+	}
+	g.pausedTurnRemaining = remaining
+	g.notifier.NotifyEndProposed(g.currentPlayer().ID)
+}
+
+func (g *Game) onEndAccepted() {
+	g.notifier.NotifyEndAccepted()
+}
+
+func (g *Game) onEndRejected() {
+	remaining := g.pausedTurnRemaining
+	g.pausedTurnRemaining = 0
+	p := g.currentPlayer()
+	g.turn = &Turn{
+		PlayerID:  p.ID,
+		StartedAt: time.Now(),
+		timer: time.AfterFunc(remaining, func() {
+			select {
+			case g.eventCh <- EventTurnTimeout:
+			case <-g.done:
+			}
+		}),
+	}
+	g.notifier.NotifyEndRejected(remaining)
 }
 
 func (g *Game) currentPlayer() *Player { return g.players[g.current] }
@@ -480,6 +523,64 @@ func (g *Game) IsTakenWord(word string) bool {
 		}
 	}
 	return false
+}
+
+// ProposeEnd signals that playerID wants to end the game (e.g. no valid moves).
+// Only the current player may call this when the game is in WaitingForMove state.
+func (g *Game) ProposeEnd(playerID string) error {
+	g.mu.Lock()
+	if g.state != StateWaitingForMove {
+		g.mu.Unlock()
+		return ErrWrongState
+	}
+	if g.currentPlayer().ID != playerID {
+		g.mu.Unlock()
+		return ErrNotYourTurn
+	}
+	g.mu.Unlock()
+	select {
+	case g.eventCh <- EventEndProposed:
+	case <-g.done:
+	}
+	return nil
+}
+
+// AcceptEnd signals that playerID (the opponent) accepts the end-game proposal.
+func (g *Game) AcceptEnd(playerID string) error {
+	g.mu.Lock()
+	if g.state != StateEndProposed {
+		g.mu.Unlock()
+		return ErrWrongState
+	}
+	if g.currentPlayer().ID == playerID {
+		g.mu.Unlock()
+		return ErrNotOpponent
+	}
+	g.mu.Unlock()
+	select {
+	case g.eventCh <- EventEndAccepted:
+	case <-g.done:
+	}
+	return nil
+}
+
+// RejectEnd signals that playerID (the opponent) rejects the end-game proposal.
+func (g *Game) RejectEnd(playerID string) error {
+	g.mu.Lock()
+	if g.state != StateEndProposed {
+		g.mu.Unlock()
+		return ErrWrongState
+	}
+	if g.currentPlayer().ID == playerID {
+		g.mu.Unlock()
+		return ErrNotOpponent
+	}
+	g.mu.Unlock()
+	select {
+	case g.eventCh <- EventEndRejected:
+	case <-g.done:
+	}
+	return nil
 }
 
 // Done returns a channel that is closed when the game has finished running.

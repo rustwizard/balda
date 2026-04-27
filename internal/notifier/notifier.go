@@ -1,6 +1,10 @@
 package notifier
 
-import "github.com/redis/go-redis/v9"
+import (
+	"time"
+
+	"github.com/redis/go-redis/v9"
+)
 
 // EventType identifies the kind of game event.
 type EventType string
@@ -92,6 +96,10 @@ func (n *GameNotifier) NotifyTurnStart(playerID string) {
 	n.sender.Send(playerID, Event{Type: EventTurnStart})
 }
 
+func (n *GameNotifier) NotifyEndProposed(_ string)           {}
+func (n *GameNotifier) NotifyEndAccepted()                   {}
+func (n *GameNotifier) NotifyEndRejected(_ time.Duration)    {}
+
 // Noop is a no-op implementation of game.Notifier.
 type Noop struct{}
 
@@ -100,3 +108,6 @@ func (n *Noop) NotifySkip(_ string, _ int, _ bool)    {}
 func (n *Noop) NotifyKick(_ string)                   {}
 func (n *Noop) NotifyBoardFull()                      {}
 func (n *Noop) NotifyTurnStart(_ string)              {}
+func (n *Noop) NotifyEndProposed(_ string)            {}
+func (n *Noop) NotifyEndAccepted()                    {}
+func (n *Noop) NotifyEndRejected(_ time.Duration)     {}

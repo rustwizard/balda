@@ -122,6 +122,54 @@ func (s *Balda) SubmitMove(ctx context.Context, uid int64, gameID string, newLet
 	return rec, playerID, nil
 }
 
+// ProposeEnd proposes to end the game. Only the current player may call this.
+func (s *Balda) ProposeEnd(ctx context.Context, uid int64, gameID string) error {
+	playerID, err := s.playerIDByUID(ctx, uid)
+	if err != nil {
+		return err
+	}
+	rec, err := s.lby.Get(gameID)
+	if err != nil {
+		return err
+	}
+	if !s.isPlayerInGame(rec, playerID) {
+		return fmt.Errorf("player is not in this game")
+	}
+	return rec.Game.ProposeEnd(playerID)
+}
+
+// AcceptEnd accepts the opponent's end-game proposal.
+func (s *Balda) AcceptEnd(ctx context.Context, uid int64, gameID string) error {
+	playerID, err := s.playerIDByUID(ctx, uid)
+	if err != nil {
+		return err
+	}
+	rec, err := s.lby.Get(gameID)
+	if err != nil {
+		return err
+	}
+	if !s.isPlayerInGame(rec, playerID) {
+		return fmt.Errorf("player is not in this game")
+	}
+	return rec.Game.AcceptEnd(playerID)
+}
+
+// RejectEnd rejects the opponent's end-game proposal.
+func (s *Balda) RejectEnd(ctx context.Context, uid int64, gameID string) error {
+	playerID, err := s.playerIDByUID(ctx, uid)
+	if err != nil {
+		return err
+	}
+	rec, err := s.lby.Get(gameID)
+	if err != nil {
+		return err
+	}
+	if !s.isPlayerInGame(rec, playerID) {
+		return fmt.Errorf("player is not in this game")
+	}
+	return rec.Game.RejectEnd(playerID)
+}
+
 // SkipTurn ends the current turn without a move.
 // Returns the game record and the player ID who skipped.
 func (s *Balda) SkipTurn(ctx context.Context, uid int64, gameID string) (*lobby.GameRecord, string, error) {

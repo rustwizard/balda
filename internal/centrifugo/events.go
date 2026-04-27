@@ -84,3 +84,19 @@ type EvGameOver struct {
 	WinnerUID string        `json:"winner_uid,omitempty"`
 	Players   []PlayerState `json:"players"`
 }
+
+// EvEndProposal is published when the current player proposes to end the game.
+type EvEndProposal struct {
+	Type        string `json:"type"` // "end_proposal"
+	GameID      string `json:"game_id"`
+	ProposerUID string `json:"proposer_uid"`
+}
+
+// EvEndProposalResult is published when the opponent responds to the end proposal.
+// When Accepted is false, RemainingMs carries the remaining turn time in milliseconds.
+type EvEndProposalResult struct {
+	Type        string `json:"type"` // "end_proposal_result"
+	GameID      string `json:"game_id"`
+	Accepted    bool   `json:"accepted"`
+	RemainingMs int64  `json:"remaining_ms,omitempty"`
+}

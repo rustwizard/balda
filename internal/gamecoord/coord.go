@@ -96,6 +96,44 @@ func (c *Coordinator) NotifyBoardFull() {
 	go c.publishBoardFullGameOver()
 }
 
+// NotifyEndProposed is called when the current player proposes to end the game.
+func (c *Coordinator) NotifyEndProposed(proposerID string) {
+	ev := centrifugo.EvEndProposal{
+		Type:        "end_proposal",
+		GameID:      c.gameID,
+		ProposerUID: proposerID,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
+		slog.Error("gamecoord: publish end_proposal", slog.String("gameID", c.gameID), slog.Any("error", err))
+	}
+}
+
+// NotifyEndAccepted is called when the opponent accepts the end proposal.
+func (c *Coordinator) NotifyEndAccepted() {
+	go c.publishEndProposalResult(true, 0)
+}
+
+// NotifyEndRejected is called when the opponent rejects the end proposal.
+func (c *Coordinator) NotifyEndRejected(remainingTurn time.Duration) {
+	go c.publishEndProposalResult(false, remainingTurn.Milliseconds())
+}
+
+func (c *Coordinator) publishEndProposalResult(accepted bool, remainingMs int64) {
+	ev := centrifugo.EvEndProposalResult{
+		Type:        "end_proposal_result",
+		GameID:      c.gameID,
+		Accepted:    accepted,
+		RemainingMs: remainingMs,
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
+		slog.Error("gamecoord: publish end_proposal_result", slog.String("gameID", c.gameID), slog.Any("error", err))
+	}
+}
+
 func (c *Coordinator) publishTurnChange(playerID, reason string) {
 	ev := centrifugo.EvTurnChange{
 		Type:           "turn_change",
