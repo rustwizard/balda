@@ -260,8 +260,10 @@ func (g *Game) onEndProposed() {
 		d = TurnDuration
 	}
 	remaining := d - elapsed
-	if remaining < 10*time.Second {
-		remaining = 10 * time.Second
+	// Guarantee the proposer gets at least 1/6 of a full turn after rejection
+	// (≥10 s on a standard 60 s turn) so the game never resumes with a near-zero timer.
+	if minRemaining := d / 6; remaining < minRemaining {
+		remaining = minRemaining
 	}
 	g.pausedTurnRemaining = remaining
 	g.notifier.NotifyEndProposed(g.currentPlayer().ID)
