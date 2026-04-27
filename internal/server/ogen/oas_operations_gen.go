@@ -6,6 +6,7 @@ package baldaapi
 type OperationName = string
 
 const (
+	AcceptEndGameOperation     OperationName = "AcceptEndGame"
 	AuthOperation              OperationName = "Auth"
 	CreateGameOperation        OperationName = "CreateGame"
 	GetPlayerStateUIDOperation OperationName = "GetPlayerStateUID"
@@ -13,6 +14,8 @@ const (
 	ListGamesOperation         OperationName = "ListGames"
 	MoveGameOperation          OperationName = "MoveGame"
 	PingOperation              OperationName = "Ping"
+	ProposeEndGameOperation    OperationName = "ProposeEndGame"
+	RejectEndGameOperation     OperationName = "RejectEndGame"
 	SignupOperation            OperationName = "Signup"
 	SkipGameOperation          OperationName = "SkipGame"
 )

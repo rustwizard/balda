@@ -11,26 +11,35 @@ import (
 )
 
 var (
-	rn1AllowedHeaders = map[string]string{
+	rn5AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Api-Key",
 	}
-	rn3AllowedHeaders = map[string]string{
+	rn6AllowedHeaders = map[string]string{
 		"GET":  "X-Api-Key,X-Api-Session",
 		"POST": "X-Api-Key,X-Api-Session",
 	}
-	rn8AllowedHeaders = map[string]string{
+	rn3AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session",
 	}
 	rn10AllowedHeaders = map[string]string{
+		"POST": "X-Api-Key,X-Api-Session",
+	}
+	rn11AllowedHeaders = map[string]string{
 		"POST": "Content-Type,X-Api-Key,X-Api-Session",
+	}
+	rn13AllowedHeaders = map[string]string{
+		"POST": "X-Api-Key,X-Api-Session",
 	}
 	rn14AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session",
 	}
-	rn11AllowedHeaders = map[string]string{
+	rn17AllowedHeaders = map[string]string{
+		"POST": "X-Api-Key,X-Api-Session",
+	}
+	rn12AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session,X-Request-Id",
 	}
-	rn13AllowedHeaders = map[string]string{
+	rn16AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 )
@@ -102,7 +111,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					default:
 						s.notAllowed(w, r, notAllowedParams{
 							allowedMethods: "POST",
-							allowedHeaders: rn1AllowedHeaders,
+							allowedHeaders: rn5AllowedHeaders,
 							acceptPost:     "application/json",
 							acceptPatch:    "",
 						})
@@ -128,7 +137,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					default:
 						s.notAllowed(w, r, notAllowedParams{
 							allowedMethods: "GET,POST",
-							allowedHeaders: rn3AllowedHeaders,
+							allowedHeaders: rn6AllowedHeaders,
 							acceptPost:     "",
 							acceptPatch:    "",
 						})
@@ -170,6 +179,33 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							break
 						}
 						switch elem[0] {
+						case 'a': // Prefix: "accept-end"
+
+							if l := len("accept-end"); len(elem) >= l && elem[0:l] == "accept-end" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleAcceptEndGameRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn3AllowedHeaders,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
 						case 'j': // Prefix: "join"
 
 							if l := len("join"); len(elem) >= l && elem[0:l] == "join" {
@@ -188,7 +224,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn8AllowedHeaders,
+										allowedHeaders: rn10AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -215,8 +251,62 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn10AllowedHeaders,
+										allowedHeaders: rn11AllowedHeaders,
 										acceptPost:     "application/json",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						case 'p': // Prefix: "propose-end"
+
+							if l := len("propose-end"); len(elem) >= l && elem[0:l] == "propose-end" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleProposeEndGameRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn13AllowedHeaders,
+										acceptPost:     "",
+										acceptPatch:    "",
+									})
+								}
+
+								return
+							}
+
+						case 'r': // Prefix: "reject-end"
+
+							if l := len("reject-end"); len(elem) >= l && elem[0:l] == "reject-end" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch r.Method {
+								case "POST":
+									s.handleRejectEndGameRequest([1]string{
+										args[0],
+									}, elemIsEscaped, w, r)
+								default:
+									s.notAllowed(w, r, notAllowedParams{
+										allowedMethods: "POST",
+										allowedHeaders: rn14AllowedHeaders,
+										acceptPost:     "",
 										acceptPatch:    "",
 									})
 								}
@@ -242,7 +332,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn14AllowedHeaders,
+										allowedHeaders: rn17AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -321,7 +411,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn11AllowedHeaders,
+								allowedHeaders: rn12AllowedHeaders,
 								acceptPost:     "",
 								acceptPatch:    "",
 							})
@@ -346,7 +436,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn13AllowedHeaders,
+								allowedHeaders: rn16AllowedHeaders,
 								acceptPost:     "application/json",
 								acceptPatch:    "",
 							})
@@ -548,6 +638,31 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 							break
 						}
 						switch elem[0] {
+						case 'a': // Prefix: "accept-end"
+
+							if l := len("accept-end"); len(elem) >= l && elem[0:l] == "accept-end" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = AcceptEndGameOperation
+									r.summary = "Accept the opponent's end-game proposal"
+									r.operationID = "acceptEndGame"
+									r.operationGroup = ""
+									r.pathPattern = "/games/{id}/accept-end"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
+							}
+
 						case 'j': // Prefix: "join"
 
 							if l := len("join"); len(elem) >= l && elem[0:l] == "join" {
@@ -590,6 +705,56 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 									r.operationID = "moveGame"
 									r.operationGroup = ""
 									r.pathPattern = "/games/{id}/move"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
+							}
+
+						case 'p': // Prefix: "propose-end"
+
+							if l := len("propose-end"); len(elem) >= l && elem[0:l] == "propose-end" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = ProposeEndGameOperation
+									r.summary = "Propose to end the game"
+									r.operationID = "proposeEndGame"
+									r.operationGroup = ""
+									r.pathPattern = "/games/{id}/propose-end"
+									r.args = args
+									r.count = 1
+									return r, true
+								default:
+									return
+								}
+							}
+
+						case 'r': // Prefix: "reject-end"
+
+							if l := len("reject-end"); len(elem) >= l && elem[0:l] == "reject-end" {
+								elem = elem[l:]
+							} else {
+								break
+							}
+
+							if len(elem) == 0 {
+								// Leaf node.
+								switch method {
+								case "POST":
+									r.name = RejectEndGameOperation
+									r.summary = "Reject the opponent's end-game proposal"
+									r.operationID = "rejectEndGame"
+									r.operationGroup = ""
+									r.pathPattern = "/games/{id}/reject-end"
 									r.args = args
 									r.count = 1
 									return r, true

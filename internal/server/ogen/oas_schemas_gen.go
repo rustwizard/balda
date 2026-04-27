@@ -57,6 +57,23 @@ func (s *APIKeyQueryParam) SetRoles(val []string) {
 	s.Roles = val
 }
 
+type AcceptEndGameConflict ErrorResponse
+
+func (*AcceptEndGameConflict) acceptEndGameRes() {}
+
+// AcceptEndGameNoContent is response for AcceptEndGame operation.
+type AcceptEndGameNoContent struct{}
+
+func (*AcceptEndGameNoContent) acceptEndGameRes() {}
+
+type AcceptEndGameNotFound ErrorResponse
+
+func (*AcceptEndGameNotFound) acceptEndGameRes() {}
+
+type AcceptEndGameUnauthorized ErrorResponse
+
+func (*AcceptEndGameUnauthorized) acceptEndGameRes() {}
+
 // Ref: #/components/schemas/AuthRequest
 type AuthRequest struct {
 	// User's email.
@@ -1098,6 +1115,40 @@ func (s *PlayerState) SetGameID(val OptUUID) {
 }
 
 func (*PlayerState) getPlayerStateUIDRes() {}
+
+type ProposeEndGameConflict ErrorResponse
+
+func (*ProposeEndGameConflict) proposeEndGameRes() {}
+
+// ProposeEndGameNoContent is response for ProposeEndGame operation.
+type ProposeEndGameNoContent struct{}
+
+func (*ProposeEndGameNoContent) proposeEndGameRes() {}
+
+type ProposeEndGameNotFound ErrorResponse
+
+func (*ProposeEndGameNotFound) proposeEndGameRes() {}
+
+type ProposeEndGameUnauthorized ErrorResponse
+
+func (*ProposeEndGameUnauthorized) proposeEndGameRes() {}
+
+type RejectEndGameConflict ErrorResponse
+
+func (*RejectEndGameConflict) rejectEndGameRes() {}
+
+// RejectEndGameNoContent is response for RejectEndGame operation.
+type RejectEndGameNoContent struct{}
+
+func (*RejectEndGameNoContent) rejectEndGameRes() {}
+
+type RejectEndGameNotFound ErrorResponse
+
+func (*RejectEndGameNotFound) rejectEndGameRes() {}
+
+type RejectEndGameUnauthorized ErrorResponse
+
+func (*RejectEndGameUnauthorized) rejectEndGameRes() {}
 
 // Ref: #/components/schemas/SignupRequest
 type SignupRequest struct {

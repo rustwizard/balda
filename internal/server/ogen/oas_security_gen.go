@@ -36,13 +36,16 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 
 // operationRolesAPIKeyHeader is a private map storing roles per operation.
 var operationRolesAPIKeyHeader = map[string][]string{
-	AuthOperation:       []string{},
-	CreateGameOperation: []string{},
-	JoinGameOperation:   []string{},
-	ListGamesOperation:  []string{},
-	MoveGameOperation:   []string{},
-	PingOperation:       []string{},
-	SkipGameOperation:   []string{},
+	AcceptEndGameOperation:  []string{},
+	AuthOperation:           []string{},
+	CreateGameOperation:     []string{},
+	JoinGameOperation:       []string{},
+	ListGamesOperation:      []string{},
+	MoveGameOperation:       []string{},
+	PingOperation:           []string{},
+	ProposeEndGameOperation: []string{},
+	RejectEndGameOperation:  []string{},
+	SkipGameOperation:       []string{},
 }
 
 // GetRolesForAPIKeyHeader returns the required roles for the given operation.
@@ -68,13 +71,16 @@ func GetRolesForAPIKeyHeader(operation string) []string {
 
 // operationRolesAPIKeyQueryParam is a private map storing roles per operation.
 var operationRolesAPIKeyQueryParam = map[string][]string{
-	AuthOperation:       []string{},
-	CreateGameOperation: []string{},
-	JoinGameOperation:   []string{},
-	ListGamesOperation:  []string{},
-	MoveGameOperation:   []string{},
-	PingOperation:       []string{},
-	SkipGameOperation:   []string{},
+	AcceptEndGameOperation:  []string{},
+	AuthOperation:           []string{},
+	CreateGameOperation:     []string{},
+	JoinGameOperation:       []string{},
+	ListGamesOperation:      []string{},
+	MoveGameOperation:       []string{},
+	PingOperation:           []string{},
+	ProposeEndGameOperation: []string{},
+	RejectEndGameOperation:  []string{},
+	SkipGameOperation:       []string{},
 }
 
 // GetRolesForAPIKeyQueryParam returns the required roles for the given operation.

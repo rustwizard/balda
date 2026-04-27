@@ -13,6 +13,16 @@ type UnimplementedHandler struct{}
 
 var _ Handler = UnimplementedHandler{}
 
+// AcceptEndGame implements acceptEndGame operation.
+//
+// The opponent accepts the end-game proposal. The game ends immediately with
+// the current scores. Only the non-proposing player may call this.
+//
+// POST /games/{id}/accept-end
+func (UnimplementedHandler) AcceptEndGame(ctx context.Context, params AcceptEndGameParams) (r AcceptEndGameRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // Auth implements auth operation.
 //
 // Auth request.
@@ -79,6 +89,27 @@ func (UnimplementedHandler) MoveGame(ctx context.Context, req *MoveRequest, para
 //
 // POST /session/ping
 func (UnimplementedHandler) Ping(ctx context.Context, params PingParams) (r PingRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// ProposeEndGame implements proposeEndGame operation.
+//
+// The current player proposes to end the game (e.g. no valid moves are available).
+// The turn timer is paused until the opponent responds.
+// Only the player whose turn it currently is may call this.
+//
+// POST /games/{id}/propose-end
+func (UnimplementedHandler) ProposeEndGame(ctx context.Context, params ProposeEndGameParams) (r ProposeEndGameRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RejectEndGame implements rejectEndGame operation.
+//
+// The opponent rejects the end-game proposal. The game resumes with the
+// remaining turn time (minimum 10 seconds). Only the non-proposing player may call this.
+//
+// POST /games/{id}/reject-end
+func (UnimplementedHandler) RejectEndGame(ctx context.Context, params RejectEndGameParams) (r RejectEndGameRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
