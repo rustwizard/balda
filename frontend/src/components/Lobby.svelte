@@ -33,12 +33,15 @@
       }
       gameState.startGame(res.game);
       if (res.board && res.current_turn_uid) {
+        const players = res.game.players?.length
+          ? res.game.players.map((p) => ({ uid: p.uid, score: 0, words_count: 0, words: [] }))
+          : res.game.player_ids.map((uid) => ({ uid, score: 0, words_count: 0, words: [] }));
         gameState.applyGameState({
           type: 'game_state',
           game_id: res.game.id,
           board: res.board,
           current_turn_uid: res.current_turn_uid,
-          players: res.game.player_ids.map((uid) => ({ uid, score: 0, words_count: 0, words: [] })),
+          players,
           status: 'in_progress',
           move_number: 0,
         });
@@ -64,7 +67,13 @@
 </script>
 
 <div class="mx-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
-  <h2 class="mb-4 text-center text-2xl font-bold text-stone-800">Лобби</h2>
+  <div class="mb-4 flex items-center justify-between">
+    <h2 class="text-center text-2xl font-bold text-stone-800">Лобби</h2>
+    <div class="text-sm font-medium text-stone-600">
+      {gameState.nickname}
+      <span class="ml-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{gameState.exp} XP</span>
+    </div>
+  </div>
 
   <button
     onclick={create}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
+	"github.com/google/uuid"
 	"github.com/ogen-go/ogen/json"
 	"github.com/ogen-go/ogen/validate"
 )
@@ -684,6 +685,16 @@ func (s *GameSummary) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.PlayerIds != nil {
+			e.FieldStart("player_ids")
+			e.ArrStart()
+			for _, elem := range s.PlayerIds {
+				json.EncodeUUID(e, elem)
+			}
+			e.ArrEnd()
+		}
+	}
+	{
 		if s.Players != nil {
 			e.FieldStart("players")
 			e.ArrStart()
@@ -707,11 +718,12 @@ func (s *GameSummary) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfGameSummary = [4]string{
+var jsonFieldsNameOfGameSummary = [5]string{
 	0: "id",
-	1: "players",
-	2: "status",
-	3: "started_at",
+	1: "player_ids",
+	2: "players",
+	3: "status",
+	4: "started_at",
 }
 
 // Decode decodes GameSummary from json.
@@ -731,6 +743,25 @@ func (s *GameSummary) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"id\"")
+			}
+		case "player_ids":
+			if err := func() error {
+				s.PlayerIds = make([]uuid.UUID, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem uuid.UUID
+					v, err := json.DecodeUUID(d)
+					elem = v
+					if err != nil {
+						return err
+					}
+					s.PlayerIds = append(s.PlayerIds, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"player_ids\"")
 			}
 		case "players":
 			if err := func() error {
@@ -2048,14 +2079,21 @@ func (s *Player) encodeFields(e *jx.Encoder) {
 			s.Key.Encode(e)
 		}
 	}
+	{
+		if s.Exp.Set {
+			e.FieldStart("exp")
+			s.Exp.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfPlayer = [5]string{
+var jsonFieldsNameOfPlayer = [6]string{
 	0: "uid",
 	1: "firstname",
 	2: "lastname",
 	3: "sid",
 	4: "key",
+	5: "exp",
 }
 
 // Decode decodes Player from json.
@@ -2115,6 +2153,16 @@ func (s *Player) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"key\"")
+			}
+		case "exp":
+			if err := func() error {
+				s.Exp.Reset()
+				if err := s.Exp.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"exp\"")
 			}
 		default:
 			return d.Skip()

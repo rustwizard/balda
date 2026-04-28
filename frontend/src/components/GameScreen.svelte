@@ -123,6 +123,7 @@
       <PlayerCard
         name={p.nickname}
         score={p.score}
+        exp={p.exp}
         wordsCount={p.wordsCount}
         words={p.words}
         consecutiveSkips={p.consecutiveSkips}

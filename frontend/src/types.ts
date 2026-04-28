@@ -6,6 +6,12 @@ export interface Player {
   lastname: string;
   sid: string;
   key: string;
+  exp?: number;
+}
+
+export interface LobbyPlayer {
+  uid: string;
+  exp?: number;
 }
 
 export interface SignupRequest {
@@ -37,6 +43,7 @@ export type GameStatus = 'waiting' | 'in_progress' | 'finished';
 export interface GameSummary {
   id: string;
   player_ids: string[];
+  players?: LobbyPlayer[];
   status: GameStatus;
   started_at: number;
 }

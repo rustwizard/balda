@@ -532,6 +532,10 @@ components:
           description: Player's API Key that the client needs to provide when making API calls.
           example: some_api_key
           type: string
+        exp:
+          description: Player's total EXP
+          type: integer
+          format: int64
 
     AuthRequest:
       type: object
@@ -588,8 +592,14 @@ components:
           type: string
           format: uuid
           example: "144e8a2b-3c1d-4e5f-a6b7-8c9d0e1f2a3b"
+        player_ids:
+          description: IDs of players participating in the game
+          type: array
+          items:
+            type: string
+            format: uuid
         players:
-          description: Players participating in the game
+          description: Players with EXP info
           type: array
           items:
             $ref: "#/components/schemas/LobbyPlayer"

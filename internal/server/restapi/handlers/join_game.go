@@ -73,12 +73,14 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 		}, nil
 	}
 
+	playerIDs := make([]uuid.UUID, 0, len(rec.Players))
 	lobbyPlayers := make([]baldaapi.LobbyPlayer, 0, len(rec.Players))
 	for _, p := range rec.Players {
 		pid, err := uuid.Parse(p.ID)
 		if err != nil {
 			continue
 		}
+		playerIDs = append(playerIDs, pid)
 		lobbyPlayers = append(lobbyPlayers, baldaapi.LobbyPlayer{
 			UID: baldaapi.NewOptUUID(pid),
 			Exp: baldaapi.NewOptInt64(int64(p.Exp)),
@@ -150,6 +152,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	return &baldaapi.JoinGameResponse{
 		Game: baldaapi.NewOptGameSummary(baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
+			PlayerIds: playerIDs,
 			Players:   lobbyPlayers,
 			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),
 			StartedAt: baldaapi.NewOptInt64(rec.StartedAt.UnixMilli()),

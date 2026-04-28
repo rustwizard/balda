@@ -24,6 +24,7 @@ type LobbyPlayer struct {
 // GameEntry is a single game item inside EvLobbyUpdate.
 type GameEntry struct {
 	ID        string        `json:"id"`
+	PlayerIDs []string      `json:"player_ids"`
 	Players   []LobbyPlayer `json:"players"`
 	Status    string        `json:"status"`
 	StartedAt int64         `json:"started_at"`
