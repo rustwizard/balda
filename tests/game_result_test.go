@@ -119,7 +119,7 @@ func TestSaveGameResult_Winner(t *testing.T) {
 
 	assert.Equal(t, 5, byID[p2.String()].score)
 	assert.Equal(t, 2, byID[p2.String()].wordsCount)
-	assert.Equal(t, 5, byID[p2.String()].expGained) // 5+0
+	assert.Equal(t, 5, byID[p2.String()].expGained) // score=5 (loser gets raw score)
 
 	// player_state.exp updated
 	checkExp := func(playerID uuid.UUID, want int64) {
