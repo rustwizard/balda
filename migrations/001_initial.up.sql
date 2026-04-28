@@ -18,3 +18,8 @@ create table if not exists users
 create unique index users_email_uindex
     on users (email);
 
+---- create above / drop below ----
+
+drop index if exists users_email_uindex;
+drop table if exists users;
+

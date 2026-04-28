@@ -13,6 +13,7 @@ import (
 
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
+	"github.com/rustwizard/balda/internal/storage"
 )
 
 // Coordinator implements game.Notifier and bridges game events to Centrifugo.
@@ -25,6 +26,7 @@ type Coordinator struct {
 	g          *game.Game
 	players    []*game.Player
 	cf         *centrifugo.Client
+	onGameOver func(storage.GameResult)
 	nextReason string // reason for the upcoming turn_change; "" means "move"
 	firstTurn  bool   // true until the first NotifyTurnStart
 }
@@ -43,6 +45,11 @@ func New(gameID string, players []*game.Player, cf *centrifugo.Client) *Coordina
 // SetGame stores the game reference. Must be called before game.Run starts.
 func (c *Coordinator) SetGame(g *game.Game) {
 	c.g = g
+}
+
+// SetOnGameOver registers a callback invoked (in a goroutine) on every game-over path.
+func (c *Coordinator) SetOnGameOver(fn func(storage.GameResult)) {
+	c.onGameOver = fn
 }
 
 // NotifyTurnStart is called by the game FSM at the beginning of each turn.
@@ -136,6 +143,44 @@ func (c *Coordinator) publishEndProposalResult(accepted bool, remainingMs int64)
 	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
 		slog.Error("gamecoord: publish end_proposal_result", slog.String("gameID", c.gameID), slog.Any("error", err))
 	}
+
+	if accepted {
+		scores := c.g.PlayerScores()
+		winnerUID := ""
+		if len(scores) == 2 {
+			if scores[0].Score > scores[1].Score {
+				winnerUID = scores[0].UID
+			} else if scores[1].Score > scores[0].Score {
+				winnerUID = scores[1].UID
+			}
+		}
+		c.dispatchGameResult(winnerUID, storage.FinishReasonAcceptEnd, scores)
+	}
+}
+
+func (c *Coordinator) dispatchGameResult(winnerUID string, reason storage.FinishReason, scores []game.PlayerState) {
+	if c.onGameOver == nil {
+		return
+	}
+	isDraw := winnerUID == ""
+	players := make([]storage.PlayerResult, len(scores))
+	for i, s := range scores {
+		isWinner := s.UID == winnerUID
+		players[i] = storage.PlayerResult{
+			PlayerID:   s.UID,
+			Score:      s.Score,
+			WordsCount: s.WordsCount,
+			ExpGained:  storage.ExpGained(s.Score, isWinner, isDraw),
+		}
+	}
+	result := storage.GameResult{
+		GameID:       c.gameID,
+		WinnerID:     winnerUID,
+		FinishReason: reason,
+		FinishedAt:   time.Now(),
+		Players:      players,
+	}
+	go c.onGameOver(result)
 }
 
 func (c *Coordinator) publishTurnChange(playerID, reason string) {
@@ -224,6 +269,8 @@ func (c *Coordinator) publishBoardFullGameOver() {
 	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
 		slog.Error("gamecoord: publish game_over (board full)", slog.String("gameID", c.gameID), slog.Any("error", err))
 	}
+
+	c.dispatchGameResult(winnerUID, storage.FinishReasonBoardFull, scores)
 }
 
 func (c *Coordinator) publishGameOver(kickedPlayerID string) {
@@ -250,4 +297,6 @@ func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
 		slog.Error("gamecoord: publish game_over", slog.String("gameID", c.gameID), slog.Any("error", err))
 	}
+
+	c.dispatchGameResult(winnerUID, storage.FinishReasonKick, scores)
 }
