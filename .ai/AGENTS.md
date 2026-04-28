@@ -321,3 +321,10 @@ GitHub Actions workflow (`.github/workflows/ci.yml`):
 - Keep game logic inside `internal/game/`; keep HTTP concerns inside `internal/server/restapi/handlers/`.
 - Use `log/slog` for logging.
 - Integration tests that need real DB/Redis should go in `tests/` or use `testcontainers-go` directly.
+
+---
+
+## Agent Rules (DO NOT OVERRIDE)
+
+- **NEVER commit, push, merge, rebase, or perform any git mutations** unless the user explicitly says "commit", "закоммить", or otherwise gives clear permission.
+- If unsure whether the user wants a commit, ask first. Do not guess.
