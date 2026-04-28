@@ -300,8 +300,10 @@ type GameSummary struct {
 	// Game ID.
 	ID OptUUID `json:"id"`
 	// IDs of players participating in the game.
-	PlayerIds []uuid.UUID   `json:"player_ids"`
-	Status    OptGameStatus `json:"status"`
+	PlayerIds []uuid.UUID `json:"player_ids"`
+	// Players with EXP info.
+	Players []LobbyPlayer `json:"players"`
+	Status  OptGameStatus `json:"status"`
 	// When the game was started (Unix timestamp in milliseconds).
 	StartedAt OptInt64 `json:"started_at"`
 }
@@ -314,6 +316,11 @@ func (s *GameSummary) GetID() OptUUID {
 // GetPlayerIds returns the value of PlayerIds.
 func (s *GameSummary) GetPlayerIds() []uuid.UUID {
 	return s.PlayerIds
+}
+
+// GetPlayers returns the value of Players.
+func (s *GameSummary) GetPlayers() []LobbyPlayer {
+	return s.Players
 }
 
 // GetStatus returns the value of Status.
@@ -334,6 +341,11 @@ func (s *GameSummary) SetID(val OptUUID) {
 // SetPlayerIds sets the value of PlayerIds.
 func (s *GameSummary) SetPlayerIds(val []uuid.UUID) {
 	s.PlayerIds = val
+}
+
+// SetPlayers sets the value of Players.
+func (s *GameSummary) SetPlayers(val []LobbyPlayer) {
+	s.Players = val
 }
 
 // SetStatus sets the value of Status.
@@ -429,6 +441,34 @@ func (s *ListGamesResponse) SetGames(val []GameSummary) {
 }
 
 func (*ListGamesResponse) listGamesRes() {}
+
+// Ref: #/components/schemas/LobbyPlayer
+type LobbyPlayer struct {
+	// Player's ID.
+	UID OptUUID `json:"uid"`
+	// Player's total EXP.
+	Exp OptInt64 `json:"exp"`
+}
+
+// GetUID returns the value of UID.
+func (s *LobbyPlayer) GetUID() OptUUID {
+	return s.UID
+}
+
+// GetExp returns the value of Exp.
+func (s *LobbyPlayer) GetExp() OptInt64 {
+	return s.Exp
+}
+
+// SetUID sets the value of UID.
+func (s *LobbyPlayer) SetUID(val OptUUID) {
+	s.UID = val
+}
+
+// SetExp sets the value of Exp.
+func (s *LobbyPlayer) SetExp(val OptInt64) {
+	s.Exp = val
+}
 
 type MoveGameBadRequest ErrorResponse
 
@@ -934,6 +974,8 @@ type Player struct {
 	Sid OptString `json:"sid"`
 	// Player's API Key that the client needs to provide when making API calls.
 	Key OptString `json:"key"`
+	// Player's total EXP.
+	Exp OptInt64 `json:"exp"`
 }
 
 // GetUID returns the value of UID.
@@ -961,6 +1003,11 @@ func (s *Player) GetKey() OptString {
 	return s.Key
 }
 
+// GetExp returns the value of Exp.
+func (s *Player) GetExp() OptInt64 {
+	return s.Exp
+}
+
 // SetUID sets the value of UID.
 func (s *Player) SetUID(val OptUUID) {
 	s.UID = val
@@ -986,10 +1033,17 @@ func (s *Player) SetKey(val OptString) {
 	s.Key = val
 }
 
+// SetExp sets the value of Exp.
+func (s *Player) SetExp(val OptInt64) {
+	s.Exp = val
+}
+
 // Ref: #/components/schemas/PlayerGameState
 type PlayerGameState struct {
 	// Player's ID.
 	UID OptUUID `json:"uid"`
+	// Player's total EXP at the time of the event.
+	Exp OptInt64 `json:"exp"`
 	// Number of points scored in the current game.
 	Score OptInt `json:"score"`
 	// Number of words submitted by the player.
@@ -1001,6 +1055,11 @@ type PlayerGameState struct {
 // GetUID returns the value of UID.
 func (s *PlayerGameState) GetUID() OptUUID {
 	return s.UID
+}
+
+// GetExp returns the value of Exp.
+func (s *PlayerGameState) GetExp() OptInt64 {
+	return s.Exp
 }
 
 // GetScore returns the value of Score.
@@ -1021,6 +1080,11 @@ func (s *PlayerGameState) GetWords() []string {
 // SetUID sets the value of UID.
 func (s *PlayerGameState) SetUID(val OptUUID) {
 	s.UID = val
+}
+
+// SetExp sets the value of Exp.
+func (s *PlayerGameState) SetExp(val OptInt64) {
+	s.Exp = val
 }
 
 // SetScore sets the value of Score.

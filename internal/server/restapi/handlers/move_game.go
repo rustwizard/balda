@@ -142,6 +142,7 @@ func playerScoresToAPI(scores []game.PlayerState) []baldaapi.PlayerGameState {
 		}
 		out = append(out, baldaapi.PlayerGameState{
 			UID:        baldaapi.NewOptUUID(pid),
+			Exp:        baldaapi.NewOptInt64(int64(ps.Exp)),
 			Score:      baldaapi.NewOptInt(ps.Score),
 			WordsCount: baldaapi.NewOptInt(ps.WordsCount),
 			Words:      ps.Words,

@@ -532,6 +532,10 @@ components:
           description: Player's API Key that the client needs to provide when making API calls.
           example: some_api_key
           type: string
+        exp:
+          description: Player's total EXP
+          type: integer
+          format: int64
 
     AuthRequest:
       type: object
@@ -568,6 +572,18 @@ components:
         - finished
       description: Current state of the game
 
+    LobbyPlayer:
+      type: object
+      properties:
+        uid:
+          description: Player's ID
+          type: string
+          format: uuid
+        exp:
+          description: Player's total EXP
+          type: integer
+          format: int64
+
     GameSummary:
       type: object
       properties:
@@ -582,6 +598,11 @@ components:
           items:
             type: string
             format: uuid
+        players:
+          description: Players with EXP info
+          type: array
+          items:
+            $ref: "#/components/schemas/LobbyPlayer"
         status:
           $ref: "#/components/schemas/GameStatus"
         started_at:
@@ -706,6 +727,10 @@ components:
           description: Player's ID
           type: string
           format: uuid
+        exp:
+          description: Player's total EXP at the time of the event
+          type: integer
+          format: int64
         score:
           description: Number of points scored in the current game
           type: integer

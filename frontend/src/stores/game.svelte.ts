@@ -5,6 +5,7 @@ export type GamePhase = 'auth' | 'lobby' | 'waiting' | 'playing' | 'finished';
 export interface PlayerInfo {
   uid: string;
   nickname: string;
+  exp: number;
   score: number;
   wordsCount: number;
   words: string[];
@@ -17,6 +18,7 @@ export function createGameState() {
   let sessionId = $state<string>('');
   let playerUid = $state<string>('');
   let nickname = $state<string>('');
+  let exp = $state<number>(0);
   let centrifugoToken = $state<string>('');
   let lobbyToken = $state<string>('');
 
@@ -51,11 +53,12 @@ export function createGameState() {
     board = Array.from({ length: 5 }, () => Array(5).fill(''));
   }
 
-  function setAuth(data: { apiKey: string; sessionId: string; playerUid: string; nickname: string; centrifugoToken: string; lobbyToken: string }) {
+  function setAuth(data: { apiKey: string; sessionId: string; playerUid: string; nickname: string; exp: number; centrifugoToken: string; lobbyToken: string }) {
     apiKey = data.apiKey;
     sessionId = data.sessionId;
     playerUid = data.playerUid;
     nickname = data.nickname;
+    exp = data.exp;
     centrifugoToken = data.centrifugoToken;
     lobbyToken = data.lobbyToken;
   }
@@ -84,14 +87,27 @@ export function createGameState() {
     currentWord = '';
     winnerUid = null;
     turnSecondsLeft = 60;
-    players = g.player_ids.map((uid) => ({
-      uid,
-      nickname: uid === playerUid ? nickname : 'Соперник',
-      score: 0,
-      wordsCount: 0,
-      words: [],
-      consecutiveSkips: 0,
-    }));
+    if (g.players && g.players.length > 0) {
+      players = g.players.map((p) => ({
+        uid: p.uid,
+        nickname: p.uid === playerUid ? nickname : 'Соперник',
+        exp: p.exp ?? 0,
+        score: 0,
+        wordsCount: 0,
+        words: [],
+        consecutiveSkips: 0,
+      }));
+    } else {
+      players = g.player_ids.map((uid) => ({
+        uid,
+        nickname: uid === playerUid ? nickname : 'Соперник',
+        exp: 0,
+        score: 0,
+        wordsCount: 0,
+        words: [],
+        consecutiveSkips: 0,
+      }));
+    }
   }
 
   function mergePlayerState(p: PlayerGameState): PlayerInfo {
@@ -99,6 +115,7 @@ export function createGameState() {
     return {
       uid: p.uid,
       nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
+      exp: existing?.exp ?? 0,
       score: p.score,
       wordsCount: p.words_count ?? 0,
       words: p.words ?? existing?.words ?? [],
@@ -234,6 +251,7 @@ export function createGameState() {
     get sessionId() { return sessionId; },
     get playerUid() { return playerUid; },
     get nickname() { return nickname; },
+    get exp() { return exp; },
     get centrifugoToken() { return centrifugoToken; },
     get lobbyToken() { return lobbyToken; },
     get phase() { return phase; },

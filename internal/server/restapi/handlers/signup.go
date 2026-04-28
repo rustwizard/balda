@@ -113,6 +113,7 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 			Lastname:  baldaapi.NewOptString(req.Lastname),
 			Sid:       baldaapi.NewOptString(sid.String()),
 			Key:       baldaapi.NewOptString(apiKey),
+			Exp:       baldaapi.NewOptInt64(0),
 		}),
 		CentrifugoToken: baldaapi.NewOptString(cfToken),
 		LobbyToken:      baldaapi.NewOptString(lobbyToken),

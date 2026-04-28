@@ -15,12 +15,19 @@ type EvGameCreated struct {
 	Players []string `json:"player_ids"`
 }
 
+// LobbyPlayer is a player entry inside a lobby GameEntry.
+type LobbyPlayer struct {
+	UID string `json:"uid"`
+	Exp int    `json:"exp"`
+}
+
 // GameEntry is a single game item inside EvLobbyUpdate.
 type GameEntry struct {
-	ID        string   `json:"id"`
-	PlayerIDs []string `json:"player_ids"`
-	Status    string   `json:"status"`
-	StartedAt int64    `json:"started_at"`
+	ID        string        `json:"id"`
+	PlayerIDs []string      `json:"player_ids"`
+	Players   []LobbyPlayer `json:"players"`
+	Status    string        `json:"status"`
+	StartedAt int64         `json:"started_at"`
 }
 
 // EvLobbyUpdate is published to the lobby channel whenever the game list changes.
@@ -38,9 +45,10 @@ type EvGameStarted struct {
 	StartedAt int64    `json:"started_at"`
 }
 
-// PlayerState holds a player's uid and current score for EvGameState.
+// PlayerState holds a player's uid, total EXP and current game score for EvGameState.
 type PlayerState struct {
 	UID        string   `json:"uid"`
+	Exp        int      `json:"exp"`
 	Score      int      `json:"score"`
 	WordsCount int      `json:"words_count"`
 	Words      []string `json:"words"`

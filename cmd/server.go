@@ -118,8 +118,15 @@ var serverCmd = &cobra.Command{
 
 		cf := centrifugo.NewClient(cfg.Centrifugo.APIURL, cfg.Centrifugo.APIKey)
 
+		s := storage.New(pool, 10*time.Second)
+
 		lby := lobby.New(func(ctx context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
 			coord := gamecoord.New(gameID, players, cf)
+			coord.SetOnGameOver(func(r storage.GameResult) {
+				if err := s.SaveGameResult(context.Background(), r); err != nil {
+					slog.Error("save game result", slog.String("gameID", r.GameID), slog.Any("error", err))
+				}
+			})
 			g, err := game.NewGame(players, coord)
 			if err != nil {
 				return nil, err
@@ -131,8 +138,6 @@ var serverCmd = &cobra.Command{
 			_, err := lby.StartGame(cmd.Context(), players, n)
 			return err
 		})
-
-		s := storage.New(pool, 10*time.Second)
 
 		svc := service.New(lby, mm, s, n)
 

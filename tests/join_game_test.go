@@ -64,9 +64,13 @@ func TestJoinGameHandler(t *testing.T) {
 		g := resp.Game.Value
 		assert.Equal(t, gameID, g.ID.Value)
 		assert.Equal(t, baldaapi.GameStatusInProgress, g.Status.Value)
-		assert.Len(t, g.PlayerIds, 2)
-		assert.Contains(t, g.PlayerIds, creator.UID.Value)
-		assert.Contains(t, g.PlayerIds, joiner.UID.Value)
+		assert.Len(t, g.Players, 2)
+		playerUIDs := make([]uuid.UUID, len(g.Players))
+		for i, p := range g.Players {
+			playerUIDs[i] = p.UID.Value
+		}
+		assert.Contains(t, playerUIDs, creator.UID.Value)
+		assert.Contains(t, playerUIDs, joiner.UID.Value)
 	})
 
 	t.Run("joining an already running game returns 409", func(t *testing.T) {
@@ -181,14 +185,17 @@ func TestJoinGameHTTP(t *testing.T) {
 
 		var body struct {
 			Game struct {
-				ID        string   `json:"id"`
-				Status    string   `json:"status"`
-				PlayerIDs []string `json:"player_ids"`
+				ID      string `json:"id"`
+				Status  string `json:"status"`
+				Players []struct {
+					UID string `json:"uid"`
+					Exp int64  `json:"exp"`
+				} `json:"players"`
 			} `json:"game"`
 		}
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
 		assert.Equal(t, gameID, body.Game.ID)
 		assert.Equal(t, "in_progress", body.Game.Status)
-		assert.Len(t, body.Game.PlayerIDs, 2)
+		assert.Len(t, body.Game.Players, 2)
 	})
 }

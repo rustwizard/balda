@@ -74,12 +74,17 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	}
 
 	playerIDs := make([]uuid.UUID, 0, len(rec.Players))
+	lobbyPlayers := make([]baldaapi.LobbyPlayer, 0, len(rec.Players))
 	for _, p := range rec.Players {
 		pid, err := uuid.Parse(p.ID)
 		if err != nil {
 			continue
 		}
 		playerIDs = append(playerIDs, pid)
+		lobbyPlayers = append(lobbyPlayers, baldaapi.LobbyPlayer{
+			UID: baldaapi.NewOptUUID(pid),
+			Exp: baldaapi.NewOptInt64(int64(p.Exp)),
+		})
 	}
 
 	ev := centrifugo.EvGameStarted{
@@ -103,7 +108,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	// Publish the initial board state so clients render the starting word immediately.
 	players := make([]centrifugo.PlayerState, 0, len(rec.Players))
 	for _, p := range rec.Players {
-		players = append(players, centrifugo.PlayerState{UID: p.ID, Score: 0, WordsCount: 0, Words: []string{}})
+		players = append(players, centrifugo.PlayerState{UID: p.ID, Exp: p.Exp, Score: 0, WordsCount: 0, Words: []string{}})
 	}
 	// The creator (index 0) always moves first.
 	firstPlayerID := ""
@@ -148,6 +153,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 		Game: baldaapi.NewOptGameSummary(baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
 			PlayerIds: playerIDs,
+			Players:   lobbyPlayers,
 			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),
 			StartedAt: baldaapi.NewOptInt64(rec.StartedAt.UnixMilli()),
 		}),

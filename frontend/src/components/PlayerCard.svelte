@@ -6,6 +6,7 @@
   interface Props {
     name: string;
     score: number;
+    exp?: number;
     wordsCount: number;
     words?: string[];
     consecutiveSkips?: number;
@@ -13,7 +14,7 @@
     isWinner?: boolean;
   }
 
-  let { name, score, wordsCount, words = [], consecutiveSkips = 0, isActive = false, isWinner = false }: Props = $props();
+  let { name, score, exp = 0, wordsCount, words = [], consecutiveSkips = 0, isActive = false, isWinner = false }: Props = $props();
 
   let showWords = $state(false);
 
@@ -30,6 +31,7 @@
     {name}
   </div>
   <div class="text-2xl font-extrabold text-blue-600">{score}</div>
+  <div class="text-xs text-stone-500">{exp} XP</div>
   <button
     class="mt-1 text-xs text-stone-500 {words.length > 0 ? 'cursor-pointer hover:text-blue-500' : 'cursor-default'}"
     onclick={toggleWords}

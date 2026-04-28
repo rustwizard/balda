@@ -49,9 +49,9 @@ func TestListGamesHandler(t *testing.T) {
 		assert.True(t, g.StartedAt.IsSet())
 		assert.Positive(t, g.StartedAt.Value)
 
-		gotIDs := make([]string, len(g.PlayerIds))
-		for i, uid := range g.PlayerIds {
-			gotIDs[i] = uid.String()
+		gotIDs := make([]string, len(g.Players))
+		for i, p := range g.Players {
+			gotIDs[i] = p.UID.Value.String()
 		}
 		assert.ElementsMatch(t, []string{p1.ID, p2.ID}, gotIDs)
 	})
