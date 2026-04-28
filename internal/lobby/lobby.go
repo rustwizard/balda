@@ -36,10 +36,16 @@ type GameRecord struct {
 	cancel    context.CancelFunc
 }
 
+// PlayerInfo is a lightweight player descriptor carried in GameSummary.
+type PlayerInfo struct {
+	ID  string
+	Exp int
+}
+
 // GameSummary is the read-only snapshot returned by List and FindByPlayer.
 type GameSummary struct {
 	ID        string
-	PlayerIDs []string
+	Players   []PlayerInfo
 	StartedAt time.Time
 	Status    GameStatus
 }
@@ -68,23 +74,23 @@ func New(factory GameFactory) *Lobby {
 // Create registers a new game in waiting status for a single player (the creator).
 // Other players join later via join mechanics.
 // Returns ErrPlayerInGame if the player is already in an active game.
-func (l *Lobby) Create(playerID string) (*GameRecord, error) {
+func (l *Lobby) Create(p *game.Player) (*GameRecord, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
-	if _, ok := l.byPlayer[playerID]; ok {
+	if _, ok := l.byPlayer[p.ID]; ok {
 		return nil, ErrPlayerInGame
 	}
 
 	id := uuid.New().String()
 	rec := &GameRecord{
 		ID:        id,
-		Players:   []*game.Player{{ID: playerID}},
+		Players:   []*game.Player{p},
 		StartedAt: time.Now(),
 		Status:    GameStatusWaiting,
 	}
 	l.games[id] = rec
-	l.byPlayer[playerID] = id
+	l.byPlayer[p.ID] = id
 	return rec, nil
 }
 
@@ -93,7 +99,7 @@ func (l *Lobby) Create(playerID string) (*GameRecord, error) {
 // factory; the first move belongs to the player who created the game (index 0).
 // Returns ErrGameNotFound, ErrGameNotWaiting, ErrGameFull, or ErrPlayerInGame
 // on the corresponding error conditions.
-func (l *Lobby) Join(ctx context.Context, gameID string, playerID string, n game.Notifier) (*GameRecord, error) {
+func (l *Lobby) Join(ctx context.Context, gameID string, p *game.Player, n game.Notifier) (*GameRecord, error) {
 	// Phase 1: read-check without creating anything.
 	l.mu.RLock()
 	rec, ok := l.games[gameID]
@@ -108,7 +114,7 @@ func (l *Lobby) Join(ctx context.Context, gameID string, playerID string, n game
 		}
 		return nil, ErrGameNotWaiting
 	}
-	if _, alreadyIn := l.byPlayer[playerID]; alreadyIn {
+	if _, alreadyIn := l.byPlayer[p.ID]; alreadyIn {
 		l.mu.RUnlock()
 		return nil, ErrPlayerInGame
 	}
@@ -118,7 +124,7 @@ func (l *Lobby) Join(ctx context.Context, gameID string, playerID string, n game
 	l.mu.RUnlock()
 
 	// Build the full player list: creator(s) first, joiner last.
-	allPlayers := append(existing, &game.Player{ID: playerID})
+	allPlayers := append(existing, p)
 
 	// Use a background context so the game goroutine outlives the HTTP request
 	// that triggered the join. The lobby cancels it via rec.cancel when needed.
@@ -145,18 +151,17 @@ func (l *Lobby) Join(ctx context.Context, gameID string, playerID string, n game
 		}
 		return nil, ErrGameNotWaiting
 	}
-	if _, alreadyIn := l.byPlayer[playerID]; alreadyIn {
+	if _, alreadyIn := l.byPlayer[p.ID]; alreadyIn {
 		cancel()
 		return nil, ErrPlayerInGame
 	}
 
 	// Commit: update record in-place and register the new player.
-	joiner := &game.Player{ID: playerID}
-	rec.Players = append(rec.Players, joiner)
+	rec.Players = append(rec.Players, p)
 	rec.Game = g
 	rec.Status = GameStatusInProgress
 	rec.cancel = cancel
-	l.byPlayer[playerID] = gameID
+	l.byPlayer[p.ID] = gameID
 
 	go func() {
 		g.Run(gameCtx)
@@ -290,13 +295,13 @@ func (l *Lobby) removeRecordLocked(rec *GameRecord) {
 }
 
 func summaryOf(rec *GameRecord) GameSummary {
-	ids := make([]string, len(rec.Players))
+	players := make([]PlayerInfo, len(rec.Players))
 	for i, p := range rec.Players {
-		ids[i] = p.ID
+		players[i] = PlayerInfo{ID: p.ID, Exp: p.Exp}
 	}
 	return GameSummary{
 		ID:        rec.ID,
-		PlayerIDs: ids,
+		Players:   players,
 		StartedAt: rec.StartedAt,
 		Status:    rec.Status,
 	}

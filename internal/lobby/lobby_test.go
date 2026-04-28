@@ -49,7 +49,11 @@ func TestLobby_StartGame_RegistersGame(t *testing.T) {
 	games := l.List()
 	require.Len(t, games, 1)
 	assert.Equal(t, rec.ID, games[0].ID)
-	assert.ElementsMatch(t, []string{"p1", "p2"}, games[0].PlayerIDs)
+	gotIDs := make([]string, len(games[0].Players))
+	for i, p := range games[0].Players {
+		gotIDs[i] = p.ID
+	}
+	assert.ElementsMatch(t, []string{"p1", "p2"}, gotIDs)
 }
 
 func TestLobby_StartGame_PlayerAlreadyInGame(t *testing.T) {

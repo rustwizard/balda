@@ -205,7 +205,7 @@ func (c *Coordinator) publishGameState() {
 
 	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
-		players[i] = centrifugo.PlayerState{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
+		players[i] = centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
 	}
 
 	ev := centrifugo.EvGameState{
@@ -254,7 +254,7 @@ func (c *Coordinator) publishBoardFullGameOver() {
 
 	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
-		players[i] = centrifugo.PlayerState{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
+		players[i] = centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
 	}
 
 	ev := centrifugo.EvGameOver{
@@ -279,7 +279,7 @@ func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 	winnerUID := ""
 	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
-		players[i] = centrifugo.PlayerState{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
+		players[i] = centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
 		if s.UID != kickedPlayerID {
 			winnerUID = s.UID
 		}

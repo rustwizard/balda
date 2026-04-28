@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-faster/errors"
 	"github.com/go-faster/jx"
-	"github.com/google/uuid"
 	"github.com/ogen-go/ogen/json"
 	"github.com/ogen-go/ogen/validate"
 )
@@ -685,11 +684,11 @@ func (s *GameSummary) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
-		if s.PlayerIds != nil {
-			e.FieldStart("player_ids")
+		if s.Players != nil {
+			e.FieldStart("players")
 			e.ArrStart()
-			for _, elem := range s.PlayerIds {
-				json.EncodeUUID(e, elem)
+			for _, elem := range s.Players {
+				elem.Encode(e)
 			}
 			e.ArrEnd()
 		}
@@ -710,7 +709,7 @@ func (s *GameSummary) encodeFields(e *jx.Encoder) {
 
 var jsonFieldsNameOfGameSummary = [4]string{
 	0: "id",
-	1: "player_ids",
+	1: "players",
 	2: "status",
 	3: "started_at",
 }
@@ -733,24 +732,22 @@ func (s *GameSummary) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"id\"")
 			}
-		case "player_ids":
+		case "players":
 			if err := func() error {
-				s.PlayerIds = make([]uuid.UUID, 0)
+				s.Players = make([]LobbyPlayer, 0)
 				if err := d.Arr(func(d *jx.Decoder) error {
-					var elem uuid.UUID
-					v, err := json.DecodeUUID(d)
-					elem = v
-					if err != nil {
+					var elem LobbyPlayer
+					if err := elem.Decode(d); err != nil {
 						return err
 					}
-					s.PlayerIds = append(s.PlayerIds, elem)
+					s.Players = append(s.Players, elem)
 					return nil
 				}); err != nil {
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return errors.Wrap(err, "decode field \"player_ids\"")
+				return errors.Wrap(err, "decode field \"players\"")
 			}
 		case "status":
 			if err := func() error {
@@ -1119,6 +1116,86 @@ func (s *ListGamesResponse) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *ListGamesResponse) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *LobbyPlayer) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *LobbyPlayer) encodeFields(e *jx.Encoder) {
+	{
+		if s.UID.Set {
+			e.FieldStart("uid")
+			s.UID.Encode(e)
+		}
+	}
+	{
+		if s.Exp.Set {
+			e.FieldStart("exp")
+			s.Exp.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfLobbyPlayer = [2]string{
+	0: "uid",
+	1: "exp",
+}
+
+// Decode decodes LobbyPlayer from json.
+func (s *LobbyPlayer) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode LobbyPlayer to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "uid":
+			if err := func() error {
+				s.UID.Reset()
+				if err := s.UID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"uid\"")
+			}
+		case "exp":
+			if err := func() error {
+				s.Exp.Reset()
+				if err := s.Exp.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"exp\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode LobbyPlayer")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *LobbyPlayer) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *LobbyPlayer) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
@@ -2079,6 +2156,12 @@ func (s *PlayerGameState) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Exp.Set {
+			e.FieldStart("exp")
+			s.Exp.Encode(e)
+		}
+	}
+	{
 		if s.Score.Set {
 			e.FieldStart("score")
 			s.Score.Encode(e)
@@ -2102,11 +2185,12 @@ func (s *PlayerGameState) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfPlayerGameState = [4]string{
+var jsonFieldsNameOfPlayerGameState = [5]string{
 	0: "uid",
-	1: "score",
-	2: "words_count",
-	3: "words",
+	1: "exp",
+	2: "score",
+	3: "words_count",
+	4: "words",
 }
 
 // Decode decodes PlayerGameState from json.
@@ -2126,6 +2210,16 @@ func (s *PlayerGameState) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"uid\"")
+			}
+		case "exp":
+			if err := func() error {
+				s.Exp.Reset()
+				if err := s.Exp.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"exp\"")
 			}
 		case "score":
 			if err := func() error {

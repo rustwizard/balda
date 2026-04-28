@@ -18,18 +18,21 @@ func (h *Handlers) ListGames(ctx context.Context, _ baldaapi.ListGamesParams) (b
 			continue
 		}
 
-		playerIDs := make([]uuid.UUID, 0, len(s.PlayerIDs))
-		for _, pid := range s.PlayerIDs {
-			uid, err := uuid.Parse(pid)
+		players := make([]baldaapi.LobbyPlayer, 0, len(s.Players))
+		for _, p := range s.Players {
+			pid, err := uuid.Parse(p.ID)
 			if err != nil {
 				continue
 			}
-			playerIDs = append(playerIDs, uid)
+			players = append(players, baldaapi.LobbyPlayer{
+				UID: baldaapi.NewOptUUID(pid),
+				Exp: baldaapi.NewOptInt64(int64(p.Exp)),
+			})
 		}
 
 		games[i] = baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
-			PlayerIds: playerIDs,
+			Players:   players,
 			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatus(s.Status)),
 			StartedAt: baldaapi.NewOptInt64(s.StartedAt.UnixMilli()),
 		}

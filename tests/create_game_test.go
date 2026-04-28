@@ -50,8 +50,8 @@ func TestCreateGameHandler(t *testing.T) {
 		assert.Equal(t, baldaapi.GameStatusWaiting, g.Status.Value)
 		assert.True(t, g.StartedAt.IsSet())
 		assert.Positive(t, g.StartedAt.Value)
-		require.Len(t, g.PlayerIds, 1)
-		assert.Equal(t, player.UID.Value, g.PlayerIds[0])
+		require.Len(t, g.Players, 1)
+		assert.Equal(t, player.UID.Value, g.Players[0].UID.Value)
 	})
 
 	t.Run("player already in a game returns conflict", func(t *testing.T) {
@@ -127,17 +127,20 @@ func TestCreateGameHTTP(t *testing.T) {
 
 		var body struct {
 			Game struct {
-				ID        string   `json:"id"`
-				Status    string   `json:"status"`
-				PlayerIDs []string `json:"player_ids"`
-				StartedAt int64    `json:"started_at"`
+				ID        string `json:"id"`
+				Status    string `json:"status"`
+				Players   []struct {
+					UID string `json:"uid"`
+					Exp int64  `json:"exp"`
+				} `json:"players"`
+				StartedAt int64 `json:"started_at"`
 			} `json:"game"`
 		}
 		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
 
 		assert.NotEmpty(t, body.Game.ID)
 		assert.Equal(t, "waiting", body.Game.Status)
-		assert.Len(t, body.Game.PlayerIDs, 1)
+		assert.Len(t, body.Game.Players, 1)
 		assert.Positive(t, body.Game.StartedAt)
 	})
 }

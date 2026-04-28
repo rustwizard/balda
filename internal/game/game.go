@@ -428,6 +428,7 @@ func (g *Game) Board() *LettersTable {
 // PlayerState holds a player's UID and current score for external consumers.
 type PlayerState struct {
 	UID        string
+	Exp        int
 	Score      int
 	WordsCount int
 	Words      []string
@@ -441,7 +442,7 @@ func (g *Game) PlayerScores() []PlayerState {
 	for i, p := range g.players {
 		words := make([]string, len(p.Words))
 		copy(words, p.Words)
-		out[i] = PlayerState{UID: p.ID, Score: p.Score, WordsCount: len(p.Words), Words: words}
+		out[i] = PlayerState{UID: p.ID, Exp: p.Exp, Score: p.Score, WordsCount: len(p.Words), Words: words}
 	}
 	return out
 }

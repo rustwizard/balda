@@ -568,6 +568,18 @@ components:
         - finished
       description: Current state of the game
 
+    LobbyPlayer:
+      type: object
+      properties:
+        uid:
+          description: Player's ID
+          type: string
+          format: uuid
+        exp:
+          description: Player's total EXP
+          type: integer
+          format: int64
+
     GameSummary:
       type: object
       properties:
@@ -576,12 +588,11 @@ components:
           type: string
           format: uuid
           example: "144e8a2b-3c1d-4e5f-a6b7-8c9d0e1f2a3b"
-        player_ids:
-          description: IDs of players participating in the game
+        players:
+          description: Players participating in the game
           type: array
           items:
-            type: string
-            format: uuid
+            $ref: "#/components/schemas/LobbyPlayer"
         status:
           $ref: "#/components/schemas/GameStatus"
         started_at:
@@ -706,6 +717,10 @@ components:
           description: Player's ID
           type: string
           format: uuid
+        exp:
+          description: Player's total EXP at the time of the event
+          type: integer
+          format: int64
         score:
           description: Number of points scored in the current game
           type: integer
