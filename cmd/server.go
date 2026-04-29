@@ -2,9 +2,13 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -184,9 +188,43 @@ var serverCmd = &cobra.Command{
 		mux.Handle("/", srv)
 
 		addr := fmt.Sprintf("%s:%d", cfg.ServerAddr, cfg.ServerPort)
-		slog.Info("starting server", slog.String("addr", addr))
-		if err := http.ListenAndServe(addr, mux); err != nil {
-			return fmt.Errorf("server serve: %v", err)
+		httpSrv := &http.Server{Addr: addr, Handler: mux}
+
+		go func() {
+			slog.Info("starting server", slog.String("addr", addr))
+			if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				slog.Error("server serve", slog.Any("error", err))
+			}
+		}()
+
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		<-quit
+
+		slog.Info("shutting down server")
+
+		// Cancel all running games so their goroutines exit cleanly.
+		lby.Shutdown()
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("server shutdown", slog.Any("error", err))
+		}
+
+		// Wait for any in-flight SaveGameResult calls to finish.
+		done := make(chan struct{})
+		go func() {
+			pendingResults.Wait()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			slog.Info("all pending game results saved")
+		case <-shutdownCtx.Done():
+			slog.Warn("shutdown timeout exceeded, some game results may be lost")
 		}
 
 		return nil
