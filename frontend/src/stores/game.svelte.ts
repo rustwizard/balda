@@ -6,6 +6,7 @@ export interface PlayerInfo {
   uid: string;
   nickname: string;
   exp: number;
+  expGained: number;
   score: number;
   wordsCount: number;
   words: string[];
@@ -92,6 +93,7 @@ export function createGameState() {
         uid: p.uid,
         nickname: p.uid === playerUid ? nickname : 'Соперник',
         exp: p.exp ?? 0,
+        expGained: 0,
         score: 0,
         wordsCount: 0,
         words: [],
@@ -102,6 +104,7 @@ export function createGameState() {
         uid,
         nickname: uid === playerUid ? nickname : 'Соперник',
         exp: 0,
+        expGained: 0,
         score: 0,
         wordsCount: 0,
         words: [],
@@ -115,7 +118,8 @@ export function createGameState() {
     return {
       uid: p.uid,
       nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
-      exp: existing?.exp ?? 0,
+      exp: p.exp ?? existing?.exp ?? 0,
+      expGained: p.exp_gained ?? 0,
       score: p.score,
       wordsCount: p.words_count ?? 0,
       words: p.words ?? existing?.words ?? [],

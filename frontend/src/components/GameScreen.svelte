@@ -124,6 +124,7 @@
         name={p.nickname}
         score={p.score}
         exp={p.exp}
+        expGained={p.expGained}
         wordsCount={p.wordsCount}
         words={p.words}
         consecutiveSkips={p.consecutiveSkips}

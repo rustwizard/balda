@@ -66,6 +66,8 @@ export interface ListGamesResponse {
 
 export interface PlayerGameState {
   uid: string;
+  exp?: number;
+  exp_gained?: number;
   score: number;
   words_count: number;
   words?: string[];
