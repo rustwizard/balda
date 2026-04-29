@@ -196,7 +196,7 @@ func (c *Coordinator) dispatchGameResult(winnerUID string, reason storage.Finish
 		FinishedAt:   time.Now(),
 		Players:      players,
 	}
-	go c.onGameOver(result)
+	c.onGameOver(result)
 }
 
 func (c *Coordinator) publishTurnChange(playerID, reason string) {
@@ -258,8 +258,11 @@ func (c *Coordinator) publishSkipWarn(playerID string, skipsUsed, skipsLeft int)
 
 func (c *Coordinator) publishBoardFullGameOver() {
 	scores := c.g.PlayerScores()
-
 	winnerUID := findWinnerByScore(scores, "")
+
+	// Persist the result before notifying clients so the database is the
+	// source of truth by the time they see game_over.
+	c.dispatchGameResult(winnerUID, storage.FinishReasonBoardFull, scores)
 
 	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
@@ -278,14 +281,15 @@ func (c *Coordinator) publishBoardFullGameOver() {
 	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
 		slog.Error("gamecoord: publish game_over (board full)", slog.String("gameID", c.gameID), slog.Any("error", err))
 	}
-
-	c.dispatchGameResult(winnerUID, storage.FinishReasonBoardFull, scores)
 }
 
 func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 	scores := c.g.PlayerScores()
-
 	winnerUID := findWinnerByScore(scores, kickedPlayerID)
+
+	// Persist the result before notifying clients so the database is the
+	// source of truth by the time they see game_over.
+	c.dispatchGameResult(winnerUID, storage.FinishReasonKick, scores)
 
 	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
@@ -304,6 +308,4 @@ func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
 		slog.Error("gamecoord: publish game_over", slog.String("gameID", c.gameID), slog.Any("error", err))
 	}
-
-	c.dispatchGameResult(winnerUID, storage.FinishReasonKick, scores)
 }
