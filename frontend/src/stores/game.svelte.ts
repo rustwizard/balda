@@ -121,6 +121,7 @@ export function createGameState() {
 
   function mergePlayerState(p: PlayerGameState): PlayerInfo {
     const existing = players.find((ep) => ep.uid === p.uid);
+    console.warn('[DEBUG mergePlayerState]', p.uid, 'incoming exp=', p.exp, 'existing exp=', existing?.exp, 'result=', p.exp ?? existing?.exp ?? 0);
     return {
       uid: p.uid,
       nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
@@ -134,6 +135,7 @@ export function createGameState() {
   }
 
   function applyGameState(ev: EvGameState) {
+    console.warn('[DEBUG applyGameState] raw players:', JSON.parse(JSON.stringify(ev.players)));
     board = ev.board;
     currentTurnUid = ev.current_turn_uid;
     moveNumber = ev.move_number;
@@ -186,6 +188,7 @@ export function createGameState() {
   }
 
   function applyMoveResponse(resp: MoveResponse) {
+    console.warn('[DEBUG applyMoveResponse] raw players:', JSON.parse(JSON.stringify(resp.players)));
     board = resp.board;
     currentTurnUid = resp.current_turn_uid;
     moveNumber = resp.move_number;
