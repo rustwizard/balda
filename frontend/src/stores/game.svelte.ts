@@ -1,4 +1,4 @@
-import type { GameSummary, PlayerState, PlayerGameState, EvGameState, EvGameOver, EvTurnChange, EvEndProposalResult, EvSkipWarn, EvLobbyUpdate, MoveResponse } from '../types';
+import type { GameSummary, PlayerGameState, EvGameState, EvGameOver, EvTurnChange, EvEndProposalResult, EvEndProposal, EvSkipWarn, EvLobbyUpdate, MoveResponse } from '../types';
 
 export type GamePhase = 'auth' | 'lobby' | 'waiting' | 'playing' | 'finished';
 
@@ -38,6 +38,10 @@ export function createGameState() {
   // Lobby game list — updated via lobby_update Centrifugo events
   let lobbyGames = $state<GameSummary[]>([]);
 
+  // End proposal
+  let endProposalPending = $state<boolean>(false);
+  let endProposalByMe = $state<boolean>(false);
+
   // Turn interaction
   let selectedPath = $state<{ row: number; col: number }[]>([]);
   let newLetterCell = $state<{ row: number; col: number } | null>(null);
@@ -72,6 +76,8 @@ export function createGameState() {
     newLetterCell = null;
     currentWord = '';
     winnerUid = null;
+    endProposalPending = false;
+    endProposalByMe = false;
   }
 
   function setWaiting(g: GameSummary) {
@@ -148,7 +154,14 @@ export function createGameState() {
     players = ev.players.map(mergePlayerState);
   }
 
+  function applyEndProposal(ev: EvEndProposal) {
+    endProposalPending = true;
+    endProposalByMe = ev.proposer_uid === playerUid;
+  }
+
   function applyEndProposalResult(ev: EvEndProposalResult) {
+    endProposalPending = false;
+    endProposalByMe = false;
     if (!ev.accepted) {
       turnSecondsLeft = Math.ceil((ev.remaining_ms ?? 0) / 1000);
     }
@@ -166,6 +179,8 @@ export function createGameState() {
     selectedPath = [];
     newLetterCell = null;
     currentWord = '';
+    endProposalPending = false;
+    endProposalByMe = false;
   }
 
   function applyMoveResponse(resp: MoveResponse) {
@@ -281,6 +296,8 @@ export function createGameState() {
     get opponent() { return opponent; },
     get notif() { return notif; },
     get lobbyGames() { return lobbyGames; },
+    get endProposalPending() { return endProposalPending; },
+    get endProposalByMe() { return endProposalByMe; },
 
     setAuth,
     setLobby,
@@ -289,6 +306,7 @@ export function createGameState() {
     applyGameState,
     applyMoveResponse,
     applyTurnChange,
+    applyEndProposal,
     applyEndProposalResult,
     applySkipWarn,
     applyLobbyUpdate,

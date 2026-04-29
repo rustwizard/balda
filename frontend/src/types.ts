@@ -163,4 +163,10 @@ export interface EvSkipWarn {
   skips_left: number;
 }
 
-export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange | EvSkipWarn | EvLobbyUpdate | EvEndProposalResult;
+export interface EvEndProposal {
+  type: 'end_proposal';
+  game_id: string;
+  proposer_uid: string;
+}
+
+export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange | EvSkipWarn | EvLobbyUpdate | EvEndProposalResult | EvEndProposal;

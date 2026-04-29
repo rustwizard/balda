@@ -61,6 +61,9 @@
       case 'turn_change':
         gameState.applyTurnChange(ev);
         break;
+      case 'end_proposal':
+        gameState.applyEndProposal(ev);
+        break;
       case 'end_proposal_result':
         gameState.applyEndProposalResult(ev);
         break;
