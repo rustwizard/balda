@@ -1,4 +1,4 @@
-import type { GameSummary, PlayerState, PlayerGameState, EvGameState, EvGameOver, EvTurnChange, EvSkipWarn, EvLobbyUpdate, MoveResponse } from '../types';
+import type { GameSummary, PlayerState, PlayerGameState, EvGameState, EvGameOver, EvTurnChange, EvEndProposalResult, EvSkipWarn, EvLobbyUpdate, MoveResponse } from '../types';
 
 export type GamePhase = 'auth' | 'lobby' | 'waiting' | 'playing' | 'finished';
 
@@ -148,6 +148,12 @@ export function createGameState() {
     players = ev.players.map(mergePlayerState);
   }
 
+  function applyEndProposalResult(ev: EvEndProposalResult) {
+    if (!ev.accepted) {
+      turnSecondsLeft = Math.ceil((ev.remaining_ms ?? 0) / 1000);
+    }
+  }
+
   function applySkipWarn(ev: EvSkipWarn) {
     players = players.map((p) =>
       p.uid === ev.player_uid ? { ...p, consecutiveSkips: ev.skips_used } : p
@@ -283,6 +289,7 @@ export function createGameState() {
     applyGameState,
     applyMoveResponse,
     applyTurnChange,
+    applyEndProposalResult,
     applySkipWarn,
     applyLobbyUpdate,
     setLobbyGames,

@@ -148,6 +148,13 @@ export interface EvLobbyUpdate {
   games: GameSummary[];
 }
 
+export interface EvEndProposalResult {
+  type: 'end_proposal_result';
+  game_id: string;
+  accepted: boolean;
+  remaining_ms?: number;
+}
+
 export interface EvSkipWarn {
   type: 'skip_warn';
   game_id: string;
@@ -156,4 +163,4 @@ export interface EvSkipWarn {
   skips_left: number;
 }
 
-export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange | EvSkipWarn | EvLobbyUpdate;
+export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange | EvSkipWarn | EvLobbyUpdate | EvEndProposalResult;
