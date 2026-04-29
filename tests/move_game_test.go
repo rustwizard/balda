@@ -84,18 +84,23 @@ func TestMoveGameHandler(t *testing.T) {
 	require.NoError(t, err)
 	joiner := joinerRes.(*baldaapi.SignupResponse).User.Value
 
-	createRes, err := h.CreateGame(ctx, baldaapi.CreateGameParams{XAPISession: creator.Sid.Value})
-	require.NoError(t, err)
-	gameID := createRes.(*baldaapi.CreateGameResponse).Game.Value.ID.Value
-
-	_, err = h.JoinGame(ctx, baldaapi.JoinGameParams{XAPISession: joiner.Sid.Value, ID: gameID})
-	require.NoError(t, err)
+	// helper to create a fresh isolated game for each sub-test
+	newGame := func(t *testing.T) uuid.UUID {
+		t.Helper()
+		createRes, err := h.CreateGame(ctx, baldaapi.CreateGameParams{XAPISession: creator.Sid.Value})
+		require.NoError(t, err)
+		gid := createRes.(*baldaapi.CreateGameResponse).Game.Value.ID.Value
+		_, err = h.JoinGame(ctx, baldaapi.JoinGameParams{XAPISession: joiner.Sid.Value, ID: gid})
+		require.NoError(t, err)
+		t.Cleanup(func() { _ = lby.Remove(gid.String()) })
+		return gid
+	}
 
 	t.Run("unknown session returns 401", func(t *testing.T) {
 		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "а"},
 			WordPath:  []baldaapi.BoardCell{{Row: 1, Col: 2}, {Row: 2, Col: 2}},
-		}, baldaapi.MoveGameParams{XAPISession: "bad-sid", ID: gameID})
+		}, baldaapi.MoveGameParams{XAPISession: "bad-sid", ID: uuid.New()})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameUnauthorized)
 		require.True(t, ok, "expected *MoveGameUnauthorized, got %T", res)
@@ -114,11 +119,11 @@ func TestMoveGameHandler(t *testing.T) {
 	})
 
 	t.Run("not player's turn returns 409", func(t *testing.T) {
-		// It is creator's turn first; joiner tries to move.
+		gid := newGame(t)
 		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "а"},
 			WordPath:  []baldaapi.BoardCell{{Row: 1, Col: 2}, {Row: 2, Col: 2}},
-		}, baldaapi.MoveGameParams{XAPISession: joiner.Sid.Value, ID: gameID})
+		}, baldaapi.MoveGameParams{XAPISession: joiner.Sid.Value, ID: gid})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameConflict)
 		require.True(t, ok, "expected *MoveGameConflict, got %T", res)
@@ -126,10 +131,11 @@ func TestMoveGameHandler(t *testing.T) {
 	})
 
 	t.Run("invalid word returns 400", func(t *testing.T) {
+		gid := newGame(t)
 		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "щ"},
 			WordPath:  []baldaapi.BoardCell{{Row: 1, Col: 2}, {Row: 2, Col: 2}},
-		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gameID})
+		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gid})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameBadRequest)
 		require.True(t, ok, "expected *MoveGameBadRequest, got %T", res)
@@ -137,11 +143,11 @@ func TestMoveGameHandler(t *testing.T) {
 	})
 
 	t.Run("new letter not in word path returns 400", func(t *testing.T) {
-		// Place new letter at (1,2) but word path doesn't include it
+		gid := newGame(t)
 		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "а"},
 			WordPath:  []baldaapi.BoardCell{{Row: 2, Col: 1}, {Row: 2, Col: 2}},
-		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gameID})
+		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gid})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameBadRequest)
 		require.True(t, ok, "expected *MoveGameBadRequest, got %T", res)
@@ -149,7 +155,8 @@ func TestMoveGameHandler(t *testing.T) {
 	})
 
 	t.Run("valid move returns 200 and advances turn", func(t *testing.T) {
-		rec, err := lby.Get(gameID.String())
+		gid := newGame(t)
+		rec, err := lby.Get(gid.String())
 		require.NoError(t, err)
 
 		newLetter, wordPath, ok := findValidMoveForGame(t, rec.Game)
@@ -167,7 +174,7 @@ func TestMoveGameHandler(t *testing.T) {
 				Row: int(newLetter.RowID), Col: int(newLetter.ColID), Char: newLetter.Char,
 			},
 			WordPath: apiPath,
-		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gameID})
+		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gid})
 		require.NoError(t, err)
 
 		okResp, ok := res.(*baldaapi.MoveResponse)
