@@ -124,9 +124,7 @@ export function createGameState() {
     return {
       uid: p.uid,
       nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
-      // Use Math.max so that a transient 0 from the server never wipes a
-      // previously-known positive EXP value.
-      exp: Math.max(p.exp ?? 0, existing?.exp ?? 0),
+      exp: p.exp ?? existing?.exp ?? 0,
       expGained: p.exp_gained ?? 0,
       score: p.score,
       wordsCount: p.words_count ?? 0,
