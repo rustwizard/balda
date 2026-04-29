@@ -731,6 +731,9 @@ components:
           description: Player's total EXP at the time of the event
           type: integer
           format: int64
+        exp_gained:
+          description: EXP earned in this game (only present in game_over events)
+          type: integer
         score:
           description: Number of points scored in the current game
           type: integer

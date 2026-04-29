@@ -1044,6 +1044,8 @@ type PlayerGameState struct {
 	UID OptUUID `json:"uid"`
 	// Player's total EXP at the time of the event.
 	Exp OptInt64 `json:"exp"`
+	// EXP earned in this game (only present in game_over events).
+	ExpGained OptInt `json:"exp_gained"`
 	// Number of points scored in the current game.
 	Score OptInt `json:"score"`
 	// Number of words submitted by the player.
@@ -1060,6 +1062,11 @@ func (s *PlayerGameState) GetUID() OptUUID {
 // GetExp returns the value of Exp.
 func (s *PlayerGameState) GetExp() OptInt64 {
 	return s.Exp
+}
+
+// GetExpGained returns the value of ExpGained.
+func (s *PlayerGameState) GetExpGained() OptInt {
+	return s.ExpGained
 }
 
 // GetScore returns the value of Score.
@@ -1085,6 +1092,11 @@ func (s *PlayerGameState) SetUID(val OptUUID) {
 // SetExp sets the value of Exp.
 func (s *PlayerGameState) SetExp(val OptInt64) {
 	s.Exp = val
+}
+
+// SetExpGained sets the value of ExpGained.
+func (s *PlayerGameState) SetExpGained(val OptInt) {
+	s.ExpGained = val
 }
 
 // SetScore sets the value of Score.

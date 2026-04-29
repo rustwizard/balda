@@ -264,9 +264,15 @@ func (c *Coordinator) publishBoardFullGameOver() {
 	// source of truth by the time they see game_over.
 	c.dispatchGameResult(winnerUID, storage.FinishReasonBoardFull, scores)
 
+	isDraw := winnerUID == ""
 	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
-		players[i] = centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
+		isWinner := s.UID == winnerUID
+		players[i] = centrifugo.PlayerState{
+			UID: s.UID, Exp: s.Exp, Score: s.Score,
+			WordsCount: s.WordsCount, Words: s.Words,
+			ExpGained: storage.ExpGained(s.Score, isWinner, isDraw),
+		}
 	}
 
 	ev := centrifugo.EvGameOver{
@@ -291,9 +297,15 @@ func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 	// source of truth by the time they see game_over.
 	c.dispatchGameResult(winnerUID, storage.FinishReasonKick, scores)
 
+	isDraw := winnerUID == ""
 	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
-		players[i] = centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
+		isWinner := s.UID == winnerUID
+		players[i] = centrifugo.PlayerState{
+			UID: s.UID, Exp: s.Exp, Score: s.Score,
+			WordsCount: s.WordsCount, Words: s.Words,
+			ExpGained: storage.ExpGained(s.Score, isWinner, isDraw),
+		}
 	}
 
 	ev := centrifugo.EvGameOver{
