@@ -138,7 +138,9 @@ export function createGameState() {
     currentTurnUid = ev.current_turn_uid;
     moveNumber = ev.move_number;
     players = ev.players.map(mergePlayerState);
-    if (ev.status === 'finished') {
+    if (ev.status === 'in_progress') {
+      phase = 'playing';
+    } else if (ev.status === 'finished') {
       phase = 'finished';
     }
     selectedPath = [];
