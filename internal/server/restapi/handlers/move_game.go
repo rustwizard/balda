@@ -164,7 +164,7 @@ func buildGameState(rec *lobby.GameRecord, currentTurnUID string) centrifugo.EvG
 	scores := rec.Game.PlayerScores()
 	players := make([]centrifugo.PlayerState, 0, len(scores))
 	for _, s := range scores {
-		players = append(players, centrifugo.PlayerState{UID: s.UID, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words})
+		players = append(players, centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words})
 	}
 	if currentTurnUID == "" {
 		currentTurnUID = rec.Game.CurrentPlayerID()

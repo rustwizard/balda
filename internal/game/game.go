@@ -348,10 +348,12 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 	}
 
 	newLetterUsed := false
-	for _, l := range word {
+	for i, l := range word {
 		if l.RowID == newLetter.RowID && l.ColID == newLetter.ColID {
 			newLetterUsed = true
-			break
+			word[i].Char = newLetter.Char
+		} else if cell := g.board.Table[l.RowID][l.ColID]; cell != nil {
+			word[i].Char = cell.Char
 		}
 	}
 	if !newLetterUsed {

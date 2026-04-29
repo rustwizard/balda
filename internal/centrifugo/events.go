@@ -52,6 +52,7 @@ type PlayerState struct {
 	Score      int      `json:"score"`
 	WordsCount int      `json:"words_count"`
 	Words      []string `json:"words"`
+	ExpGained  int      `json:"exp_gained,omitempty"`
 }
 
 // EvGameState carries the full board snapshot sent after game_started and after each move.

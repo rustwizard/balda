@@ -2,8 +2,13 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -120,13 +125,11 @@ var serverCmd = &cobra.Command{
 
 		s := storage.New(pool, 10*time.Second)
 
+		var pendingResults sync.WaitGroup
+
 		lby := lobby.New(func(ctx context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
 			coord := gamecoord.New(gameID, players, cf)
-			coord.SetOnGameOver(func(r storage.GameResult) {
-				if err := s.SaveGameResult(context.Background(), r); err != nil {
-					slog.Error("save game result", slog.String("gameID", r.GameID), slog.Any("error", err))
-				}
-			})
+			coord.SetOnGameOver(makeOnGameOverCallback(s, &pendingResults))
 			g, err := game.NewGame(players, coord)
 			if err != nil {
 				return nil, err
@@ -160,9 +163,43 @@ var serverCmd = &cobra.Command{
 		mux.Handle("/", srv)
 
 		addr := fmt.Sprintf("%s:%d", cfg.ServerAddr, cfg.ServerPort)
-		slog.Info("starting server", slog.String("addr", addr))
-		if err := http.ListenAndServe(addr, mux); err != nil {
-			return fmt.Errorf("server serve: %v", err)
+		httpSrv := &http.Server{Addr: addr, Handler: mux}
+
+		go func() {
+			slog.Info("starting server", slog.String("addr", addr))
+			if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				slog.Error("server serve", slog.Any("error", err))
+			}
+		}()
+
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		<-quit
+
+		slog.Info("shutting down server")
+
+		// Cancel all running games so their goroutines exit cleanly.
+		lby.Shutdown()
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("server shutdown", slog.Any("error", err))
+		}
+
+		// Wait for any in-flight SaveGameResult calls to finish.
+		done := make(chan struct{})
+		go func() {
+			pendingResults.Wait()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			slog.Info("all pending game results saved")
+		case <-shutdownCtx.Done():
+			slog.Warn("shutdown timeout exceeded, some game results may be lost")
 		}
 
 		return nil
@@ -194,4 +231,41 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 func init() {
 	serverCmd.Flags().AddFlagSet(cfg.Flags("server"))
 	serverCmd.Flags().AddFlagSet(cfg.Session.Flags("redis"))
+}
+
+// gameResultSaver matches *storage.Storage so the callback can be unit-tested.
+type gameResultSaver interface {
+	SaveGameResult(ctx context.Context, r storage.GameResult) error
+}
+
+// makeOnGameOverCallback returns a callback that persists a game result with
+// retry and exponential backoff (100 ms, 200 ms). It accounts its work in
+// pending so the server can drain in-flight saves during graceful shutdown.
+func makeOnGameOverCallback(saver gameResultSaver, pending *sync.WaitGroup) func(storage.GameResult) {
+	return func(r storage.GameResult) {
+		pending.Add(1)
+		defer pending.Done()
+
+		var err error
+		for i := 0; i < 3; i++ {
+			if i > 0 {
+				time.Sleep(time.Duration(i) * 100 * time.Millisecond)
+			}
+			err = saver.SaveGameResult(context.Background(), r)
+			if err == nil {
+				break
+			}
+			slog.Warn("save game result failed, retrying",
+				slog.Int("attempt", i+1),
+				slog.String("gameID", r.GameID),
+				slog.Any("error", err),
+			)
+		}
+		if err != nil {
+			slog.Error("save game result failed after retries",
+				slog.String("gameID", r.GameID),
+				slog.Any("error", err),
+			)
+		}
+	}
 }

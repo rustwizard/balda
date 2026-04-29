@@ -170,7 +170,33 @@ func (c *Coordinator) publishEndProposalResult(accepted bool, remainingMs int64)
 	if accepted {
 		scores := c.g.PlayerScores()
 		winnerUID := findWinnerByScore(scores, "")
+
+		// Persist the result before notifying clients so the database is the
+		// source of truth by the time they see game_over.
 		c.dispatchGameResult(winnerUID, storage.FinishReasonAcceptEnd, scores)
+
+		// Send a uniform game_over event so clients can finish the game
+		// regardless of how it ended (kick, board_full, or accept_end).
+		isDraw := winnerUID == ""
+		players := make([]centrifugo.PlayerState, len(scores))
+		for i, s := range scores {
+			isWinner := s.UID == winnerUID
+			players[i] = centrifugo.PlayerState{
+				UID: s.UID, Exp: s.Exp, Score: s.Score,
+				WordsCount: s.WordsCount, Words: s.Words,
+				ExpGained: storage.ExpGained(s.Score, isWinner, isDraw),
+			}
+		}
+
+		gameOverEv := centrifugo.EvGameOver{
+			Type:      "game_over",
+			GameID:    c.gameID,
+			WinnerUID: winnerUID,
+			Players:   players,
+		}
+		if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), gameOverEv); err != nil {
+			slog.Error("gamecoord: publish game_over (accept_end)", slog.String("gameID", c.gameID), slog.Any("error", err))
+		}
 	}
 }
 
@@ -196,7 +222,7 @@ func (c *Coordinator) dispatchGameResult(winnerUID string, reason storage.Finish
 		FinishedAt:   time.Now(),
 		Players:      players,
 	}
-	go c.onGameOver(result)
+	c.onGameOver(result)
 }
 
 func (c *Coordinator) publishTurnChange(playerID, reason string) {
@@ -258,12 +284,21 @@ func (c *Coordinator) publishSkipWarn(playerID string, skipsUsed, skipsLeft int)
 
 func (c *Coordinator) publishBoardFullGameOver() {
 	scores := c.g.PlayerScores()
-
 	winnerUID := findWinnerByScore(scores, "")
 
+	// Persist the result before notifying clients so the database is the
+	// source of truth by the time they see game_over.
+	c.dispatchGameResult(winnerUID, storage.FinishReasonBoardFull, scores)
+
+	isDraw := winnerUID == ""
 	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
-		players[i] = centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
+		isWinner := s.UID == winnerUID
+		players[i] = centrifugo.PlayerState{
+			UID: s.UID, Exp: s.Exp, Score: s.Score,
+			WordsCount: s.WordsCount, Words: s.Words,
+			ExpGained: storage.ExpGained(s.Score, isWinner, isDraw),
+		}
 	}
 
 	ev := centrifugo.EvGameOver{
@@ -278,18 +313,25 @@ func (c *Coordinator) publishBoardFullGameOver() {
 	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
 		slog.Error("gamecoord: publish game_over (board full)", slog.String("gameID", c.gameID), slog.Any("error", err))
 	}
-
-	c.dispatchGameResult(winnerUID, storage.FinishReasonBoardFull, scores)
 }
 
 func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 	scores := c.g.PlayerScores()
-
 	winnerUID := findWinnerByScore(scores, kickedPlayerID)
 
+	// Persist the result before notifying clients so the database is the
+	// source of truth by the time they see game_over.
+	c.dispatchGameResult(winnerUID, storage.FinishReasonKick, scores)
+
+	isDraw := winnerUID == ""
 	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
-		players[i] = centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
+		isWinner := s.UID == winnerUID
+		players[i] = centrifugo.PlayerState{
+			UID: s.UID, Exp: s.Exp, Score: s.Score,
+			WordsCount: s.WordsCount, Words: s.Words,
+			ExpGained: storage.ExpGained(s.Score, isWinner, isDraw),
+		}
 	}
 
 	ev := centrifugo.EvGameOver{
@@ -304,6 +346,4 @@ func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
 		slog.Error("gamecoord: publish game_over", slog.String("gameID", c.gameID), slog.Any("error", err))
 	}
-
-	c.dispatchGameResult(winnerUID, storage.FinishReasonKick, scores)
 }

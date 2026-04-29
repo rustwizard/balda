@@ -40,6 +40,33 @@
     showAlphabet = false;
   }
 
+  async function handleProposeEnd() {
+    if (!gameState.game) return;
+    try {
+      await api.proposeEnd(gameState.game.id, gameState.apiKey, gameState.sessionId);
+    } catch (err: any) {
+      gameState.showNotif(err?.message || 'Не удалось предложить ничью');
+    }
+  }
+
+  async function handleAcceptEnd() {
+    if (!gameState.game) return;
+    try {
+      await api.acceptEnd(gameState.game.id, gameState.apiKey, gameState.sessionId);
+    } catch (err: any) {
+      gameState.showNotif(err?.message || 'Не удалось принять предложение');
+    }
+  }
+
+  async function handleRejectEnd() {
+    if (!gameState.game) return;
+    try {
+      await api.rejectEnd(gameState.game.id, gameState.apiKey, gameState.sessionId);
+    } catch (err: any) {
+      gameState.showNotif(err?.message || 'Не удалось отклонить предложение');
+    }
+  }
+
   async function handleSkip() {
     if (!gameState.isMyTurn || gameState.moveLoading || !gameState.game) return;
     gameState.setMoveLoading(true);
@@ -124,6 +151,7 @@
         name={p.nickname}
         score={p.score}
         exp={p.exp}
+        expGained={p.expGained}
         wordsCount={p.wordsCount}
         words={p.words}
         consecutiveSkips={p.consecutiveSkips}
@@ -178,6 +206,33 @@
     </div>
   {/if}
 
+  <!-- End proposal banner -->
+  {#if gameState.endProposalPending}
+    {#if gameState.endProposalByMe}
+      <div class="rounded-2xl bg-stone-100 px-4 py-3 text-center text-sm text-stone-600">
+        Ожидание ответа соперника…
+      </div>
+    {:else}
+      <div class="rounded-2xl bg-green-50 p-4 ring-1 ring-green-300">
+        <div class="mb-3 text-center font-semibold text-green-800">Соперник предлагает закончить игру</div>
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            onclick={handleRejectEnd}
+            class="rounded-xl bg-stone-200 px-4 py-2 font-bold text-stone-700 transition hover:bg-stone-300"
+          >
+            Отклонить
+          </button>
+          <button
+            onclick={handleAcceptEnd}
+            class="rounded-xl bg-green-600 px-4 py-2 font-bold text-white transition hover:bg-green-700"
+          >
+            Принять
+          </button>
+        </div>
+      </div>
+    {/if}
+  {/if}
+
   <!-- Actions -->
   <div class="grid grid-cols-2 gap-3">
     <button
@@ -197,6 +252,16 @@
       Отправить
     </button>
   </div>
+
+  <!-- Propose end button: visible only when it's my turn and no proposal pending -->
+  {#if gameState.phase === 'playing' && gameState.isMyTurn && !gameState.endProposalPending}
+    <button
+      onclick={handleProposeEnd}
+      class="w-full rounded-xl bg-stone-100 px-4 py-2 text-sm font-semibold text-stone-600 ring-1 ring-stone-300 transition hover:bg-stone-200"
+    >
+      Предложить закончить игру
+    </button>
+  {/if}
 
   {#if gameState.phase === 'finished'}
     <div class="rounded-2xl bg-yellow-50 p-4 text-center">

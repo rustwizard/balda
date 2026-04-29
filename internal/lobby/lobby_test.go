@@ -157,6 +157,29 @@ func TestLobby_GameEndsAutomatically(t *testing.T) {
 	assert.ErrorIs(t, err, lobby.ErrGameNotFound)
 }
 
+// TestLobby_Shutdown verifies that Shutdown cancels all running games.
+func TestLobby_Shutdown(t *testing.T) {
+	l := newLobby()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	rec, err := l.StartGame(ctx, makePlayers("p1", "p2"), &notifier.Noop{})
+	require.NoError(t, err)
+
+	// Give the game goroutine time to start.
+	time.Sleep(50 * time.Millisecond)
+
+	l.Shutdown()
+
+	select {
+	case <-rec.Game.Done():
+		// OK
+	case <-time.After(2 * time.Second):
+		t.Fatal("game did not shut down after Lobby.Shutdown")
+	}
+}
+
 // TestLobby_ConcurrentAccess checks for data races under concurrent load.
 func TestLobby_ConcurrentAccess(t *testing.T) {
 	l := newLobby()

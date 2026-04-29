@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/pflag"
 )
 
-const defaultExpiration = 30 * time.Second
+const defaultExpiration = 5 * time.Minute
 
 type Config struct {
 	Addr       string

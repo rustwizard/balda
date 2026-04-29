@@ -651,6 +651,11 @@ components:
           type: string
 
     BoardCell:
+      description: >
+        A cell position on the 5×5 board, used in word_path.
+        The character at each cell is resolved server-side from the current board state;
+        clients do not need to send it. The new letter being placed is provided separately
+        in new_letter.char.
       type: object
       required:
         - row
@@ -731,6 +736,9 @@ components:
           description: Player's total EXP at the time of the event
           type: integer
           format: int64
+        exp_gained:
+          description: EXP earned in this game (only present in game_over events)
+          type: integer
         score:
           description: Number of points scored in the current game
           type: integer

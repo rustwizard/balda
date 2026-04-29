@@ -23,7 +23,22 @@
         console.error('ping failed', err);
       });
     }, 5000);
-    return () => clearInterval(interval);
+
+    // Browsers throttle setInterval for background tabs. Send an immediate
+    // ping when the user returns so the session does not expire.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        ping(gameState.apiKey, gameState.sessionId, ++pingCounter).catch((err) => {
+          console.error('ping failed', err);
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   });
 
   let connected = $state(false);
@@ -60,6 +75,12 @@
         break;
       case 'turn_change':
         gameState.applyTurnChange(ev);
+        break;
+      case 'end_proposal':
+        gameState.applyEndProposal(ev);
+        break;
+      case 'end_proposal_result':
+        gameState.applyEndProposalResult(ev);
         break;
       case 'skip_warn':
         gameState.applySkipWarn(ev);

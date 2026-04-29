@@ -286,6 +286,20 @@ func (l *Lobby) onDone(id string) {
 	l.mu.Unlock()
 }
 
+// Shutdown cancels all running games. It is safe to call concurrently
+// and is used during server graceful shutdown.
+func (l *Lobby) Shutdown() {
+	l.mu.RLock()
+	recs := make([]*GameRecord, 0, len(l.games))
+	for _, rec := range l.games {
+		recs = append(recs, rec)
+	}
+	l.mu.RUnlock()
+	for _, rec := range recs {
+		rec.cancel()
+	}
+}
+
 // removeRecordLocked removes rec from both maps. Caller must hold l.mu (write).
 func (l *Lobby) removeRecordLocked(rec *GameRecord) {
 	delete(l.games, rec.ID)
