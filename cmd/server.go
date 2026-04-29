@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -120,11 +121,34 @@ var serverCmd = &cobra.Command{
 
 		s := storage.New(pool, 10*time.Second)
 
+		var pendingResults sync.WaitGroup
+
 		lby := lobby.New(func(ctx context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
 			coord := gamecoord.New(gameID, players, cf)
 			coord.SetOnGameOver(func(r storage.GameResult) {
-				if err := s.SaveGameResult(context.Background(), r); err != nil {
-					slog.Error("save game result", slog.String("gameID", r.GameID), slog.Any("error", err))
+				pendingResults.Add(1)
+				defer pendingResults.Done()
+
+				var err error
+				for i := 0; i < 3; i++ {
+					if i > 0 {
+						time.Sleep(time.Duration(i) * 100 * time.Millisecond)
+					}
+					err = s.SaveGameResult(context.Background(), r)
+					if err == nil {
+						break
+					}
+					slog.Warn("save game result failed, retrying",
+						slog.Int("attempt", i+1),
+						slog.String("gameID", r.GameID),
+						slog.Any("error", err),
+					)
+				}
+				if err != nil {
+					slog.Error("save game result failed after retries",
+						slog.String("gameID", r.GameID),
+						slog.Any("error", err),
+					)
 				}
 			})
 			g, err := game.NewGame(players, coord)
