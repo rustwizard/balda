@@ -167,6 +167,9 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | POST | `/games/{id}/join` | Присоединиться к игре в ожидании |
 | POST | `/games/{id}/move` | Отправить ход (поставить букву + слово) |
 | POST | `/games/{id}/skip` | Пропустить текущий ход |
+| POST | `/games/{id}/propose-end` | Предложить завершить игру досрочно |
+| POST | `/games/{id}/accept-end` | Принять предложение соперника завершить игру |
+| POST | `/games/{id}/reject-end` | Отклонить предложение соперника завершить игру |
 
 ### POST /signup
 
@@ -203,7 +206,13 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 ```json
 // Ответ
 {
-  "game": { "id": "…", "player_ids": ["<creator>"], "status": "waiting", "started_at": 1712600000000 },
+  "game": {
+    "id": "…",
+    "player_ids": ["<creator>"],
+    "players": [{ "uid": "<creator>", "exp": 42 }],
+    "status": "waiting",
+    "started_at": 1712600000000
+  },
   "game_token": "…"
 }
 ```
@@ -215,7 +224,13 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 ```json
 // Ответ
 {
-  "game": { "id": "…", "player_ids": ["<creator>", "<joiner>"], "status": "in_progress", "started_at": 1712600000000 },
+  "game": {
+    "id": "…",
+    "player_ids": ["<creator>", "<joiner>"],
+    "players": [{ "uid": "<creator>", "exp": 42 }, { "uid": "<joiner>", "exp": 17 }],
+    "status": "in_progress",
+    "started_at": 1712600000000
+  },
   "game_token": "…",
   "board": [["","","","",""],["","","","",""],["с","л","о","в","о"],["","","","",""],["","","","",""]],
   "current_turn_uid": "<uid-создателя>"
@@ -262,10 +277,25 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | Канал | Тип события | Когда |
 |-------|-------------|-------|
 | `lobby` | `game_created` | После `POST /games` |
+| `lobby` | `lobby_update` | При каждом изменении списка активных игр |
 | `lobby` + `game:{id}` | `game_started` | После `POST /games/{id}/join` |
 | `game:{id}` | `game_state` | При начале хода и после каждого принятого хода |
 | `game:{id}` | `turn_change` | При каждой смене хода (любая причина) |
+| `game:{id}` | `skip_warn` | При каждом пропуске хода игроком |
+| `game:{id}` | `end_proposal` | Когда игрок предлагает завершить игру досрочно |
+| `game:{id}` | `end_proposal_result` | Когда соперник принимает или отклоняет предложение |
 | `game:{id}` | `game_over` | Когда игра завершается |
+
+### `lobby_update`
+
+Отправляется в канал `lobby` при каждом изменении списка активных игр. Клиент заменяет свой локальный список полученным массивом `games`.
+
+```json
+{ "type": "lobby_update", "games": [
+  { "id": "…", "player_ids": ["…"], "players": [{"uid":"…","exp":42}],
+    "status": "waiting", "started_at": 1712600000000 }
+]}
+```
 
 ### `game_state`
 
@@ -273,8 +303,8 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 
 ```json
 { "type": "game_state", "game_id": "…", "board": [["","…"]],
-  "current_turn_uid": "…", "players": [{"uid":"…","score":0,"words_count":0}],
-  "status": "in_progress", "move_number": 0 }
+  "current_turn_uid": "…", "move_number": 0, "status": "in_progress",
+  "players": [{"uid":"…","exp":42,"score":0,"words_count":0,"words":[]}] }
 ```
 
 ### `turn_change`
@@ -288,14 +318,39 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 
 Возможные значения `reason`: `game_start`, `move`, `skip`, `timeout`.
 
+### `skip_warn`
+
+Отправляется каждый раз, когда игрок пропускает ход. `skips_left` достигает 0 на последнем пропуске; сразу после этого следует `game_over`.
+
+```json
+{ "type": "skip_warn", "game_id": "…", "player_uid": "…",
+  "skips_used": 1, "skips_left": 2 }
+```
+
+### `end_proposal`
+
+Отправляется, когда игрок предлагает завершить игру досрочно.
+
+```json
+{ "type": "end_proposal", "game_id": "…", "proposer_uid": "…" }
+```
+
+### `end_proposal_result`
+
+Отправляется, когда соперник отвечает на предложение. При отклонении `remaining_ms` содержит оставшееся время хода для восстановления таймера.
+
+```json
+{ "type": "end_proposal_result", "game_id": "…", "accepted": false, "remaining_ms": 34200 }
+```
+
 ### `game_over`
 
 ```json
 { "type": "game_over", "game_id": "…", "winner_uid": "…",
-  "players": [{"uid":"…","score":5,"words_count":2}] }
+  "players": [{"uid":"…","exp":55,"score":5,"words_count":2,"exp_gained":13}] }
 ```
 
-Отправляется при завершении игры — либо потому что поле заполнено, либо игрок был исключён. `winner_uid` отсутствует при ничьей.
+Отправляется при завершении игры — поле заполнено, игрок исключён или оба согласились завершить досрочно. `winner_uid` отсутствует при ничьей. `exp_gained` — опыт, заработанный в этой игре.
 
 ---
 
@@ -318,8 +373,15 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 - Каждому игроку отводится **60 секунд** на ход.
 - По истечении времени ход автоматически переходит к другому игроку; никаких действий от клиентов не требуется.
 - После **3 последовательных таймаутов** игрок исключается и игра завершается.
-- Игрок может добровольно пропустить ход через `POST /games/{id}/skip`.
+- Игрок может добровольно пропустить ход через `POST /games/{id}/skip`. После **3 подряд пропусков** игра завершается.
 - Игра также завершается автоматически, когда поле заполнено (все 25 клеток заняты).
+
+### Предложение завершить игру досрочно
+
+- Любой игрок может предложить завершить игру через `POST /games/{id}/propose-end`.
+- Соперник может принять (`POST /games/{id}/accept-end`) или отклонить (`POST /games/{id}/reject-end`) предложение.
+- При принятии игра немедленно завершается с текущими счётами.
+- При отклонении ход возобновляется с оставшимся временем на момент предложения.
 
 ### Проверка слов
 
@@ -338,17 +400,21 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 Каждая игра запускает цикл FSM (`Game.Run`), управляемый значениями `TurnEvent`, отправляемыми по внутреннему каналу.
 
 ```
-┌─────────────────────┬────────────────────┬─────────────────────┐
-│ Состояние           │ Событие            │ Следующее состояние  │
-├─────────────────────┼────────────────────┼─────────────────────┤
-│ WaitingForMove      │ MoveSubmitted      │ WaitingForMove      │
-│ WaitingForMove      │ TurnSkipped        │ WaitingForMove      │
-│ WaitingForMove      │ TurnTimeout        │ PlayerTimedOut      │
-│ WaitingForMove      │ BoardFull          │ GameOver            │
-├─────────────────────┼────────────────────┼─────────────────────┤
-│ PlayerTimedOut      │ AckTimeout         │ WaitingForMove      │
-│ PlayerTimedOut      │ Kick               │ GameOver            │
-└─────────────────────┴────────────────────┴─────────────────────┘
+┌──────────────────────────┬─────────────────────┬──────────────────────────┐
+│ Состояние                │ Событие             │ Следующее состояние      │
+├──────────────────────────┼─────────────────────┼──────────────────────────┤
+│ WaitingForMove           │ MoveSubmitted       │ WaitingForMove           │
+│ WaitingForMove           │ TurnSkipped         │ WaitingForMove           │
+│ WaitingForMove           │ TurnTimeout         │ PlayerTimedOut           │
+│ WaitingForMove           │ BoardFull           │ GameOver                 │
+│ WaitingForMove           │ ProposeEnd          │ WaitingForEndProposal    │
+├──────────────────────────┼─────────────────────┼──────────────────────────┤
+│ WaitingForEndProposal    │ EndProposalAccepted │ GameOver                 │
+│ WaitingForEndProposal    │ EndProposalRejected │ WaitingForMove           │
+├──────────────────────────┼─────────────────────┼──────────────────────────┤
+│ PlayerTimedOut           │ AckTimeout          │ WaitingForMove           │
+│ PlayerTimedOut           │ Kick                │ GameOver                 │
+└──────────────────────────┴─────────────────────┴──────────────────────────┘
 ```
 
 - 60-секундный таймер автоматически вызывает `TurnTimeout`. Координатор (`internal/gamecoord/`) подтверждает его через `AckTimeout`, переходя к следующему игроку.
@@ -373,17 +439,38 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | created_at | timestamp | |
 | updated_at | timestamp | |
 
-**user_state**
+**player_state**
 
 | Столбец | Тип | Примечания |
 |---------|-----|------------|
 | user_id | bigint | PK, FK → users |
+| player_id | uuid | уникальный идентификатор игрока |
 | nickname | text | автогенерируемый |
 | exp | bigint | очки опыта |
 | flags | bigint | флаги функций |
 | lives | bigint | |
 | created_at | timestamp | |
 | updated_at | timestamp | |
+
+**game_results**
+
+| Столбец | Тип | Примечания |
+|---------|-----|------------|
+| id | bigserial | PK |
+| game_id | uuid | уникальный |
+| winner_id | uuid | null при ничьей |
+| finish_reason | text | `board_full`, `kick`, `accept_end` |
+| finished_at | timestamptz | |
+
+**game_result_players**
+
+| Столбец | Тип | Примечания |
+|---------|-----|------------|
+| game_result_id | bigint | FK → game_results |
+| player_id | uuid | |
+| score | int | |
+| words_count | int | |
+| exp_gained | int | |
 
 ---
 
@@ -405,7 +492,7 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | `--redis.username` | | Имя пользователя Redis |
 | `--redis.password` | | Пароль Redis |
 | `--redis.db_num` | `0` | Номер базы данных Redis |
-| `--redis.expiration` | `30s` | Длительность сессии |
+| `--redis.expiration` | `5m` | Длительность сессии |
 | `--centrifugo.api_url` | | URL HTTP API Centrifugo |
 | `--centrifugo.api_key` | | API-ключ Centrifugo |
 | `--centrifugo.token_hmac_secret_key` | | Секрет для подписи токенов Centrifugo |
