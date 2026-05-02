@@ -143,6 +143,9 @@ func (s *AuthResponse) SetLobbyToken(val OptString) {
 
 func (*AuthResponse) authRes() {}
 
+// A cell position on the 5×5 board, used in word_path. The character at each cell is resolved
+// server-side from the current board state; clients do not need to send it. The new letter being
+// placed is provided separately in new_letter.char.
 // Ref: #/components/schemas/BoardCell
 type BoardCell struct {
 	Row int `json:"row"`
