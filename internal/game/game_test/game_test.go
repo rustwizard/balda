@@ -60,13 +60,13 @@ func TestCheckWordExistence_WordInDictionary(t *testing.T) {
 	word := game.Dict.RandomFiveLetterWord()
 	g, err := game.NewGame(nil, nil)
 	require.NoError(t, err)
-	assert.True(t, g.СheckWordExistence(word))
+	assert.True(t, g.CheckWordExistence(word))
 }
 
 func TestCheckWordExistence_WordNotInDictionary(t *testing.T) {
 	g, err := game.NewGame(nil, nil)
 	require.NoError(t, err)
-	assert.False(t, g.СheckWordExistence("zzzzzznotaword"))
+	assert.False(t, g.CheckWordExistence("zzzzzznotaword"))
 }
 
 func TestCheckWordExistence_YoMatchesE(t *testing.T) {
@@ -78,8 +78,8 @@ func TestCheckWordExistence_YoMatchesE(t *testing.T) {
 	game.Dict.Definition["елка"] = "test"
 	t.Cleanup(func() { delete(game.Dict.Definition, "елка") })
 
-	assert.True(t, g.СheckWordExistence("ёлка"), "ё should match е in dictionary")
-	assert.True(t, g.СheckWordExistence("елка"), "е should match е in dictionary")
+	assert.True(t, g.CheckWordExistence("ёлка"), "ё should match е in dictionary")
+	assert.True(t, g.CheckWordExistence("елка"), "е should match е in dictionary")
 }
 
 // ─── Game.AddWordToCurrentPlayer ────────────────────────────────────────────

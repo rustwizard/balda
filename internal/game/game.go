@@ -78,7 +78,7 @@ type Game struct {
 	pausedTurnRemaining time.Duration // remaining turn time when paused for end proposal
 }
 
-func (g *Game) СheckWordExistence(word string) bool {
+func (g *Game) CheckWordExistence(word string) bool {
 	if _, ok := Dict.Definition[normalizeWord(word)]; !ok {
 		return false
 	}
@@ -372,7 +372,7 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 		g.mu.Unlock()
 		return ErrWordIsInitialWord
 	}
-	if !g.СheckWordExistence(wordStr) {
+	if !g.CheckWordExistence(wordStr) {
 		g.mu.Unlock()
 		return ErrWordNotInDictionary
 	}
