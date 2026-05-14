@@ -365,6 +365,10 @@ type JoinGameConflict ErrorResponse
 
 func (*JoinGameConflict) joinGameRes() {}
 
+type JoinGameInternalServerError ErrorResponse
+
+func (*JoinGameInternalServerError) joinGameRes() {}
+
 type JoinGameNotFound ErrorResponse
 
 func (*JoinGameNotFound) joinGameRes() {}
@@ -480,6 +484,10 @@ func (*MoveGameBadRequest) moveGameRes() {}
 type MoveGameConflict ErrorResponse
 
 func (*MoveGameConflict) moveGameRes() {}
+
+type MoveGameInternalServerError ErrorResponse
+
+func (*MoveGameInternalServerError) moveGameRes() {}
 
 type MoveGameNotFound ErrorResponse
 
