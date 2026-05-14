@@ -57,9 +57,10 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 			}, nil
 		default:
 			slog.Error("join_game: join", slog.Any("error", err))
-			return &baldaapi.JoinGameConflict{
+			return &baldaapi.JoinGameInternalServerError{
 				Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
 				Message: baldaapi.NewOptString("failed to join game"),
+				Type:    baldaapi.NewOptString("InternalServerError"),
 			}, nil
 		}
 	}

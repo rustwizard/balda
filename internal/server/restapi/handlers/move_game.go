@@ -77,10 +77,10 @@ func (h *Handlers) MoveGame(ctx context.Context, req *baldaapi.MoveRequest, para
 			}, nil
 		default:
 			slog.Error("move_game: submit move", slog.Any("error", err))
-			return &baldaapi.MoveGameBadRequest{
+			return &baldaapi.MoveGameInternalServerError{
 				Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
 				Message: baldaapi.NewOptString("failed to submit move"),
-				Type:    baldaapi.NewOptString("InternalError"),
+				Type:    baldaapi.NewOptString("InternalServerError"),
 			}, nil
 		}
 	}
