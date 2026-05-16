@@ -69,10 +69,7 @@ func (lt *LettersTable) AsStrings() [5][5]string {
 
 func (lt *LettersTable) isPlaceForLetterTaken(l *Letter) bool {
 	char := lt.Table[l.RowID][l.ColID]
-	if char != nil {
-		return true
-	}
-	return false
+	return char != nil
 }
 
 // IsFull reports whether every cell on the 5x5 board is occupied.
