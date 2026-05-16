@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -31,7 +32,7 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 	}
 
 	sid, err := h.sess.Get(u.UID)
-	if err == session.ErrNotFound {
+	if errors.Is(err, session.ErrNotFound) {
 		sidStr, err := h.sess.Create(u.UID)
 		if err != nil {
 			slog.Error("auth: create sid", slog.Any("error", err))

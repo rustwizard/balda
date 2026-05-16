@@ -96,7 +96,7 @@ var serverCmd = &cobra.Command{
 		dbVersion, err := migrations.Migrate(10 * time.Second)
 		if err != nil {
 			slog.Error("failed to migrate database", slog.Any("error", err))
-			return fmt.Errorf("failed to migrate database: %v", err)
+			return fmt.Errorf("failed to migrate database: %w", err)
 		}
 
 		slog.Info("database migration success", slog.Int("db_version", dbVersion))
@@ -107,7 +107,7 @@ var serverCmd = &cobra.Command{
 		)
 		pool, err := pgxpool.New(cmd.Context(), connStr)
 		if err != nil {
-			return fmt.Errorf("connect to pg: %v", err)
+			return fmt.Errorf("connect to pg: %w", err)
 		}
 		defer pool.Close()
 
@@ -148,7 +148,7 @@ var serverCmd = &cobra.Command{
 
 		srv, err := baldaapi.NewServer(h, h, baldaapi.WithPathPrefix("/balda/api/v1"))
 		if err != nil {
-			return fmt.Errorf("create ogen server: %v", err)
+			return fmt.Errorf("create ogen server: %w", err)
 		}
 
 		mux := http.NewServeMux()
@@ -163,7 +163,7 @@ var serverCmd = &cobra.Command{
 		mux.Handle("/", srv)
 
 		addr := fmt.Sprintf("%s:%d", cfg.ServerAddr, cfg.ServerPort)
-		httpSrv := &http.Server{Addr: addr, Handler: mux}
+		httpSrv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
 		go func() {
 			slog.Info("starting server", slog.String("addr", addr))
