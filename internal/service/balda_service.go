@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -24,7 +25,7 @@ func New(lby *lobby.Lobby, mm *matchmaking.Queue, s *storage.Balda, n game.Notif
 
 func (s *Balda) GameSummary(playerID string) *lobby.GameSummary {
 	gs, err := s.lby.FindByPlayer(playerID)
-	if err == lobby.ErrGameNotFound {
+	if errors.Is(err, lobby.ErrGameNotFound) {
 		return nil
 	}
 	return &gs
