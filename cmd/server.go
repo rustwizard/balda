@@ -78,12 +78,12 @@ type CentrifugoConfig struct {
 }
 
 type Config struct {
-	ServerAddr  string
-	ServerPort  int
-	Pg          PgConfig
-	Session     session.Config
-	XAPIToken   string
-	Centrifugo  CentrifugoConfig
+	ServerAddr string
+	ServerPort int
+	Pg         PgConfig
+	Session    session.Config
+	XAPIToken  string
+	Centrifugo CentrifugoConfig
 }
 
 // serverCmd represents the server command

@@ -1,10 +1,11 @@
 package game
 
 import (
+	"testing"
+
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestNewLettersTable(t *testing.T) {

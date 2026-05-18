@@ -70,7 +70,7 @@ type EvGameState struct {
 // It is a lightweight alternative to a full game_state snapshot: the board has
 // not changed, only the active player and the timer need to be updated.
 type EvTurnChange struct {
-	Type           string `json:"type"`    // always "turn_change"
+	Type           string `json:"type"` // always "turn_change"
 	GameID         string `json:"game_id"`
 	CurrentTurnUID string `json:"current_turn_uid"`
 	Reason         string `json:"reason"` // "timeout"
@@ -79,7 +79,7 @@ type EvTurnChange struct {
 // EvSkipWarn is published each time the current player skips a turn.
 // SkipsLeft reaches 0 on the final skip; game_over follows immediately after.
 type EvSkipWarn struct {
-	Type      string `json:"type"`       // "skip_warn"
+	Type      string `json:"type"` // "skip_warn"
 	GameID    string `json:"game_id"`
 	PlayerUID string `json:"player_uid"` // who skipped
 	SkipsUsed int    `json:"skips_used"`

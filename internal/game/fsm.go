@@ -14,12 +14,12 @@ const (
 	EventMoveSubmitted TurnEvent = iota
 	EventTurnSkipped
 	EventTurnTimeout
-	EventAckTimeout    // player (or coordinator) acks the timeout; game continues
-	EventKick          // explicit kick decision; game ends
-	EventBoardFull     // board has no empty cells; game ends
-	EventEndProposed   // current player proposes to end the game
-	EventEndAccepted   // opponent accepts the end proposal
-	EventEndRejected   // opponent rejects the end proposal; timer resumes
+	EventAckTimeout  // player (or coordinator) acks the timeout; game continues
+	EventKick        // explicit kick decision; game ends
+	EventBoardFull   // board has no empty cells; game ends
+	EventEndProposed // current player proposes to end the game
+	EventEndAccepted // opponent accepts the end proposal
+	EventEndRejected // opponent rejects the end proposal; timer resumes
 )
 
 /*

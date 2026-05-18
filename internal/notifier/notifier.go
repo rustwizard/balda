@@ -96,9 +96,9 @@ func (n *GameNotifier) NotifyTurnStart(playerID string) {
 	n.sender.Send(playerID, Event{Type: EventTurnStart})
 }
 
-func (n *GameNotifier) NotifyEndProposed(_ string)           {}
-func (n *GameNotifier) NotifyEndAccepted()                   {}
-func (n *GameNotifier) NotifyEndRejected(_ time.Duration)    {}
+func (n *GameNotifier) NotifyEndProposed(_ string)        {}
+func (n *GameNotifier) NotifyEndAccepted()                {}
+func (n *GameNotifier) NotifyEndRejected(_ time.Duration) {}
 
 // Noop is a no-op implementation of game.Notifier.
 type Noop struct{}

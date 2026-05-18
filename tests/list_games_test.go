@@ -9,8 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rustwizard/balda/internal/game"
-	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/notifier"
+	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

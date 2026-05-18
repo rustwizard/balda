@@ -13,14 +13,14 @@ import (
 
 // mockNotifier captures all notifications for assertion in tests.
 type mockNotifier struct {
-	mu            sync.Mutex
-	timeouts      []timeoutCall
-	kicks         []string
-	turnStarts    []string
-	boardFulls    int
-	endProposals  []string
-	endAccepteds  int
-	endRejecteds  []time.Duration
+	mu           sync.Mutex
+	timeouts     []timeoutCall
+	kicks        []string
+	turnStarts   []string
+	boardFulls   int
+	endProposals []string
+	endAccepteds int
+	endRejecteds []time.Duration
 }
 
 type timeoutCall struct {

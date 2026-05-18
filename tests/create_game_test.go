@@ -127,9 +127,9 @@ func TestCreateGameHTTP(t *testing.T) {
 
 		var body struct {
 			Game struct {
-				ID        string `json:"id"`
-				Status    string `json:"status"`
-				Players   []struct {
+				ID      string `json:"id"`
+				Status  string `json:"status"`
+				Players []struct {
 					UID string `json:"uid"`
 					Exp int64  `json:"exp"`
 				} `json:"players"`

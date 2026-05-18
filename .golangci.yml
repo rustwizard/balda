@@ -104,7 +104,6 @@ linters:
 
 formatters:
   enable:
-    - gofmt
     - goimports
 
   settings:

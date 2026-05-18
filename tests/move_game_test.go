@@ -246,7 +246,9 @@ func TestMoveGameHTTP(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	var authData struct {
-		Player struct{ Sid string `json:"sid"` } `json:"player"`
+		Player struct {
+			Sid string `json:"sid"`
+		} `json:"player"`
 	}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&authData))
 	creatorSid := authData.Player.Sid
@@ -262,7 +264,9 @@ func TestMoveGameHTTP(t *testing.T) {
 	defer createResp.Body.Close()
 	require.Equal(t, http.StatusOK, createResp.StatusCode)
 	var createBody struct {
-		Game struct{ ID string `json:"id"` } `json:"game"`
+		Game struct {
+			ID string `json:"id"`
+		} `json:"game"`
 	}
 	require.NoError(t, json.NewDecoder(createResp.Body).Decode(&createBody))
 	gameID := createBody.Game.ID
@@ -341,7 +345,9 @@ func TestSkipGameHTTP(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	var authData struct {
-		Player struct{ Sid string `json:"sid"` } `json:"player"`
+		Player struct {
+			Sid string `json:"sid"`
+		} `json:"player"`
 	}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&authData))
 	creatorSid := authData.Player.Sid
@@ -356,7 +362,9 @@ func TestSkipGameHTTP(t *testing.T) {
 	defer createResp.Body.Close()
 	require.Equal(t, http.StatusOK, createResp.StatusCode)
 	var createBody struct {
-		Game struct{ ID string `json:"id"` } `json:"game"`
+		Game struct {
+			ID string `json:"id"`
+		} `json:"game"`
 	}
 	require.NoError(t, json.NewDecoder(createResp.Body).Decode(&createBody))
 	gameID := createBody.Game.ID

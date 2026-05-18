@@ -15,10 +15,10 @@ import (
 
 // Handlers implements baldaapi.Handler and baldaapi.SecurityHandler.
 type Handlers struct {
-	svc                     *service.Balda
-	sess                    *session.Service
-	xAPIToken               string
-	cf                      *centrifugo.Client
+	svc                       *service.Balda
+	sess                      *session.Service
+	xAPIToken                 string
+	cf                        *centrifugo.Client
 	centrifugoTokenHMACSecret string
 }
 
