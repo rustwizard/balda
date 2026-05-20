@@ -238,6 +238,59 @@ func TestAuthHandler(t *testing.T) {
 		require.True(t, isErr, "expected *ErrorResponse, got %T", res)
 		assert.Equal(t, http.StatusUnauthorized, errResp.Status.Value)
 	})
+
+	t.Run("no active_game when player has no game", func(t *testing.T) {
+		res, err := h.Auth(ctx, &baldaapi.AuthRequest{
+			Email:    "auth.user@example.org",
+			Password: "mypassword",
+		})
+		require.NoError(t, err)
+
+		resp, ok := res.(*baldaapi.AuthResponse)
+		require.True(t, ok)
+		assert.False(t, resp.ActiveGame.IsSet(), "expected active_game to be absent")
+	})
+
+	t.Run("active_game returned after joining an in_progress game", func(t *testing.T) {
+		// Sign up two players and start a game.
+		creatorRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
+			Firstname: "Reconnect", Lastname: "Creator", Email: "reconnect.creator@example.org", Password: "pass",
+		})
+		require.NoError(t, err)
+		creator := creatorRes.(*baldaapi.SignupResponse).User.Value
+
+		joinerRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
+			Firstname: "Reconnect", Lastname: "Joiner", Email: "reconnect.joiner@example.org", Password: "pass",
+		})
+		require.NoError(t, err)
+		joiner := joinerRes.(*baldaapi.SignupResponse).User.Value
+
+		createRes, err := h.CreateGame(ctx, baldaapi.CreateGameParams{XAPISession: creator.Sid.Value})
+		require.NoError(t, err)
+		gameID := createRes.(*baldaapi.CreateGameResponse).Game.Value.ID.Value
+
+		_, err = h.JoinGame(ctx, baldaapi.JoinGameParams{XAPISession: joiner.Sid.Value, ID: gameID})
+		require.NoError(t, err)
+
+		// Creator re-authenticates — should get active_game.
+		res, err := h.Auth(ctx, &baldaapi.AuthRequest{
+			Email:    "reconnect.creator@example.org",
+			Password: "pass",
+		})
+		require.NoError(t, err)
+
+		resp, ok := res.(*baldaapi.AuthResponse)
+		require.True(t, ok)
+		require.True(t, resp.ActiveGame.IsSet(), "expected active_game to be set")
+
+		ag := resp.ActiveGame.Value
+		assert.Equal(t, gameID, ag.GameID.Value)
+		assert.NotEmpty(t, ag.GameToken.Value)
+		assert.Len(t, ag.Board, 5)
+		assert.NotEmpty(t, ag.CurrentTurnUID.Value)
+		assert.Equal(t, baldaapi.GameStatusInProgress, ag.Status.Value)
+		assert.Len(t, ag.Players, 2)
+	})
 }
 
 func TestGetUsersStateUIDHandler(t *testing.T) {

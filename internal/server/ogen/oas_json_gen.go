@@ -128,6 +128,207 @@ func (s *AcceptEndGameUnauthorized) UnmarshalJSON(data []byte) error {
 }
 
 // Encode implements json.Marshaler.
+func (s *ActiveGame) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *ActiveGame) encodeFields(e *jx.Encoder) {
+	{
+		if s.GameID.Set {
+			e.FieldStart("game_id")
+			s.GameID.Encode(e)
+		}
+	}
+	{
+		if s.GameToken.Set {
+			e.FieldStart("game_token")
+			s.GameToken.Encode(e)
+		}
+	}
+	{
+		if s.Board != nil {
+			e.FieldStart("board")
+			e.ArrStart()
+			for _, elem := range s.Board {
+				e.ArrStart()
+				for _, elem := range elem {
+					e.Str(elem)
+				}
+				e.ArrEnd()
+			}
+			e.ArrEnd()
+		}
+	}
+	{
+		if s.CurrentTurnUID.Set {
+			e.FieldStart("current_turn_uid")
+			s.CurrentTurnUID.Encode(e)
+		}
+	}
+	{
+		if s.MoveNumber.Set {
+			e.FieldStart("move_number")
+			s.MoveNumber.Encode(e)
+		}
+	}
+	{
+		if s.Status.Set {
+			e.FieldStart("status")
+			s.Status.Encode(e)
+		}
+	}
+	{
+		if s.Players != nil {
+			e.FieldStart("players")
+			e.ArrStart()
+			for _, elem := range s.Players {
+				elem.Encode(e)
+			}
+			e.ArrEnd()
+		}
+	}
+}
+
+var jsonFieldsNameOfActiveGame = [7]string{
+	0: "game_id",
+	1: "game_token",
+	2: "board",
+	3: "current_turn_uid",
+	4: "move_number",
+	5: "status",
+	6: "players",
+}
+
+// Decode decodes ActiveGame from json.
+func (s *ActiveGame) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode ActiveGame to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "game_id":
+			if err := func() error {
+				s.GameID.Reset()
+				if err := s.GameID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"game_id\"")
+			}
+		case "game_token":
+			if err := func() error {
+				s.GameToken.Reset()
+				if err := s.GameToken.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"game_token\"")
+			}
+		case "board":
+			if err := func() error {
+				s.Board = make([][]string, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem []string
+					elem = make([]string, 0)
+					if err := d.Arr(func(d *jx.Decoder) error {
+						var elemElem string
+						v, err := d.Str()
+						elemElem = string(v)
+						if err != nil {
+							return err
+						}
+						elem = append(elem, elemElem)
+						return nil
+					}); err != nil {
+						return err
+					}
+					s.Board = append(s.Board, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"board\"")
+			}
+		case "current_turn_uid":
+			if err := func() error {
+				s.CurrentTurnUID.Reset()
+				if err := s.CurrentTurnUID.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"current_turn_uid\"")
+			}
+		case "move_number":
+			if err := func() error {
+				s.MoveNumber.Reset()
+				if err := s.MoveNumber.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"move_number\"")
+			}
+		case "status":
+			if err := func() error {
+				s.Status.Reset()
+				if err := s.Status.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"status\"")
+			}
+		case "players":
+			if err := func() error {
+				s.Players = make([]PlayerGameState, 0)
+				if err := d.Arr(func(d *jx.Decoder) error {
+					var elem PlayerGameState
+					if err := elem.Decode(d); err != nil {
+						return err
+					}
+					s.Players = append(s.Players, elem)
+					return nil
+				}); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"players\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode ActiveGame")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *ActiveGame) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *ActiveGame) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
 func (s *AuthRequest) Encode(e *jx.Encoder) {
 	e.ObjStart()
 	s.encodeFields(e)
@@ -267,12 +468,19 @@ func (s *AuthResponse) encodeFields(e *jx.Encoder) {
 			s.LobbyToken.Encode(e)
 		}
 	}
+	{
+		if s.ActiveGame.Set {
+			e.FieldStart("active_game")
+			s.ActiveGame.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfAuthResponse = [3]string{
+var jsonFieldsNameOfAuthResponse = [4]string{
 	0: "player",
 	1: "centrifugo_token",
 	2: "lobby_token",
+	3: "active_game",
 }
 
 // Decode decodes AuthResponse from json.
@@ -312,6 +520,16 @@ func (s *AuthResponse) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"lobby_token\"")
+			}
+		case "active_game":
+			if err := func() error {
+				s.ActiveGame.Reset()
+				if err := s.ActiveGame.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"active_game\"")
 			}
 		default:
 			return d.Skip()
@@ -1873,6 +2091,39 @@ func (s *MoveResponse) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *MoveResponse) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes ActiveGame as json.
+func (o OptActiveGame) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	o.Value.Encode(e)
+}
+
+// Decode decodes ActiveGame from json.
+func (o *OptActiveGame) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptActiveGame to nil")
+	}
+	o.Set = true
+	if err := o.Value.Decode(d); err != nil {
+		return err
+	}
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptActiveGame) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptActiveGame) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }
