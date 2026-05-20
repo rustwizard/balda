@@ -31,6 +31,19 @@ func (s *Balda) GameSummary(playerID string) *lobby.GameSummary {
 	return &gs
 }
 
+// ActiveGameRecord returns the full game record for the given player, or nil if not in a game.
+func (s *Balda) ActiveGameRecord(playerID string) *lobby.GameRecord {
+	gs, err := s.lby.FindByPlayer(playerID)
+	if err != nil {
+		return nil
+	}
+	rec, err := s.lby.Get(gs.ID)
+	if err != nil {
+		return nil
+	}
+	return rec
+}
+
 func (s *Balda) ListGames() []lobby.GameSummary {
 	return s.lby.List()
 }

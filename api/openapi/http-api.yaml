@@ -577,6 +577,39 @@ components:
         lobby_token:
           description: Centrifugo subscription JWT for the lobby channel
           type: string
+        active_game:
+          description: Present when the player is currently in an active game. Use this to reconnect after a disconnect.
+          $ref: "#/components/schemas/ActiveGame"
+
+    ActiveGame:
+      type: object
+      properties:
+        game_id:
+          description: ID of the active game
+          type: string
+          format: uuid
+        game_token:
+          description: Centrifugo subscription JWT for the game channel
+          type: string
+        board:
+          description: Current 5x5 board state
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        current_turn_uid:
+          description: ID of the player whose turn it is
+          type: string
+          format: uuid
+        move_number:
+          type: integer
+        status:
+          $ref: "#/components/schemas/GameStatus"
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerGameState"
 
     GameStatus:
       type: string

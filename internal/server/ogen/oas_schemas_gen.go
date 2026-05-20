@@ -74,6 +74,91 @@ type AcceptEndGameUnauthorized ErrorResponse
 
 func (*AcceptEndGameUnauthorized) acceptEndGameRes() {}
 
+// Ref: #/components/schemas/ActiveGame
+type ActiveGame struct {
+	// ID of the active game.
+	GameID OptUUID `json:"game_id"`
+	// Centrifugo subscription JWT for the game channel.
+	GameToken OptString `json:"game_token"`
+	// Current 5x5 board state.
+	Board [][]string `json:"board"`
+	// ID of the player whose turn it is.
+	CurrentTurnUID OptUUID           `json:"current_turn_uid"`
+	MoveNumber     OptInt            `json:"move_number"`
+	Status         OptGameStatus     `json:"status"`
+	Players        []PlayerGameState `json:"players"`
+}
+
+// GetGameID returns the value of GameID.
+func (s *ActiveGame) GetGameID() OptUUID {
+	return s.GameID
+}
+
+// GetGameToken returns the value of GameToken.
+func (s *ActiveGame) GetGameToken() OptString {
+	return s.GameToken
+}
+
+// GetBoard returns the value of Board.
+func (s *ActiveGame) GetBoard() [][]string {
+	return s.Board
+}
+
+// GetCurrentTurnUID returns the value of CurrentTurnUID.
+func (s *ActiveGame) GetCurrentTurnUID() OptUUID {
+	return s.CurrentTurnUID
+}
+
+// GetMoveNumber returns the value of MoveNumber.
+func (s *ActiveGame) GetMoveNumber() OptInt {
+	return s.MoveNumber
+}
+
+// GetStatus returns the value of Status.
+func (s *ActiveGame) GetStatus() OptGameStatus {
+	return s.Status
+}
+
+// GetPlayers returns the value of Players.
+func (s *ActiveGame) GetPlayers() []PlayerGameState {
+	return s.Players
+}
+
+// SetGameID sets the value of GameID.
+func (s *ActiveGame) SetGameID(val OptUUID) {
+	s.GameID = val
+}
+
+// SetGameToken sets the value of GameToken.
+func (s *ActiveGame) SetGameToken(val OptString) {
+	s.GameToken = val
+}
+
+// SetBoard sets the value of Board.
+func (s *ActiveGame) SetBoard(val [][]string) {
+	s.Board = val
+}
+
+// SetCurrentTurnUID sets the value of CurrentTurnUID.
+func (s *ActiveGame) SetCurrentTurnUID(val OptUUID) {
+	s.CurrentTurnUID = val
+}
+
+// SetMoveNumber sets the value of MoveNumber.
+func (s *ActiveGame) SetMoveNumber(val OptInt) {
+	s.MoveNumber = val
+}
+
+// SetStatus sets the value of Status.
+func (s *ActiveGame) SetStatus(val OptGameStatus) {
+	s.Status = val
+}
+
+// SetPlayers sets the value of Players.
+func (s *ActiveGame) SetPlayers(val []PlayerGameState) {
+	s.Players = val
+}
+
 // Ref: #/components/schemas/AuthRequest
 type AuthRequest struct {
 	// User's email.
@@ -109,6 +194,8 @@ type AuthResponse struct {
 	CentrifugoToken OptString `json:"centrifugo_token"`
 	// Centrifugo subscription JWT for the lobby channel.
 	LobbyToken OptString `json:"lobby_token"`
+	// Present when the player is currently in an active game. Use this to reconnect after a disconnect.
+	ActiveGame OptActiveGame `json:"active_game"`
 }
 
 // GetPlayer returns the value of Player.
@@ -126,6 +213,11 @@ func (s *AuthResponse) GetLobbyToken() OptString {
 	return s.LobbyToken
 }
 
+// GetActiveGame returns the value of ActiveGame.
+func (s *AuthResponse) GetActiveGame() OptActiveGame {
+	return s.ActiveGame
+}
+
 // SetPlayer sets the value of Player.
 func (s *AuthResponse) SetPlayer(val OptPlayer) {
 	s.Player = val
@@ -139,6 +231,11 @@ func (s *AuthResponse) SetCentrifugoToken(val OptString) {
 // SetLobbyToken sets the value of LobbyToken.
 func (s *AuthResponse) SetLobbyToken(val OptString) {
 	s.LobbyToken = val
+}
+
+// SetActiveGame sets the value of ActiveGame.
+func (s *AuthResponse) SetActiveGame(val OptActiveGame) {
+	s.ActiveGame = val
 }
 
 func (*AuthResponse) authRes() {}
@@ -622,6 +719,52 @@ func (s *MoveResponse) SetMoveNumber(val OptInt) {
 }
 
 func (*MoveResponse) moveGameRes() {}
+
+// NewOptActiveGame returns new OptActiveGame with value set to v.
+func NewOptActiveGame(v ActiveGame) OptActiveGame {
+	return OptActiveGame{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptActiveGame is optional ActiveGame.
+type OptActiveGame struct {
+	Value ActiveGame
+	Set   bool
+}
+
+// IsSet returns true if OptActiveGame was set.
+func (o OptActiveGame) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptActiveGame) Reset() {
+	var v ActiveGame
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptActiveGame) SetTo(v ActiveGame) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptActiveGame) Get() (v ActiveGame, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptActiveGame) Or(d ActiveGame) ActiveGame {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
 
 // NewOptGameStatus returns new OptGameStatus with value set to v.
 func NewOptGameStatus(v GameStatus) OptGameStatus {
