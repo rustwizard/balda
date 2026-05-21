@@ -3,6 +3,46 @@ package game
 type GameState int
 type TurnEvent int
 
+func (e TurnEvent) String() string {
+	switch e {
+	case EventMoveSubmitted:
+		return "MoveSubmitted"
+	case EventTurnSkipped:
+		return "TurnSkipped"
+	case EventTurnTimeout:
+		return "TurnTimeout"
+	case EventAckTimeout:
+		return "AckTimeout"
+	case EventKick:
+		return "Kick"
+	case EventBoardFull:
+		return "BoardFull"
+	case EventEndProposed:
+		return "EndProposed"
+	case EventEndAccepted:
+		return "EndAccepted"
+	case EventEndRejected:
+		return "EndRejected"
+	default:
+		return "Unknown"
+	}
+}
+
+func (s GameState) String() string {
+	switch s {
+	case StateWaitingForMove:
+		return "WaitingForMove"
+	case StatePlayerTimedOut:
+		return "PlayerTimedOut"
+	case StateEndProposed:
+		return "EndProposed"
+	case StateGameOver:
+		return "GameOver"
+	default:
+		return "Unknown"
+	}
+}
+
 const (
 	StateWaitingForMove GameState = iota
 	StatePlayerTimedOut           // intermediate: notification sent, awaiting ACK or kick

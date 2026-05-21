@@ -184,7 +184,10 @@ func (g *Game) Run(ctx context.Context) {
 func (g *Game) dispatch(ev TurnEvent) {
 	t, ok := fsmTable[g.state][ev]
 	if !ok {
-		slog.Info("game dispatch", slog.Any("ignored event", ev), "state", g.state)
+		slog.Warn("game fsm: unexpected event ignored",
+			slog.String("event", ev.String()),
+			slog.String("state", g.state.String()),
+		)
 		return
 	}
 	t.action(g)      // action runs first; may queue follow-up events
