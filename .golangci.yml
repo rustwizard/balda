@@ -26,6 +26,7 @@ linters:
     gosec:
       excludes:
         - G115 # Annoying and have a lot of false-positive results.
+        - G404 # math/rand is fine for non-security use (game name generation).
     govet:
       enable:
         - shadow
@@ -83,6 +84,10 @@ linters:
       - linters: [govet]
         text: 'declaration of "(err|ctx|log|lg|c)"'
 
+      # Word list in flname has intentional duplicate strings — not constants.
+      - path: internal/flname/flname\.go
+        linters: [goconst]
+
       # Ignore linters in main packages.
       - path: main\.go
         linters: [goconst, funlen, gocognit, gocyclo]
@@ -100,6 +105,26 @@ linters:
 
       - linters: [revive]
         text: "comment on exported const .+ should be of the form"
+
+      # game.GameState is intentional; renaming would be a large churn.
+      - linters: [revive]
+        text: "stutters; consider calling this"
+
+      # Session methods intentionally omit context — adding it is a larger refactor.
+      - linters: [contextcheck]
+        text: "should pass the context parameter"
+
+      # Non-inherited context in lobby factory is intentional (game outlives request).
+      - linters: [contextcheck]
+        text: "Non-inherited new context"
+
+      # unnamedResult on small helper/test functions adds noise without value.
+      - linters: [gocritic]
+        text: "unnamedResult"
+
+      # Test helpers and internal functions that currently always receive one value.
+      - linters: [unparam]
+        path: _test\.go
 
 formatters:
   enable:

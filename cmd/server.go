@@ -90,7 +90,7 @@ type Config struct {
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Balda Game Server",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		flags.BindEnv(cmd)
 
 		dbVersion, err := migrations.Migrate(10 * time.Second)
@@ -127,7 +127,7 @@ var serverCmd = &cobra.Command{
 
 		var pendingResults sync.WaitGroup
 
-		lby := lobby.New(func(ctx context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
+		lby := lobby.New(func(_ context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
 			coord := gamecoord.New(gameID, players, cf)
 			coord.SetOnGameOver(makeOnGameOverCallback(s, &pendingResults))
 			g, err := game.NewGame(players, coord)
@@ -152,13 +152,13 @@ var serverCmd = &cobra.Command{
 		}
 
 		mux := http.NewServeMux()
-		mux.HandleFunc("/balda/api/v1/docs/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc("/balda/api/v1/docs/openapi.yaml", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/yaml")
-			w.Write(openapi.Spec)
+			_, _ = w.Write(openapi.Spec)
 		})
-		mux.HandleFunc("/balda/api/v1/docs", func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc("/balda/api/v1/docs", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			fmt.Fprint(w, docsHTML)
+			_, _ = fmt.Fprint(w, docsHTML)
 		})
 		mux.Handle("/", srv)
 

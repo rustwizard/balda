@@ -8,7 +8,7 @@ import (
 )
 
 // ListGames implements baldaapi.Handler.
-func (h *Handlers) ListGames(ctx context.Context, _ baldaapi.ListGamesParams) (baldaapi.ListGamesRes, error) {
+func (h *Handlers) ListGames(_ context.Context, _ baldaapi.ListGamesParams) (baldaapi.ListGamesRes, error) {
 	summaries := h.svc.ListGames()
 
 	games := make([]baldaapi.GameSummary, len(summaries))

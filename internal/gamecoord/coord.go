@@ -20,7 +20,7 @@ import (
 //
 // nextReason and firstTurn are only written/read from the game's Run goroutine
 // (NotifyTimeout and NotifyTurnStart are both called under g.mu from Run), so
-// no additional synchronisation is needed.
+// no additional synchronization is needed.
 type Coordinator struct {
 	gameID     string
 	g          *game.Game
@@ -30,6 +30,8 @@ type Coordinator struct {
 	nextReason string // reason for the upcoming turn_change; "" means "move"
 	firstTurn  bool   // true until the first NotifyTurnStart
 }
+
+const evTypeGameOver = "game_over"
 
 // New creates a Coordinator for the given game. Call SetGame immediately after
 // constructing the *game.Game so notifier callbacks can read game state.
@@ -189,7 +191,7 @@ func (c *Coordinator) publishEndProposalResult(accepted bool, remainingMs int64)
 		}
 
 		gameOverEv := centrifugo.EvGameOver{
-			Type:      "game_over",
+			Type:      evTypeGameOver,
 			GameID:    c.gameID,
 			WinnerUID: winnerUID,
 			Players:   players,
@@ -302,7 +304,7 @@ func (c *Coordinator) publishBoardFullGameOver() {
 	}
 
 	ev := centrifugo.EvGameOver{
-		Type:      "game_over",
+		Type:      evTypeGameOver,
 		GameID:    c.gameID,
 		WinnerUID: winnerUID,
 		Players:   players,
@@ -335,7 +337,7 @@ func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 	}
 
 	ev := centrifugo.EvGameOver{
-		Type:      "game_over",
+		Type:      evTypeGameOver,
 		GameID:    c.gameID,
 		WinnerUID: winnerUID,
 		Players:   players,

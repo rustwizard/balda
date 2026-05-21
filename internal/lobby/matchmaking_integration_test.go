@@ -2,7 +2,7 @@ package lobby_test
 
 // Integration tests for lobby + matchmaking working together.
 // These tests wire both packages the same way a real server would and verify
-// end-to-end behaviour: from a player entering the queue to a game running in
+// end-to-end behavior: from a player entering the queue to a game running in
 // the lobby and eventually ending.
 
 import (
@@ -100,7 +100,7 @@ func TestIntegration_BothPlayersInSameGame(t *testing.T) {
 }
 
 // TestIntegration_GameEnds_LobbyClears verifies that when the game's context
-// is cancelled (server shutdown or explicit remove) the lobby removes the entry
+// is canceled (server shutdown or explicit remove) the lobby removes the entry
 // automatically, so List() eventually returns empty.
 func TestIntegration_GameEnds_LobbyClears(t *testing.T) {
 	lby, q, cancel := newSystem(t)

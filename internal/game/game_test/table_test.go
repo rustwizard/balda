@@ -92,7 +92,6 @@ func TestPutLetterOnTable(t *testing.T) {
 		Char:  "t",
 	})
 	assert.NoError(t, err)
-
 }
 
 func TestPutLetterOnTable_HorizontalAdjacency(t *testing.T) {
@@ -107,9 +106,9 @@ func TestPutLetterOnTable_HorizontalAdjacency(t *testing.T) {
 	assert.NoError(t, lt.PutLetterOnTable(&game.Letter{RowID: 4, ColID: 1, Char: "c"}))
 
 	// Row 4, col 2 was previously forbidden because row 3, col 2 is empty.
-	// Now it is allowed because row 4, col 1 is a horizontal neighbour.
+	// Now it is allowed because row 4, col 1 is a horizontal neighbor.
 	assert.NoError(t, lt.PutLetterOnTable(&game.Letter{RowID: 4, ColID: 2, Char: "d"}))
 
-	// Row 4, col 4 has no neighbours — still forbidden.
+	// Row 4, col 4 has no neighbors — still forbidden.
 	assert.ErrorIs(t, lt.PutLetterOnTable(&game.Letter{RowID: 4, ColID: 4, Char: "e"}), game.ErrWrongLetterPlace)
 }

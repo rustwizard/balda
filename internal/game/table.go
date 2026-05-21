@@ -103,7 +103,7 @@ func (lt *LettersTable) PutLetterOnTable(l *Letter) error {
 }
 
 // hasAdjacentLetter reports whether the cell has at least one occupied
-// neighbour (up, down, left or right). A letter must be placed adjacent to
+// neighbor (up, down, left or right). A letter must be placed adjacent to
 // an existing letter.
 func (lt *LettersTable) hasAdjacentLetter(l *Letter) bool {
 	r, c := l.RowID, l.ColID

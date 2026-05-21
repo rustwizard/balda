@@ -299,7 +299,7 @@ func fillBoardExcept(g *game.Game, skipRow, skipCol uint8) {
 	board := g.Board()
 	for r := range board.Table {
 		for c := range board.Table[r] {
-			if board.Table[r][c] == nil && !(uint8(r) == skipRow && uint8(c) == skipCol) {
+			if board.Table[r][c] == nil && (uint8(r) != skipRow || uint8(c) != skipCol) {
 				board.Table[r][c] = &game.Letter{RowID: uint8(r), ColID: uint8(c), Char: "я"}
 			}
 		}

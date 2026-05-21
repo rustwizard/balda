@@ -193,7 +193,7 @@ func TestQueue_Run_Integration(t *testing.T) {
 	assert.Equal(t, 0, q.Len())
 }
 
-// TestQueue_Run_ContextCancel verifies that Run exits when its context is cancelled.
+// TestQueue_Run_ContextCancel verifies that Run exits when its context is canceled.
 func TestQueue_Run_ContextCancel(t *testing.T) {
 	q := matchmaking.New(testCfg(), noopCallback)
 
@@ -215,7 +215,7 @@ func TestQueue_Run_ContextCancel(t *testing.T) {
 }
 
 // TestQueue_ConcurrentEnqueueDequeue checks for data races under concurrent use.
-func TestQueue_ConcurrentEnqueueDequeue(t *testing.T) {
+func TestQueue_ConcurrentEnqueueDequeue(_ *testing.T) {
 	q := matchmaking.New(testCfg(), noopCallback)
 
 	ctx, cancel := context.WithCancel(context.Background())

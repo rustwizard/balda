@@ -95,7 +95,7 @@ func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 		Expiration: 30 * time.Second,
 	})
 
-	lby := lobby.New(func(ctx context.Context, _ string, players []*game.Player, n game.Notifier) (*game.Game, error) {
+	lby := lobby.New(func(_ context.Context, _ string, players []*game.Player, n game.Notifier) (*game.Game, error) {
 		return game.NewGameWithWord(players, "масло", n)
 	})
 	mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
