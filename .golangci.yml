@@ -95,8 +95,7 @@ linters:
       - linters: [revive]
         text: 'receiver-naming: receiver name \S+ should be consistent with previous receiver name \S+ for invalid-type'
 
-      - path: internal
-        linters: [revive]
+      - linters: [revive]
         text: "package-comments"
 
       - linters: [revive]
