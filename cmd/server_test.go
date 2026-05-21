@@ -17,7 +17,7 @@ type fakeGameResultSaver struct {
 	err   error
 }
 
-func (f *fakeGameResultSaver) SaveGameResult(ctx context.Context, r storage.GameResult) error {
+func (f *fakeGameResultSaver) SaveGameResult(_ context.Context, _ storage.GameResult) error {
 	f.calls++
 	if f.calls <= f.failN {
 		return f.err

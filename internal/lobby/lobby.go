@@ -99,7 +99,7 @@ func (l *Lobby) Create(p *game.Player) (*GameRecord, error) {
 // factory; the first move belongs to the player who created the game (index 0).
 // Returns ErrGameNotFound, ErrGameNotWaiting, ErrGameFull, or ErrPlayerInGame
 // on the corresponding error conditions.
-func (l *Lobby) Join(ctx context.Context, gameID string, p *game.Player, n game.Notifier) (*GameRecord, error) {
+func (l *Lobby) Join(_ context.Context, gameID string, p *game.Player, n game.Notifier) (*GameRecord, error) {
 	// Phase 1: read-check without creating anything.
 	l.mu.RLock()
 	rec, ok := l.games[gameID]
@@ -119,7 +119,7 @@ func (l *Lobby) Join(ctx context.Context, gameID string, p *game.Player, n game.
 		return nil, ErrPlayerInGame
 	}
 	// Snapshot creator list so factory can be called outside the lock.
-	existing := make([]*game.Player, len(rec.Players))
+	existing := make([]*game.Player, len(rec.Players), len(rec.Players)+1)
 	copy(existing, rec.Players)
 	l.mu.RUnlock()
 

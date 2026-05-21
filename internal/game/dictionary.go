@@ -31,7 +31,7 @@ func NewDictionary() (*Dictionary, error) {
 	if err != nil {
 		return dict, fmt.Errorf("game: dictionary: %w", err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	dec := json.NewDecoder(f)
 	for {

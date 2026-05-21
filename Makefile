@@ -7,7 +7,7 @@ BUILD_TARGET=$(MAKEFILE_PATH)/bin/balda
 GREEN_COLOR   = "\033[0;32m"
 DEFAULT_COLOR = "\033[m"
 
-.PHONY: build code-gen test docker restart
+.PHONY: build code-gen test lint docker restart
 
 build:
 	@echo -e $(GREEN_COLOR)[building balda to $(BUILD_TARGET)]$(DEFAULT_COLOR)
@@ -21,6 +21,10 @@ code-gen:
 test:
 	@echo -e $(GREEN_COLOR)[running tests]$(DEFAULT_COLOR)
 	@go generate ./... && go test -v `go list ./... | grep -v integration`
+
+lint:
+	@echo -e $(GREEN_COLOR)[running linter]$(DEFAULT_COLOR)
+	@golangci-lint run ./...
 
 docker:
 	@docker build -f ./build/Dockerfile ./

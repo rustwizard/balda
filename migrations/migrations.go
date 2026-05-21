@@ -32,7 +32,7 @@ func Migrate(timeout time.Duration) (int, error) {
 	if err != nil {
 		return failedMigrateVersion, fmt.Errorf("migrations: failed to connect to postgres server: %w", err)
 	}
-	defer conn.Close(ctx)
+	defer conn.Close(ctx) //nolint:errcheck
 
 	options := &migrate.MigratorOptions{DisableTx: false}
 	migrator, err := migrate.NewMigratorEx(ctx, conn, versionTable, options)

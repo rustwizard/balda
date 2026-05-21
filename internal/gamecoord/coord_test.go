@@ -143,7 +143,7 @@ func TestPublishGameOver_PersistsBeforePublish(t *testing.T) {
 	p2 := &game.Player{ID: "p2", Score: 5}
 
 	coord := New("game-1", []*game.Player{p1, p2}, cf)
-	coord.SetOnGameOver(func(r storage.GameResult) {
+	coord.SetOnGameOver(func(_ storage.GameResult) {
 		close(saved)
 	})
 

@@ -45,7 +45,7 @@ func (c *Client) Publish(ctx context.Context, channel string, data any) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("centrifugo: unexpected status %d", resp.StatusCode)

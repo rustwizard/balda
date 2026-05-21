@@ -61,7 +61,7 @@ func startCentrifugo(ctx context.Context, t *testing.T) (apiURL, wsURL string, c
 			t.Logf("failed to terminate centrifugo container: %v", err)
 		}
 	}
-	return
+	return apiURL, wsURL, cleanup
 }
 
 func setupHandlersWithCentrifugo(ctx context.Context, t *testing.T, cfAPIURL string) (*handlers.Handlers, func()) {
