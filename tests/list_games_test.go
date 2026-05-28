@@ -9,7 +9,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/rustwizard/balda/internal/game"
-	"github.com/rustwizard/balda/internal/notifier"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +32,7 @@ func TestListGamesHandler(t *testing.T) {
 	p1 := &game.Player{ID: uuid.NewString()}
 	p2 := &game.Player{ID: uuid.NewString()}
 
-	rec, err := lby.StartGame(ctx, []*game.Player{p1, p2}, &notifier.Noop{})
+	rec, err := lby.StartGame(ctx, []*game.Player{p1, p2}, &game.NoopNotifier{})
 	require.NoError(t, err)
 
 	t.Run("active game appears in list", func(t *testing.T) {
@@ -59,7 +58,7 @@ func TestListGamesHandler(t *testing.T) {
 	p3 := &game.Player{ID: uuid.NewString()}
 	p4 := &game.Player{ID: uuid.NewString()}
 
-	_, err = lby.StartGame(ctx, []*game.Player{p3, p4}, &notifier.Noop{})
+	_, err = lby.StartGame(ctx, []*game.Player{p3, p4}, &game.NoopNotifier{})
 	require.NoError(t, err)
 
 	t.Run("two active games both appear", func(t *testing.T) {

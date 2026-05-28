@@ -17,7 +17,6 @@ import (
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
-	"github.com/rustwizard/balda/internal/notifier"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/balda/internal/service"
@@ -99,12 +98,12 @@ func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 		return game.NewGameWithWord(players, "масло", n)
 	})
 	mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-		_, err := lby.StartGame(ctx, players, &notifier.Noop{})
+		_, err := lby.StartGame(ctx, players, &game.NoopNotifier{})
 		return err
 	})
 
 	s := storage.New(pool, 10*time.Second)
-	svc := service.New(lby, mm, s, &notifier.Noop{})
+	svc := service.New(lby, mm, s)
 
 	return &coreSetup{
 		svc:  svc,
@@ -372,7 +371,7 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 		{ID: uid1.String()},
 		{ID: uid2.String()},
 	}
-	_, err = lby.StartGame(ctx, players, &notifier.Noop{})
+	_, err = lby.StartGame(ctx, players, &game.NoopNotifier{})
 	require.NoError(t, err)
 
 	t.Run("player in active game has GameID set", func(t *testing.T) {
