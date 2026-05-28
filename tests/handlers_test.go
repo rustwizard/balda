@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
@@ -92,7 +93,7 @@ func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 	sess := session.NewService(session.Config{
 		Addr:       redisAddr,
 		Expiration: 30 * time.Second,
-	})
+	}, redis.NewClient(&redis.Options{Addr: redisAddr}))
 
 	lby := lobby.New(func(_ context.Context, _ string, players []*game.Player, n game.Notifier) (*game.Game, error) {
 		return game.NewGameWithWord(players, "масло", n)

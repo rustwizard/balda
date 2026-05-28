@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/rustwizard/balda/api/openapi"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
@@ -109,7 +110,12 @@ var serverCmd = &cobra.Command{
 		}
 		defer pool.Close()
 
-		sess := session.NewService(cfg.Session)
+		sess := session.NewService(cfg.Session, redis.NewClient(&redis.Options{
+			Addr:     cfg.Session.Addr,
+			Username: cfg.Session.Username,
+			Password: cfg.Session.Password,
+			DB:       cfg.Session.DBNum,
+		}))
 
 		cf := centrifugo.NewClient(cfg.Centrifugo.APIURL, cfg.Centrifugo.APIKey)
 

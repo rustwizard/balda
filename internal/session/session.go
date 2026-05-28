@@ -28,15 +28,10 @@ type Service struct {
 	storage *redis.Client
 }
 
-func NewService(cfg Config) *Service {
+func NewService(cfg Config, client *redis.Client) *Service {
 	return &Service{
-		cfg: cfg,
-		storage: redis.NewClient(&redis.Options{
-			Addr:     cfg.Addr,
-			Password: cfg.Password,
-			DB:       cfg.DBNum,
-			Username: cfg.Username,
-		}),
+		cfg:     cfg,
+		storage: client,
 	}
 }
 
