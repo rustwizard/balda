@@ -12,14 +12,12 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/redis/go-redis/v9"
 	"github.com/rustwizard/balda/api/openapi"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/gamecoord"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
-	"github.com/rustwizard/balda/internal/notifier"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/balda/internal/service"
 	"github.com/rustwizard/balda/internal/storage"
@@ -113,14 +111,6 @@ var serverCmd = &cobra.Command{
 
 		sess := session.NewService(cfg.Session)
 
-		redisClient := redis.NewClient(&redis.Options{
-			Addr:     cfg.Session.Addr,
-			Username: cfg.Session.Username,
-			Password: cfg.Session.Password,
-			DB:       cfg.Session.DBNum,
-		})
-		n := notifier.New(notifier.WithRedisSender(redisClient))
-
 		cf := centrifugo.NewClient(cfg.Centrifugo.APIURL, cfg.Centrifugo.APIKey)
 
 		s := storage.New(pool, 10*time.Second)
@@ -138,11 +128,11 @@ var serverCmd = &cobra.Command{
 			return g, nil
 		})
 		mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-			_, err := lby.StartGame(cmd.Context(), players, n)
+			_, err := lby.StartGame(cmd.Context(), players, &game.NoopNotifier{})
 			return err
 		})
 
-		svc := service.New(lby, mm, s, n)
+		svc := service.New(lby, mm, s)
 
 		h := handlers.New(svc, sess, cfg.XAPIToken, cf, cfg.Centrifugo.TokenHMACSecret)
 

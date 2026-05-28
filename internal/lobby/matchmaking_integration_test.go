@@ -13,7 +13,6 @@ import (
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
-	"github.com/rustwizard/balda/internal/notifier"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +38,7 @@ func newSystem(t testing.TB) (*lobby.Lobby, *matchmaking.Queue, context.CancelFu
 	lby := newLobby() // defined in lobby_test.go: uses realFactory + "волна" board
 	ctx, cancel := context.WithCancel(context.Background())
 	q := matchmaking.New(mmCfg(), func(players []*game.Player) error {
-		_, err := lby.StartGame(ctx, players, &notifier.Noop{})
+		_, err := lby.StartGame(ctx, players, &game.NoopNotifier{})
 		return err
 	})
 	return lby, q, cancel

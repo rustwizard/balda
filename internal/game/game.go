@@ -596,3 +596,15 @@ func (g *Game) RejectEnd(playerID string) error {
 func (g *Game) Done() <-chan struct{} {
 	return g.done
 }
+
+// NoopNotifier is a no-op implementation of Notifier.
+type NoopNotifier struct{}
+
+func (*NoopNotifier) NotifyTimeout(_ string, _ int, _ bool) {}
+func (*NoopNotifier) NotifySkip(_ string, _ int, _ bool)    {}
+func (*NoopNotifier) NotifyKick(_ string)                   {}
+func (*NoopNotifier) NotifyBoardFull()                      {}
+func (*NoopNotifier) NotifyTurnStart(_ string)              {}
+func (*NoopNotifier) NotifyEndProposed(_ string)            {}
+func (*NoopNotifier) NotifyEndAccepted()                    {}
+func (*NoopNotifier) NotifyEndRejected(_ time.Duration)     {}

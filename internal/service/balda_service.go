@@ -13,14 +13,13 @@ import (
 )
 
 type Balda struct {
-	lby      *lobby.Lobby
-	mm       *matchmaking.Queue
-	s        *storage.Balda
-	notifier game.Notifier
+	lby *lobby.Lobby
+	mm  *matchmaking.Queue
+	s   *storage.Balda
 }
 
-func New(lby *lobby.Lobby, mm *matchmaking.Queue, s *storage.Balda, n game.Notifier) *Balda {
-	return &Balda{lby: lby, mm: mm, s: s, notifier: n}
+func New(lby *lobby.Lobby, mm *matchmaking.Queue, s *storage.Balda) *Balda {
+	return &Balda{lby: lby, mm: mm, s: s}
 }
 
 func (s *Balda) GameSummary(playerID string) *lobby.GameSummary {
@@ -82,7 +81,7 @@ func (s *Balda) JoinGame(ctx context.Context, uid int64, gameID string) (*lobby.
 	if err != nil {
 		return nil, fmt.Errorf("join game: %w", err)
 	}
-	return s.lby.Join(ctx, gameID, &game.Player{ID: p.PlayerID.String(), Exp: p.Exp}, s.notifier)
+	return s.lby.Join(ctx, gameID, &game.Player{ID: p.PlayerID.String(), Exp: p.Exp}, &game.NoopNotifier{})
 }
 
 func (s *Balda) playerIDByUID(ctx context.Context, uid int64) (string, error) {
