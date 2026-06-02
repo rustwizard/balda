@@ -408,7 +408,7 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 │ WaitingForMove           │ MoveSubmitted      │ WaitingForMove           │
 │ WaitingForMove           │ TurnSkipped        │ WaitingForMove           │
 │ WaitingForMove           │ TurnTimeout        │ PlayerTimedOut           │
-│ WaitingForMove           │ BoardFull          │ GameOver                 │
+│ WaitingForMove           │ GameFinished       │ GameOver                 │
 │ WaitingForMove           │ ProposeEnd         │ WaitingForEndProposal    │
 ├──────────────────────────┼────────────────────┼──────────────────────────┤
 │ WaitingForEndProposal    │ EndProposalAccepted│ GameOver                 │
@@ -422,6 +422,10 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 - A 60-second timer fires `TurnTimeout` automatically. The `Coordinator` (`internal/gamecoord/`) acknowledges it via `AckTimeout`, advancing to the next player.
 - `MoveSubmitted` and `TurnSkipped` reset the consecutive-timeout counter.
 - On the third consecutive timeout the game auto-queues `Kick` → `GameOver`.
+- `GameFinished` ends the game naturally when:
+  - the board is completely full (25 cells), or
+  - every player skips once in a row (deadlock heuristic — no moves left).
+- The winner on any natural finish is the player with the highest `Score`; a tie is a draw.
 
 ---
 

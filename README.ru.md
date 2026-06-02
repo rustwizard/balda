@@ -406,7 +406,7 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 │ WaitingForMove           │ MoveSubmitted       │ WaitingForMove           │
 │ WaitingForMove           │ TurnSkipped         │ WaitingForMove           │
 │ WaitingForMove           │ TurnTimeout         │ PlayerTimedOut           │
-│ WaitingForMove           │ BoardFull           │ GameOver                 │
+│ WaitingForMove           │ GameFinished        │ GameOver                 │
 │ WaitingForMove           │ ProposeEnd          │ WaitingForEndProposal    │
 ├──────────────────────────┼─────────────────────┼──────────────────────────┤
 │ WaitingForEndProposal    │ EndProposalAccepted │ GameOver                 │
@@ -420,6 +420,10 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 - 60-секундный таймер автоматически вызывает `TurnTimeout`. Координатор (`internal/gamecoord/`) подтверждает его через `AckTimeout`, переходя к следующему игроку.
 - `MoveSubmitted` и `TurnSkipped` сбрасывают счётчик последовательных таймаутов.
 - После третьего подряд таймаута игра автоматически ставит в очередь `Kick` → `GameOver`.
+- `GameFinished` завершает игру естественным образом при:
+  - полностью заполненной доске (25 клеток), либо
+  - когда все игроки подряд делают skip (эвристика отсутствия ходов).
+- Победитель при любом естественном завершении — игрок с наибольшим `Score`; при равенстве — ничья.
 
 ---
 

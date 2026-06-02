@@ -47,7 +47,7 @@ type Notifier interface {
 	NotifyTimeout(playerID string, consecutive int, willKick bool)
 	NotifySkip(playerID string, consecutive int, willEnd bool)
 	NotifyKick(playerID string)
-	NotifyBoardFull()
+	NotifyGameFinished()
 	NotifyTurnStart(playerID string)
 	NotifyEndProposed(proposerID string)
 	NotifyEndAccepted()
@@ -65,17 +65,18 @@ type Player struct {
 }
 
 type Game struct {
-	mu                  sync.Mutex
-	state               GameState
-	players             []*Player
-	board               *LettersTable
-	current             int
-	turn                *Turn
-	eventCh             chan TurnEvent
-	done                chan struct{}
-	notifier            Notifier
-	turnDuration        time.Duration // 0 means use TurnDuration constant
-	pausedTurnRemaining time.Duration // remaining turn time when paused for end proposal
+	mu                    sync.Mutex
+	state                 GameState
+	players               []*Player
+	board                 *LettersTable
+	current               int
+	turn                  *Turn
+	eventCh               chan TurnEvent
+	done                  chan struct{}
+	notifier              Notifier
+	turnDuration          time.Duration // 0 means use TurnDuration constant
+	pausedTurnRemaining   time.Duration // remaining turn time when paused for end proposal
+	consecutiveSkipsTotal int           // total skips across all players without a move
 }
 
 func (g *Game) CheckWordExistence(word string) bool {
@@ -200,6 +201,7 @@ func (g *Game) onMoveAccepted() {
 	p := g.currentPlayer()
 	p.ConsecutiveTimeouts = 0
 	p.ConsecutiveSkips = 0
+	g.consecutiveSkipsTotal = 0
 	g.cancelTimer()
 	g.advanceTurn()
 }
@@ -208,11 +210,16 @@ func (g *Game) onSkip() {
 	p := g.currentPlayer()
 	p.ConsecutiveTimeouts = 0
 	p.ConsecutiveSkips++
+	g.consecutiveSkipsTotal++
 	willEnd := p.ConsecutiveSkips >= MaxConsecutiveSkips
 	g.notifier.NotifySkip(p.ID, p.ConsecutiveSkips, willEnd)
 	g.cancelTimer()
 	if willEnd {
 		g.eventCh <- EventKick
+		return
+	}
+	if g.consecutiveSkipsTotal >= len(g.players) {
+		g.eventCh <- EventGameFinished
 		return
 	}
 	g.advanceTurn()
@@ -249,8 +256,8 @@ func (g *Game) onKick() {
 	// StateGameOver committed by dispatch; shutdown follows in Run.
 }
 
-func (g *Game) onBoardFull() {
-	g.notifier.NotifyBoardFull()
+func (g *Game) onGameFinished() {
+	g.notifier.NotifyGameFinished()
 }
 
 // --- EndProposed actions ---
@@ -395,7 +402,7 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 
 	ev := EventMoveSubmitted
 	if boardFull {
-		ev = EventBoardFull
+		ev = EventGameFinished
 	}
 	select {
 	case g.eventCh <- ev:
@@ -618,7 +625,7 @@ type NoopNotifier struct{}
 func (*NoopNotifier) NotifyTimeout(_ string, _ int, _ bool) {}
 func (*NoopNotifier) NotifySkip(_ string, _ int, _ bool)    {}
 func (*NoopNotifier) NotifyKick(_ string)                   {}
-func (*NoopNotifier) NotifyBoardFull()                      {}
+func (*NoopNotifier) NotifyGameFinished()                   {}
 func (*NoopNotifier) NotifyTurnStart(_ string)              {}
 func (*NoopNotifier) NotifyEndProposed(_ string)            {}
 func (*NoopNotifier) NotifyEndAccepted()                    {}

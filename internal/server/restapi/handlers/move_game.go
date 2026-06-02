@@ -89,7 +89,7 @@ func (h *Handlers) MoveGame(ctx context.Context, req *baldaapi.MoveRequest, para
 	boardFull := rec.Game.BoardIsFull()
 
 	if boardFull {
-		// gamecoord.NotifyBoardFull will publish game_over via Centrifugo.
+		// gamecoord.NotifyGameFinished will publish game_over via Centrifugo.
 		return &baldaapi.MoveResponse{
 			Board:      boardToSlice(rec.Game.BoardSnapshot()),
 			Players:    playerScoresToAPI(scores),

@@ -15,8 +15,8 @@ func (e TurnEvent) String() string {
 		return "AckTimeout"
 	case EventKick:
 		return "Kick"
-	case EventBoardFull:
-		return "BoardFull"
+	case EventGameFinished:
+		return "GameFinished"
 	case EventEndProposed:
 		return "EndProposed"
 	case EventEndAccepted:
@@ -54,12 +54,12 @@ const (
 	EventMoveSubmitted TurnEvent = iota
 	EventTurnSkipped
 	EventTurnTimeout
-	EventAckTimeout  // player (or coordinator) acks the timeout; game continues
-	EventKick        // explicit kick decision; game ends
-	EventBoardFull   // board has no empty cells; game ends
-	EventEndProposed // current player proposes to end the game
-	EventEndAccepted // opponent accepts the end proposal
-	EventEndRejected // opponent rejects the end proposal; timer resumes
+	EventAckTimeout   // player (or coordinator) acks the timeout; game continues
+	EventKick         // explicit kick decision; game ends
+	EventGameFinished // board full or no moves left; game ends naturally
+	EventEndProposed  // current player proposes to end the game
+	EventEndAccepted  // opponent accepts the end proposal
+	EventEndRejected  // opponent rejects the end proposal; timer resumes
 )
 
 /*
@@ -71,6 +71,7 @@ const (
 │ WaitingForMove      │ MoveSubmitted      │ WaitingForMove      │
 │ WaitingForMove      │ TurnSkipped        │ WaitingForMove      │
 │ WaitingForMove      │ TurnTimeout        │ PlayerTimedOut      │
+│ WaitingForMove      │ GameFinished       │ GameOver            │
 │ WaitingForMove      │ EndProposed        │ EndProposed         │
 ├─────────────────────┼────────────────────┼─────────────────────┤
 │ PlayerTimedOut      │ AckTimeout         │ WaitingForMove      │
@@ -93,7 +94,7 @@ var fsmTable = map[GameState]map[TurnEvent]transition{
 		EventTurnSkipped:   {StateWaitingForMove, (*Game).onSkip},
 		EventTurnTimeout:   {StatePlayerTimedOut, (*Game).onTurnTimeout},
 		EventKick:          {StateGameOver, (*Game).onKick},
-		EventBoardFull:     {StateGameOver, (*Game).onBoardFull},
+		EventGameFinished:  {StateGameOver, (*Game).onGameFinished},
 		EventEndProposed:   {StateEndProposed, (*Game).onEndProposed},
 	},
 	StatePlayerTimedOut: {

@@ -38,7 +38,7 @@ export interface AuthResponse {
   lobby_token?: string;
 }
 
-export type GameStatus = 'waiting' | 'in_progress' | 'finished';
+export type GameStatus = "waiting" | "in_progress" | "finished";
 
 export interface GameSummary {
   id: string;
@@ -83,7 +83,7 @@ export interface PlayerState {
 }
 
 export interface EvGameState {
-  type: 'game_state';
+  type: "game_state";
   game_id: string;
   board: string[][];
   current_turn_uid: string;
@@ -93,21 +93,22 @@ export interface EvGameState {
 }
 
 export interface EvGameOver {
-  type: 'game_over';
+  type: "game_over";
   game_id: string;
   winner_uid?: string | null;
   players: PlayerGameState[];
+  reason?: "kick" | "game_finished" | "accept_end";
 }
 
 export interface EvGameCreated {
-  type: 'game_created';
+  type: "game_created";
   game_id: string;
   status: GameStatus;
   player_ids: string[];
 }
 
 export interface EvGameStarted {
-  type: 'game_started';
+  type: "game_started";
   game_id: string;
   status: GameStatus;
   player_ids: string[];
@@ -115,10 +116,10 @@ export interface EvGameStarted {
 }
 
 export interface EvTurnChange {
-  type: 'turn_change';
+  type: "turn_change";
   game_id: string;
   current_turn_uid: string;
-  reason: 'game_start' | 'move' | 'skip' | 'timeout';
+  reason: "game_start" | "move" | "skip" | "timeout";
 }
 
 export interface BoardCell {
@@ -144,19 +145,19 @@ export interface MoveResponse {
 }
 
 export interface EvLobbyUpdate {
-  type: 'lobby_update';
+  type: "lobby_update";
   games: GameSummary[];
 }
 
 export interface EvEndProposalResult {
-  type: 'end_proposal_result';
+  type: "end_proposal_result";
   game_id: string;
   accepted: boolean;
   remaining_ms?: number;
 }
 
 export interface EvSkipWarn {
-  type: 'skip_warn';
+  type: "skip_warn";
   game_id: string;
   player_uid: string;
   skips_used: number;
@@ -164,9 +165,18 @@ export interface EvSkipWarn {
 }
 
 export interface EvEndProposal {
-  type: 'end_proposal';
+  type: "end_proposal";
   game_id: string;
   proposer_uid: string;
 }
 
-export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange | EvSkipWarn | EvLobbyUpdate | EvEndProposalResult | EvEndProposal;
+export type CentrifugoEvent =
+  | EvGameState
+  | EvGameOver
+  | EvGameCreated
+  | EvGameStarted
+  | EvTurnChange
+  | EvSkipWarn
+  | EvLobbyUpdate
+  | EvEndProposalResult
+  | EvEndProposal;

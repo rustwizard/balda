@@ -13,14 +13,14 @@ import (
 
 // mockNotifier captures all notifications for assertion in tests.
 type mockNotifier struct {
-	mu           sync.Mutex
-	timeouts     []timeoutCall
-	kicks        []string
-	turnStarts   []string
-	boardFulls   int
-	endProposals []string
-	endAccepteds int
-	endRejecteds []time.Duration
+	mu            sync.Mutex
+	timeouts      []timeoutCall
+	kicks         []string
+	turnStarts    []string
+	gameFinisheds int
+	endProposals  []string
+	endAccepteds  int
+	endRejecteds  []time.Duration
 }
 
 type timeoutCall struct {
@@ -37,10 +37,10 @@ func (m *mockNotifier) NotifyTimeout(playerID string, consecutive int, willKick 
 
 func (m *mockNotifier) NotifySkip(_ string, _ int, _ bool) {}
 
-func (m *mockNotifier) NotifyBoardFull() {
+func (m *mockNotifier) NotifyGameFinished() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.boardFulls++
+	m.gameFinisheds++
 }
 
 func (m *mockNotifier) NotifyKick(playerID string) {
@@ -115,10 +115,10 @@ func (m *mockNotifier) turnStartCount() int {
 	return len(m.turnStarts)
 }
 
-func (m *mockNotifier) boardFullCount() int {
+func (m *mockNotifier) gameFinishedCount() int {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.boardFulls
+	return m.gameFinisheds
 }
 
 func (m *mockNotifier) timeoutCount() int {
@@ -328,7 +328,7 @@ func waitRunDone(t *testing.T, done <-chan struct{}) {
 	}
 }
 
-func TestGame_Run_BoardFull_StopsGame(t *testing.T) {
+func TestGame_Run_GameFinished_BoardFull_StopsGame(t *testing.T) {
 	n := &mockNotifier{}
 	g, err := game.NewGameWithWord(makePlayers("p1", "p2"), testBoardWord, n)
 	require.NoError(t, err)
@@ -343,7 +343,7 @@ func TestGame_Run_BoardFull_StopsGame(t *testing.T) {
 	waitRunDone(t, done)
 }
 
-func TestGame_Run_BoardFull_CallsNotifyBoardFull(t *testing.T) {
+func TestGame_Run_GameFinished_BoardFull_CallsNotifyGameFinished(t *testing.T) {
 	n := &mockNotifier{}
 	g, err := game.NewGameWithWord(makePlayers("p1", "p2"), testBoardWord, n)
 	require.NoError(t, err)
@@ -356,10 +356,10 @@ func TestGame_Run_BoardFull_CallsNotifyBoardFull(t *testing.T) {
 	submitLastMove(t, g, "p1")
 
 	waitRunDone(t, done)
-	assert.Equal(t, 1, n.boardFullCount(), "NotifyBoardFull must be called exactly once")
+	assert.Equal(t, 1, n.gameFinishedCount(), "NotifyGameFinished must be called exactly once")
 }
 
-func TestGame_Run_BoardFull_TurnDoesNotAdvance(t *testing.T) {
+func TestGame_Run_GameFinished_BoardFull_TurnDoesNotAdvance(t *testing.T) {
 	n := &mockNotifier{}
 	g, err := game.NewGameWithWord(makePlayers("p1", "p2"), testBoardWord, n)
 	require.NoError(t, err)

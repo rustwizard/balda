@@ -64,7 +64,7 @@ func TestSaveGameResult_Winner(t *testing.T) {
 	result := storage.GameResult{
 		GameID:       gameID.String(),
 		WinnerID:     p1.String(),
-		FinishReason: storage.FinishReasonBoardFull,
+		FinishReason: storage.FinishReasonGameFinished,
 		FinishedAt:   time.Now().UTC().Truncate(time.Second),
 		Players: []storage.PlayerResult{
 			{PlayerID: p1.String(), Score: 8, WordsCount: 3, ExpGained: storage.ExpGained(8, true, false)},
@@ -82,7 +82,7 @@ func TestSaveGameResult_Winner(t *testing.T) {
 	).Scan(&winnerID, &finishReason)
 	require.NoError(t, err)
 	assert.Equal(t, p1.String(), winnerID)
-	assert.Equal(t, "board_full", finishReason)
+	assert.Equal(t, "game_finished", finishReason)
 
 	// game_result_players rows
 	rows, err := s.Pool().Query(ctx,
@@ -219,7 +219,7 @@ func TestSaveGameResult_DuplicateGameID(t *testing.T) {
 	result := storage.GameResult{
 		GameID:       gameID.String(),
 		WinnerID:     p1.String(),
-		FinishReason: storage.FinishReasonBoardFull,
+		FinishReason: storage.FinishReasonGameFinished,
 		FinishedAt:   time.Now().UTC(),
 		Players: []storage.PlayerResult{
 			{PlayerID: p1.String(), Score: 1, WordsCount: 1, ExpGained: 11},
