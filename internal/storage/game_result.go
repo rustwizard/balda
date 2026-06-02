@@ -9,9 +9,10 @@ import (
 type FinishReason string
 
 const (
-	FinishReasonBoardFull FinishReason = "board_full"
-	FinishReasonKick      FinishReason = "kick"
-	FinishReasonAcceptEnd FinishReason = "accept_end"
+	FinishReasonGameFinished FinishReason = "game_finished"
+	FinishReasonBoardFull    FinishReason = "board_full"
+	FinishReasonKick         FinishReason = "kick"
+	FinishReasonAcceptEnd    FinishReason = "accept_end"
 )
 
 type PlayerResult struct {

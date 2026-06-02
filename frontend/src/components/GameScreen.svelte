@@ -276,6 +276,15 @@
           Ничья!
         {/if}
       </div>
+      <div class="mt-1 text-sm text-yellow-700">
+        {#if gameState.finishReason === 'game_finished'}
+          Игра окончена: доска заполнена или ходов не осталось
+        {:else if gameState.finishReason === 'kick'}
+          Игра окончена: соперник выбыт
+        {:else if gameState.finishReason === 'accept_end'}
+          Игра окончена по соглашению
+        {/if}
+      </div>
       <button
         onclick={() => gameState.setLobby()}
         class="mt-3 rounded-xl bg-yellow-500 px-6 py-2 font-bold text-white transition hover:bg-yellow-600"

@@ -1,6 +1,17 @@
-import type { GameSummary, PlayerGameState, EvGameState, EvGameOver, EvTurnChange, EvEndProposalResult, EvEndProposal, EvSkipWarn, EvLobbyUpdate, MoveResponse } from '../types';
+import type {
+  GameSummary,
+  PlayerGameState,
+  EvGameState,
+  EvGameOver,
+  EvTurnChange,
+  EvEndProposalResult,
+  EvEndProposal,
+  EvSkipWarn,
+  EvLobbyUpdate,
+  MoveResponse,
+} from "../types";
 
-export type GamePhase = 'auth' | 'lobby' | 'waiting' | 'playing' | 'finished';
+export type GamePhase = "auth" | "lobby" | "waiting" | "playing" | "finished";
 
 export interface PlayerInfo {
   uid: string;
@@ -15,25 +26,26 @@ export interface PlayerInfo {
 
 export function createGameState() {
   // Auth & session
-  let apiKey = $state<string>('');
-  let sessionId = $state<string>('');
-  let playerUid = $state<string>('');
-  let nickname = $state<string>('');
+  let apiKey = $state<string>("");
+  let sessionId = $state<string>("");
+  let playerUid = $state<string>("");
+  let nickname = $state<string>("");
   let exp = $state<number>(0);
-  let centrifugoToken = $state<string>('');
-  let lobbyToken = $state<string>('');
+  let centrifugoToken = $state<string>("");
+  let lobbyToken = $state<string>("");
 
   // Game
-  let phase = $state<GamePhase>('auth');
+  let phase = $state<GamePhase>("auth");
   let game = $state<GameSummary | null>(null);
   let board = $state<string[][]>([]);
-  let currentTurnUid = $state<string>('');
+  let currentTurnUid = $state<string>("");
   let players = $state<PlayerInfo[]>([]);
   let moveNumber = $state<number>(0);
   let winnerUid = $state<string | null | undefined>(null);
+  let finishReason = $state<string | undefined>(undefined);
 
   // In-game notification (replaces browser alert)
-  let notif = $state<{ message: string; kind: 'error' | 'warn' } | null>(null);
+  let notif = $state<{ message: string; kind: "error" | "warn" } | null>(null);
 
   // Lobby game list — updated via lobby_update Centrifugo events
   let lobbyGames = $state<GameSummary[]>([]);
@@ -45,7 +57,7 @@ export function createGameState() {
   // Turn interaction
   let selectedPath = $state<{ row: number; col: number }[]>([]);
   let newLetterCell = $state<{ row: number; col: number } | null>(null);
-  let currentWord = $state<string>('');
+  let currentWord = $state<string>("");
   let turnSecondsLeft = $state<number>(60);
   let moveLoading = $state<boolean>(false);
 
@@ -55,10 +67,18 @@ export function createGameState() {
   const opponent = $derived(players.find((p) => p.uid !== playerUid));
 
   function resetBoard() {
-    board = Array.from({ length: 5 }, () => Array(5).fill(''));
+    board = Array.from({ length: 5 }, () => Array(5).fill(""));
   }
 
-  function setAuth(data: { apiKey: string; sessionId: string; playerUid: string; nickname: string; exp: number; centrifugoToken: string; lobbyToken: string }) {
+  function setAuth(data: {
+    apiKey: string;
+    sessionId: string;
+    playerUid: string;
+    nickname: string;
+    exp: number;
+    centrifugoToken: string;
+    lobbyToken: string;
+  }) {
     apiKey = data.apiKey;
     sessionId = data.sessionId;
     playerUid = data.playerUid;
@@ -69,35 +89,36 @@ export function createGameState() {
   }
 
   function setLobby() {
-    phase = 'lobby';
+    phase = "lobby";
     game = null;
     resetBoard();
     selectedPath = [];
     newLetterCell = null;
-    currentWord = '';
+    currentWord = "";
     winnerUid = null;
+    finishReason = undefined;
     endProposalPending = false;
     endProposalByMe = false;
   }
 
   function setWaiting(g: GameSummary) {
     game = g;
-    phase = 'waiting';
+    phase = "waiting";
   }
 
   function startGame(g: GameSummary) {
     game = g;
-    phase = 'playing';
+    phase = "playing";
     resetBoard();
     selectedPath = [];
     newLetterCell = null;
-    currentWord = '';
+    currentWord = "";
     winnerUid = null;
     turnSecondsLeft = 60;
     if (g.players && g.players.length > 0) {
       players = g.players.map((p) => ({
         uid: p.uid,
-        nickname: p.uid === playerUid ? nickname : 'Соперник',
+        nickname: p.uid === playerUid ? nickname : "Соперник",
         exp: p.exp ?? 0,
         expGained: 0,
         score: 0,
@@ -108,7 +129,7 @@ export function createGameState() {
     } else {
       players = g.player_ids.map((uid) => ({
         uid,
-        nickname: uid === playerUid ? nickname : 'Соперник',
+        nickname: uid === playerUid ? nickname : "Соперник",
         exp: 0,
         expGained: 0,
         score: 0,
@@ -123,7 +144,8 @@ export function createGameState() {
     const existing = players.find((ep) => ep.uid === p.uid);
     return {
       uid: p.uid,
-      nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
+      nickname:
+        existing?.nickname || (p.uid === playerUid ? nickname : "Соперник"),
       exp: p.exp ?? existing?.exp ?? 0,
       expGained: p.exp_gained ?? 0,
       score: p.score,
@@ -138,21 +160,22 @@ export function createGameState() {
     currentTurnUid = ev.current_turn_uid;
     moveNumber = ev.move_number;
     players = ev.players.map(mergePlayerState);
-    if (ev.status === 'in_progress') {
-      phase = 'playing';
-    } else if (ev.status === 'finished') {
-      phase = 'finished';
+    if (ev.status === "in_progress") {
+      phase = "playing";
+    } else if (ev.status === "finished") {
+      phase = "finished";
     }
     selectedPath = [];
     newLetterCell = null;
-    currentWord = '';
+    currentWord = "";
     turnSecondsLeft = 60;
     notif = null;
   }
 
   function finishGame(ev: EvGameOver) {
-    phase = 'finished';
+    phase = "finished";
     winnerUid = ev.winner_uid;
+    finishReason = ev.reason;
     players = ev.players.map(mergePlayerState);
   }
 
@@ -171,7 +194,7 @@ export function createGameState() {
 
   function applySkipWarn(ev: EvSkipWarn) {
     players = players.map((p) =>
-      p.uid === ev.player_uid ? { ...p, consecutiveSkips: ev.skips_used } : p
+      p.uid === ev.player_uid ? { ...p, consecutiveSkips: ev.skips_used } : p,
     );
   }
 
@@ -180,7 +203,7 @@ export function createGameState() {
     turnSecondsLeft = 60;
     selectedPath = [];
     newLetterCell = null;
-    currentWord = '';
+    currentWord = "";
     endProposalPending = false;
     endProposalByMe = false;
   }
@@ -189,13 +212,16 @@ export function createGameState() {
     board = resp.board;
     currentTurnUid = resp.current_turn_uid;
     moveNumber = resp.move_number;
-    players = resp.players.map((p) => ({ ...mergePlayerState(p), consecutiveSkips: 0 }));
-    if (resp.status === 'finished') {
-      phase = 'finished';
+    players = resp.players.map((p) => ({
+      ...mergePlayerState(p),
+      consecutiveSkips: 0,
+    }));
+    if (resp.status === "finished") {
+      phase = "finished";
     }
     selectedPath = [];
     newLetterCell = null;
-    currentWord = '';
+    currentWord = "";
     turnSecondsLeft = 60;
     notif = null;
   }
@@ -230,7 +256,7 @@ export function createGameState() {
   }
 
   function rebuildWord() {
-    currentWord = selectedPath.map((p) => board[p.row][p.col]).join('');
+    currentWord = selectedPath.map((p) => board[p.row][p.col]).join("");
   }
 
   function setNewLetterCell(row: number, col: number) {
@@ -246,7 +272,7 @@ export function createGameState() {
 
   function undoNewLetter() {
     if (newLetterCell) {
-      board[newLetterCell.row][newLetterCell.col] = '';
+      board[newLetterCell.row][newLetterCell.col] = "";
       newLetterCell = null;
       rebuildWord();
     }
@@ -254,7 +280,7 @@ export function createGameState() {
 
   function clearSelection() {
     selectedPath = [];
-    currentWord = '';
+    currentWord = "";
   }
 
   function applyLobbyUpdate(ev: EvLobbyUpdate) {
@@ -265,7 +291,7 @@ export function createGameState() {
     lobbyGames = gs;
   }
 
-  function showNotif(message: string, kind: 'error' | 'warn' = 'error') {
+  function showNotif(message: string, kind: "error" | "warn" = "error") {
     notif = { message, kind };
   }
 
@@ -274,32 +300,87 @@ export function createGameState() {
   }
 
   return {
-    get apiKey() { return apiKey; },
-    get sessionId() { return sessionId; },
-    get playerUid() { return playerUid; },
-    get nickname() { return nickname; },
-    get exp() { return exp; },
-    get centrifugoToken() { return centrifugoToken; },
-    get lobbyToken() { return lobbyToken; },
-    get phase() { return phase; },
-    get game() { return game; },
-    get board() { return board; },
-    get currentTurnUid() { return currentTurnUid; },
-    get players() { return players; },
-    get moveNumber() { return moveNumber; },
-    get winnerUid() { return winnerUid; },
-    get selectedPath() { return selectedPath; },
-    get newLetterCell() { return newLetterCell; },
-    get currentWord() { return currentWord; },
-    get turnSecondsLeft() { return turnSecondsLeft; },
-    get moveLoading() { return moveLoading; },
-    get isMyTurn() { return isMyTurn; },
-    get myPlayer() { return myPlayer; },
-    get opponent() { return opponent; },
-    get notif() { return notif; },
-    get lobbyGames() { return lobbyGames; },
-    get endProposalPending() { return endProposalPending; },
-    get endProposalByMe() { return endProposalByMe; },
+    get apiKey() {
+      return apiKey;
+    },
+    get sessionId() {
+      return sessionId;
+    },
+    get playerUid() {
+      return playerUid;
+    },
+    get nickname() {
+      return nickname;
+    },
+    get exp() {
+      return exp;
+    },
+    get centrifugoToken() {
+      return centrifugoToken;
+    },
+    get lobbyToken() {
+      return lobbyToken;
+    },
+    get phase() {
+      return phase;
+    },
+    get game() {
+      return game;
+    },
+    get board() {
+      return board;
+    },
+    get currentTurnUid() {
+      return currentTurnUid;
+    },
+    get players() {
+      return players;
+    },
+    get moveNumber() {
+      return moveNumber;
+    },
+    get winnerUid() {
+      return winnerUid;
+    },
+    get finishReason() {
+      return finishReason;
+    },
+    get selectedPath() {
+      return selectedPath;
+    },
+    get newLetterCell() {
+      return newLetterCell;
+    },
+    get currentWord() {
+      return currentWord;
+    },
+    get turnSecondsLeft() {
+      return turnSecondsLeft;
+    },
+    get moveLoading() {
+      return moveLoading;
+    },
+    get isMyTurn() {
+      return isMyTurn;
+    },
+    get myPlayer() {
+      return myPlayer;
+    },
+    get opponent() {
+      return opponent;
+    },
+    get notif() {
+      return notif;
+    },
+    get lobbyGames() {
+      return lobbyGames;
+    },
+    get endProposalPending() {
+      return endProposalPending;
+    },
+    get endProposalByMe() {
+      return endProposalByMe;
+    },
 
     setAuth,
     setLobby,
@@ -323,7 +404,9 @@ export function createGameState() {
     clearSelection,
     showNotif,
     clearNotif,
-    setMoveLoading(value: boolean) { moveLoading = value; },
+    setMoveLoading(value: boolean) {
+      moveLoading = value;
+    },
   };
 }
 

@@ -92,6 +92,7 @@ type EvGameOver struct {
 	GameID    string        `json:"game_id"`
 	WinnerUID string        `json:"winner_uid,omitempty"`
 	Players   []PlayerState `json:"players"`
+	Reason    string        `json:"reason,omitempty"`
 }
 
 // EvEndProposal is published when the current player proposes to end the game.

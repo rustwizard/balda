@@ -137,7 +137,7 @@ classDiagram
     +NotifyTimeout(playerID, consecutive, willKick)
     +NotifySkip(playerID, consecutive, willEnd)
     +NotifyKick(playerID)
-    +NotifyBoardFull()
+    +NotifyGameFinished()
   }
 
   class GameState {
@@ -154,7 +154,7 @@ classDiagram
     EventTurnTimeout
     EventAckTimeout
     EventKick
-    EventBoardFull
+    EventGameFinished
   }
 
   class Dictionary {

@@ -99,10 +99,10 @@ func (c *Coordinator) NotifyKick(kickedPlayerID string) {
 	go c.publishGameOver(kickedPlayerID)
 }
 
-// NotifyBoardFull is called when the last empty cell on the board is filled.
+// NotifyGameFinished is called when the game ends naturally (board full or no moves left).
 // The winner is the player with the higher score; equal scores mean a draw.
-func (c *Coordinator) NotifyBoardFull() {
-	go c.publishBoardFullGameOver()
+func (c *Coordinator) NotifyGameFinished() {
+	go c.publishNaturalGameOver()
 }
 
 // NotifyEndProposed is called when the current player proposes to end the game.
@@ -195,6 +195,7 @@ func (c *Coordinator) publishEndProposalResult(accepted bool, remainingMs int64)
 			GameID:    c.gameID,
 			WinnerUID: winnerUID,
 			Players:   players,
+			Reason:    "accept_end",
 		}
 		if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), gameOverEv); err != nil {
 			slog.Error("gamecoord: publish game_over (accept_end)", slog.String("gameID", c.gameID), slog.Any("error", err))
@@ -284,13 +285,13 @@ func (c *Coordinator) publishSkipWarn(playerID string, skipsUsed, skipsLeft int)
 	}
 }
 
-func (c *Coordinator) publishBoardFullGameOver() {
+func (c *Coordinator) publishNaturalGameOver() {
 	scores := c.g.PlayerScores()
 	winnerUID := findWinnerByScore(scores, "")
 
 	// Persist the result before notifying clients so the database is the
 	// source of truth by the time they see game_over.
-	c.dispatchGameResult(winnerUID, storage.FinishReasonBoardFull, scores)
+	c.dispatchGameResult(winnerUID, storage.FinishReasonGameFinished, scores)
 
 	isDraw := winnerUID == ""
 	players := make([]centrifugo.PlayerState, len(scores))
@@ -308,12 +309,13 @@ func (c *Coordinator) publishBoardFullGameOver() {
 		GameID:    c.gameID,
 		WinnerUID: winnerUID,
 		Players:   players,
+		Reason:    "game_finished",
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 	if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), ev); err != nil {
-		slog.Error("gamecoord: publish game_over (board full)", slog.String("gameID", c.gameID), slog.Any("error", err))
+		slog.Error("gamecoord: publish game_over (game_finished)", slog.String("gameID", c.gameID), slog.Any("error", err))
 	}
 }
 
@@ -341,6 +343,7 @@ func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 		GameID:    c.gameID,
 		WinnerUID: winnerUID,
 		Players:   players,
+		Reason:    "kick",
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
