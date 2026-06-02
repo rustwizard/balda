@@ -117,7 +117,8 @@ func (s *Balda) SubmitMove(ctx context.Context, uid int64, gameID string, newLet
 		return nil, "", fmt.Errorf("player is not in this game")
 	}
 
-	board := rec.Game.Board().AsStrings()
+	// Resolve characters for the word path from the current board state.
+	board := rec.Game.BoardSnapshot()
 	for i := range wordPath {
 		if wordPath[i].RowID == newLetter.RowID && wordPath[i].ColID == newLetter.ColID {
 			wordPath[i].Char = newLetter.Char

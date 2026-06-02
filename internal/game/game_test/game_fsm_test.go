@@ -296,11 +296,11 @@ func TestGame_Run_ExplicitKickEndsGame(t *testing.T) {
 // fillBoardExcept fills every cell of the board with "я" except the given cell.
 // Must be called before g.Run to avoid data races.
 func fillBoardExcept(g *game.Game, skipRow, skipCol uint8) {
-	board := g.Board()
-	for r := range board.Table {
-		for c := range board.Table[r] {
-			if board.Table[r][c] == nil && (uint8(r) != skipRow || uint8(c) != skipCol) {
-				board.Table[r][c] = &game.Letter{RowID: uint8(r), ColID: uint8(c), Char: "я"}
+	snap := g.BoardSnapshot()
+	for r := uint8(0); r < 5; r++ {
+		for c := uint8(0); c < 5; c++ {
+			if snap[r][c] == "" && (r != skipRow || c != skipCol) {
+				g.FillCell(r, c, "я")
 			}
 		}
 	}

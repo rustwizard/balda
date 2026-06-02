@@ -423,11 +423,26 @@ func NewGameWithWord(players []*Player, initWord string, n Notifier, opts ...Opt
 	return g, nil
 }
 
-// Board returns the game's letter board.
-func (g *Game) Board() *LettersTable {
+// BoardSnapshot returns a copy of the current board state.
+// The copy is made under the game mutex so callers never hold a raw pointer
+// to the board and can safely read the result without additional locking.
+func (g *Game) BoardSnapshot() [5][5]string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	return g.board
+	return g.board.AsStrings()
+}
+
+// BoardIsFull reports whether every cell on the 5×5 board is occupied.
+func (g *Game) BoardIsFull() bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.board.IsFull()
+}
+
+// FillCell places a letter directly on the board without validation.
+// Only safe to call before Run() starts (no concurrent access).
+func (g *Game) FillCell(row, col uint8, char string) {
+	g.board.Table[row][col] = &Letter{RowID: row, ColID: col, Char: char}
 }
 
 // PlayerState holds a player's UID and current score for external consumers.

@@ -136,7 +136,7 @@ func (h *Handlers) buildActiveGame(uid int64, playerID string) *baldaapi.ActiveG
 	return &baldaapi.ActiveGame{
 		GameID:         baldaapi.NewOptUUID(gameID),
 		GameToken:      baldaapi.NewOptString(gameToken),
-		Board:          boardToSlice(rec.Game.Board().AsStrings()),
+		Board:          boardToSlice(rec.Game.BoardSnapshot()),
 		CurrentTurnUID: baldaapi.NewOptUUID(currentTurnUID),
 		MoveNumber:     baldaapi.NewOptInt(rec.Game.MoveNumber()),
 		Status:         baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),

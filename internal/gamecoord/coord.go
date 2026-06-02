@@ -242,7 +242,7 @@ func (c *Coordinator) publishTurnChange(playerID, reason string) {
 }
 
 func (c *Coordinator) publishGameState() {
-	board := c.g.Board().AsStrings()
+	board := c.g.BoardSnapshot()
 	scores := c.g.PlayerScores()
 	currentTurn := c.g.CurrentPlayerID()
 	moveNum := c.g.MoveNumber()

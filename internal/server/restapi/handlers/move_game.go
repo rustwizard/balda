@@ -86,12 +86,12 @@ func (h *Handlers) MoveGame(ctx context.Context, req *baldaapi.MoveRequest, para
 	}
 
 	scores := rec.Game.PlayerScores()
-	boardFull := rec.Game.Board().IsFull()
+	boardFull := rec.Game.BoardIsFull()
 
 	if boardFull {
 		// gamecoord.NotifyBoardFull will publish game_over via Centrifugo.
 		return &baldaapi.MoveResponse{
-			Board:      boardToSlice(rec.Game.Board().AsStrings()),
+			Board:      boardToSlice(rec.Game.BoardSnapshot()),
 			Players:    playerScoresToAPI(scores),
 			Status:     baldaapi.NewOptGameStatus(baldaapi.GameStatusFinished),
 			MoveNumber: baldaapi.NewOptInt(rec.Game.MoveNumber()),
@@ -115,7 +115,7 @@ func (h *Handlers) MoveGame(ctx context.Context, req *baldaapi.MoveRequest, para
 	}
 
 	return &baldaapi.MoveResponse{
-		Board:          boardToSlice(rec.Game.Board().AsStrings()),
+		Board:          boardToSlice(rec.Game.BoardSnapshot()),
 		CurrentTurnUID: baldaapi.NewOptUUID(nextUID),
 		Players:        playerScoresToAPI(scores),
 		Status:         baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),
@@ -172,7 +172,7 @@ func buildGameState(rec *lobby.GameRecord, currentTurnUID string) centrifugo.EvG
 	return centrifugo.EvGameState{
 		Type:           "game_state",
 		GameID:         rec.ID,
-		Board:          rec.Game.Board().AsStrings(),
+		Board:          rec.Game.BoardSnapshot(),
 		CurrentTurnUID: currentTurnUID,
 		Players:        players,
 		Status:         "in_progress",
