@@ -2,7 +2,7 @@ package lobby_test
 
 // Integration tests for lobby + matchmaking working together.
 // These tests wire both packages the same way a real server would and verify
-// end-to-end behaviour: from a player entering the queue to a game running in
+// end-to-end behavior: from a player entering the queue to a game running in
 // the lobby and eventually ending.
 
 import (
@@ -13,7 +13,6 @@ import (
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
-	"github.com/rustwizard/balda/internal/notifier"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +38,7 @@ func newSystem(t testing.TB) (*lobby.Lobby, *matchmaking.Queue, context.CancelFu
 	lby := newLobby() // defined in lobby_test.go: uses realFactory + "волна" board
 	ctx, cancel := context.WithCancel(context.Background())
 	q := matchmaking.New(mmCfg(), func(players []*game.Player) error {
-		_, err := lby.StartGame(ctx, players, &notifier.Noop{})
+		_, err := lby.StartGame(ctx, players, &game.NoopNotifier{})
 		return err
 	})
 	return lby, q, cancel
@@ -100,7 +99,7 @@ func TestIntegration_BothPlayersInSameGame(t *testing.T) {
 }
 
 // TestIntegration_GameEnds_LobbyClears verifies that when the game's context
-// is cancelled (server shutdown or explicit remove) the lobby removes the entry
+// is canceled (server shutdown or explicit remove) the lobby removes the entry
 // automatically, so List() eventually returns empty.
 func TestIntegration_GameEnds_LobbyClears(t *testing.T) {
 	lby, q, cancel := newSystem(t)

@@ -2,8 +2,13 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -14,7 +19,6 @@ import (
 	"github.com/rustwizard/balda/internal/gamecoord"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
-	"github.com/rustwizard/balda/internal/notifier"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/balda/internal/service"
 	"github.com/rustwizard/balda/internal/storage"
@@ -73,25 +77,25 @@ type CentrifugoConfig struct {
 }
 
 type Config struct {
-	ServerAddr  string
-	ServerPort  int
-	Pg          PgConfig
-	Session     session.Config
-	XAPIToken   string
-	Centrifugo  CentrifugoConfig
+	ServerAddr string
+	ServerPort int
+	Pg         PgConfig
+	Session    session.Config
+	XAPIToken  string
+	Centrifugo CentrifugoConfig
 }
 
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "Balda Game Server",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		flags.BindEnv(cmd)
 
 		dbVersion, err := migrations.Migrate(10 * time.Second)
 		if err != nil {
 			slog.Error("failed to migrate database", slog.Any("error", err))
-			return fmt.Errorf("failed to migrate database: %v", err)
+			return fmt.Errorf("failed to migrate database: %w", err)
 		}
 
 		slog.Info("database migration success", slog.Int("db_version", dbVersion))
@@ -102,24 +106,26 @@ var serverCmd = &cobra.Command{
 		)
 		pool, err := pgxpool.New(cmd.Context(), connStr)
 		if err != nil {
-			return fmt.Errorf("connect to pg: %v", err)
+			return fmt.Errorf("connect to pg: %w", err)
 		}
 		defer pool.Close()
 
-		sess := session.NewService(cfg.Session)
-
-		redisClient := redis.NewClient(&redis.Options{
+		sess := session.NewService(cfg.Session, redis.NewClient(&redis.Options{
 			Addr:     cfg.Session.Addr,
 			Username: cfg.Session.Username,
 			Password: cfg.Session.Password,
 			DB:       cfg.Session.DBNum,
-		})
-		n := notifier.New(notifier.WithRedisSender(redisClient))
+		}))
 
 		cf := centrifugo.NewClient(cfg.Centrifugo.APIURL, cfg.Centrifugo.APIKey)
 
-		lby := lobby.New(func(ctx context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
+		s := storage.New(pool, 10*time.Second)
+
+		var pendingResults sync.WaitGroup
+
+		lby := lobby.New(func(_ context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
 			coord := gamecoord.New(gameID, players, cf)
+			coord.SetOnGameOver(makeOnGameOverCallback(s, &pendingResults))
 			g, err := game.NewGame(players, coord)
 			if err != nil {
 				return nil, err
@@ -128,36 +134,68 @@ var serverCmd = &cobra.Command{
 			return g, nil
 		})
 		mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-			_, err := lby.StartGame(cmd.Context(), players, n)
+			_, err := lby.StartGame(cmd.Context(), players, &game.NoopNotifier{})
 			return err
 		})
 
-		s := storage.New(pool, 10*time.Second)
-
-		svc := service.New(lby, mm, s, n)
+		svc := service.New(lby, mm, s)
 
 		h := handlers.New(svc, sess, cfg.XAPIToken, cf, cfg.Centrifugo.TokenHMACSecret)
 
 		srv, err := baldaapi.NewServer(h, h, baldaapi.WithPathPrefix("/balda/api/v1"))
 		if err != nil {
-			return fmt.Errorf("create ogen server: %v", err)
+			return fmt.Errorf("create ogen server: %w", err)
 		}
 
 		mux := http.NewServeMux()
-		mux.HandleFunc("/balda/api/v1/docs/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc("/balda/api/v1/docs/openapi.yaml", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/yaml")
-			w.Write(openapi.Spec)
+			_, _ = w.Write(openapi.Spec)
 		})
-		mux.HandleFunc("/balda/api/v1/docs", func(w http.ResponseWriter, r *http.Request) {
+		mux.HandleFunc("/balda/api/v1/docs", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			fmt.Fprint(w, docsHTML)
+			_, _ = fmt.Fprint(w, docsHTML)
 		})
 		mux.Handle("/", srv)
 
 		addr := fmt.Sprintf("%s:%d", cfg.ServerAddr, cfg.ServerPort)
-		slog.Info("starting server", slog.String("addr", addr))
-		if err := http.ListenAndServe(addr, mux); err != nil {
-			return fmt.Errorf("server serve: %v", err)
+		httpSrv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+
+		go func() {
+			slog.Info("starting server", slog.String("addr", addr))
+			if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				slog.Error("server serve", slog.Any("error", err))
+			}
+		}()
+
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		<-quit
+
+		slog.Info("shutting down server")
+
+		// Cancel all running games so their goroutines exit cleanly.
+		lby.Shutdown()
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if err := httpSrv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("server shutdown", slog.Any("error", err))
+		}
+
+		// Wait for any in-flight SaveGameResult calls to finish.
+		done := make(chan struct{})
+		go func() {
+			pendingResults.Wait()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			slog.Info("all pending game results saved")
+		case <-shutdownCtx.Done():
+			slog.Warn("shutdown timeout exceeded, some game results may be lost")
 		}
 
 		return nil
@@ -189,4 +227,41 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 func init() {
 	serverCmd.Flags().AddFlagSet(cfg.Flags("server"))
 	serverCmd.Flags().AddFlagSet(cfg.Session.Flags("redis"))
+}
+
+// gameResultSaver matches *storage.Storage so the callback can be unit-tested.
+type gameResultSaver interface {
+	SaveGameResult(ctx context.Context, r storage.GameResult) error
+}
+
+// makeOnGameOverCallback returns a callback that persists a game result with
+// retry and exponential backoff (100 ms, 200 ms). It accounts its work in
+// pending so the server can drain in-flight saves during graceful shutdown.
+func makeOnGameOverCallback(saver gameResultSaver, pending *sync.WaitGroup) func(storage.GameResult) {
+	return func(r storage.GameResult) {
+		pending.Add(1)
+		defer pending.Done()
+
+		var err error
+		for i := 0; i < 3; i++ {
+			if i > 0 {
+				time.Sleep(time.Duration(i) * 100 * time.Millisecond)
+			}
+			err = saver.SaveGameResult(context.Background(), r)
+			if err == nil {
+				break
+			}
+			slog.Warn("save game result failed, retrying",
+				slog.Int("attempt", i+1),
+				slog.String("gameID", r.GameID),
+				slog.Any("error", err),
+			)
+		}
+		if err != nil {
+			slog.Error("save game result failed after retries",
+				slog.String("gameID", r.GameID),
+				slog.Any("error", err),
+			)
+		}
+	}
 }

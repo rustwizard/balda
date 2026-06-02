@@ -113,7 +113,7 @@ func (q *Queue) Len() int {
 	return len(q.entries)
 }
 
-// Run starts the matchmaking loop. It blocks until ctx is cancelled.
+// Run starts the matchmaking loop. It blocks until ctx is canceled.
 // Call this in a dedicated goroutine.
 func (q *Queue) Run(ctx context.Context) {
 	ticker := time.NewTicker(q.cfg.TickInterval)

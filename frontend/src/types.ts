@@ -6,6 +6,12 @@ export interface Player {
   lastname: string;
   sid: string;
   key: string;
+  exp?: number;
+}
+
+export interface LobbyPlayer {
+  uid: string;
+  exp?: number;
 }
 
 export interface SignupRequest {
@@ -37,6 +43,7 @@ export type GameStatus = 'waiting' | 'in_progress' | 'finished';
 export interface GameSummary {
   id: string;
   player_ids: string[];
+  players?: LobbyPlayer[];
   status: GameStatus;
   started_at: number;
 }
@@ -57,10 +64,13 @@ export interface ListGamesResponse {
   games: GameSummary[];
 }
 
-export interface PlayerScore {
+export interface PlayerGameState {
   uid: string;
+  exp?: number;
+  exp_gained?: number;
   score: number;
   words_count: number;
+  words?: string[];
 }
 
 export interface PlayerState {
@@ -77,7 +87,7 @@ export interface EvGameState {
   game_id: string;
   board: string[][];
   current_turn_uid: string;
-  players: PlayerScore[];
+  players: PlayerGameState[];
   status: GameStatus;
   move_number: number;
 }
@@ -86,7 +96,7 @@ export interface EvGameOver {
   type: 'game_over';
   game_id: string;
   winner_uid?: string | null;
-  players: PlayerScore[];
+  players: PlayerGameState[];
 }
 
 export interface EvGameCreated {
@@ -128,9 +138,21 @@ export interface MoveRequest {
 export interface MoveResponse {
   board: string[][];
   current_turn_uid: string;
-  players: PlayerScore[];
+  players: PlayerGameState[];
   status: GameStatus;
   move_number: number;
+}
+
+export interface EvLobbyUpdate {
+  type: 'lobby_update';
+  games: GameSummary[];
+}
+
+export interface EvEndProposalResult {
+  type: 'end_proposal_result';
+  game_id: string;
+  accepted: boolean;
+  remaining_ms?: number;
 }
 
 export interface EvSkipWarn {
@@ -141,4 +163,10 @@ export interface EvSkipWarn {
   skips_left: number;
 }
 
-export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange | EvSkipWarn;
+export interface EvEndProposal {
+  type: 'end_proposal';
+  game_id: string;
+  proposer_uid: string;
+}
+
+export type CentrifugoEvent = EvGameState | EvGameOver | EvGameCreated | EvGameStarted | EvTurnChange | EvSkipWarn | EvLobbyUpdate | EvEndProposalResult | EvEndProposal;

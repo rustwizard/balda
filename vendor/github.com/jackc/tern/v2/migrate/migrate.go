@@ -484,6 +484,24 @@ func (m *Migrator) GetCurrentVersion(ctx context.Context) (v int32, err error) {
 	return v, err
 }
 
+// SetVersion sets the current migration version without running any migrations.
+// This is useful for baselining an existing database when adopting tern.
+func (m *Migrator) SetVersion(ctx context.Context, version int32) (err error) {
+	err = acquireAdvisoryLock(ctx, m.conn)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		unlockErr := releaseAdvisoryLock(ctx, m.conn)
+		if err == nil && unlockErr != nil {
+			err = unlockErr
+		}
+	}()
+
+	_, err = m.conn.Exec(ctx, "update "+m.versionTable+" set version=$1", version)
+	return err
+}
+
 func (m *Migrator) ensureSchemaVersionTableExists(ctx context.Context) (err error) {
 	err = acquireAdvisoryLock(ctx, m.conn)
 	if err != nil {
@@ -496,12 +514,27 @@ func (m *Migrator) ensureSchemaVersionTableExists(ctx context.Context) (err erro
 		}
 	}()
 
-	if ok, err := m.versionTableExists(ctx); err != nil || ok {
+	if ok, err := m.versionTableExists(ctx); err != nil {
+		return err
+	} else if ok {
+		_, err = m.conn.Exec(ctx, fmt.Sprintf(`
+      do $$
+      begin
+        if not exists (
+          select 1 from pg_constraint
+          where conrelid = '%[1]s'::regclass
+          and contype = 'p'
+        ) then
+          alter table %[1]s add primary key (version);
+        end if;
+      end
+      $$;
+    `, m.versionTable))
 		return err
 	}
 
 	_, err = m.conn.Exec(ctx, fmt.Sprintf(`
-    create table if not exists %s(version int4 not null);
+    create table if not exists %s(version int4 not null primary key);
 
     insert into %s(version)
     select 0

@@ -57,9 +57,10 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 			}, nil
 		default:
 			slog.Error("join_game: join", slog.Any("error", err))
-			return &baldaapi.JoinGameConflict{
+			return &baldaapi.JoinGameInternalServerError{
 				Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
 				Message: baldaapi.NewOptString("failed to join game"),
+				Type:    baldaapi.NewOptString("InternalServerError"),
 			}, nil
 		}
 	}
@@ -74,12 +75,17 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	}
 
 	playerIDs := make([]uuid.UUID, 0, len(rec.Players))
+	lobbyPlayers := make([]baldaapi.LobbyPlayer, 0, len(rec.Players))
 	for _, p := range rec.Players {
 		pid, err := uuid.Parse(p.ID)
 		if err != nil {
 			continue
 		}
 		playerIDs = append(playerIDs, pid)
+		lobbyPlayers = append(lobbyPlayers, baldaapi.LobbyPlayer{
+			UID: baldaapi.NewOptUUID(pid),
+			Exp: baldaapi.NewOptInt64(int64(p.Exp)),
+		})
 	}
 
 	ev := centrifugo.EvGameStarted{
@@ -98,28 +104,12 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	if err := h.cf.Publish(ctx, centrifugo.ChannelGame(rec.ID), ev); err != nil {
 		slog.Error("join_game: publish to game channel", slog.Any("error", err))
 	}
+	h.publishLobbyUpdate(ctx)
 
-	// Publish the initial board state so clients render the starting word immediately.
-	players := make([]centrifugo.PlayerScore, 0, len(rec.Players))
-	for _, p := range rec.Players {
-		players = append(players, centrifugo.PlayerScore{UID: p.ID, Score: 0, WordsCount: 0})
-	}
 	// The creator (index 0) always moves first.
 	firstPlayerID := ""
 	if len(rec.Players) > 0 {
 		firstPlayerID = rec.Players[0].ID
-	}
-	gameState := centrifugo.EvGameState{
-		Type:           "game_state",
-		GameID:         rec.ID,
-		Board:          rec.Game.BoardSnapshot(),
-		CurrentTurnUID: firstPlayerID,
-		Players:        players,
-		Status:         "in_progress",
-		MoveNumber:     0,
-	}
-	if err := h.cf.Publish(ctx, centrifugo.ChannelGame(rec.ID), gameState); err != nil {
-		slog.Error("join_game: publish initial game state", slog.Any("error", err))
 	}
 
 	gameToken, err := centrifugo.GenerateSubscriptionToken(
@@ -147,6 +137,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 		Game: baldaapi.NewOptGameSummary(baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
 			PlayerIds: playerIDs,
+			Players:   lobbyPlayers,
 			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),
 			StartedAt: baldaapi.NewOptInt64(rec.StartedAt.UnixMilli()),
 		}),

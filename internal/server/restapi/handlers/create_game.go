@@ -52,12 +52,17 @@ func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGamePar
 	}
 
 	playerIDs := make([]uuid.UUID, 0, len(rec.Players))
+	lobbyPlayers := make([]baldaapi.LobbyPlayer, 0, len(rec.Players))
 	for _, p := range rec.Players {
 		pid, err := uuid.Parse(p.ID)
 		if err != nil {
 			continue
 		}
 		playerIDs = append(playerIDs, pid)
+		lobbyPlayers = append(lobbyPlayers, baldaapi.LobbyPlayer{
+			UID: baldaapi.NewOptUUID(pid),
+			Exp: baldaapi.NewOptInt64(int64(p.Exp)),
+		})
 	}
 
 	ev := centrifugo.EvGameCreated{
@@ -70,8 +75,10 @@ func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGamePar
 		ev.Players = append(ev.Players, p.ID)
 	}
 	if err := h.cf.Publish(ctx, centrifugo.ChannelLobby, ev); err != nil {
-		slog.Error("create_game: publish to centrifugo", slog.Any("error", err))
+		slog.Error("create_game: publish game_created", slog.Any("error", err))
 	}
+
+	h.publishLobbyUpdate(ctx)
 
 	gameToken, err := centrifugo.GenerateSubscriptionToken(
 		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,
@@ -88,6 +95,7 @@ func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGamePar
 		Game: baldaapi.NewOptGameSummary(baldaapi.GameSummary{
 			ID:        baldaapi.NewOptUUID(gameID),
 			PlayerIds: playerIDs,
+			Players:   lobbyPlayers,
 			Status:    baldaapi.NewOptGameStatus(baldaapi.GameStatusWaiting),
 			StartedAt: baldaapi.NewOptInt64(rec.StartedAt.UnixMilli()),
 		}),

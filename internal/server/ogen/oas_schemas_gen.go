@@ -57,6 +57,108 @@ func (s *APIKeyQueryParam) SetRoles(val []string) {
 	s.Roles = val
 }
 
+type AcceptEndGameConflict ErrorResponse
+
+func (*AcceptEndGameConflict) acceptEndGameRes() {}
+
+// AcceptEndGameNoContent is response for AcceptEndGame operation.
+type AcceptEndGameNoContent struct{}
+
+func (*AcceptEndGameNoContent) acceptEndGameRes() {}
+
+type AcceptEndGameNotFound ErrorResponse
+
+func (*AcceptEndGameNotFound) acceptEndGameRes() {}
+
+type AcceptEndGameUnauthorized ErrorResponse
+
+func (*AcceptEndGameUnauthorized) acceptEndGameRes() {}
+
+// Ref: #/components/schemas/ActiveGame
+type ActiveGame struct {
+	// ID of the active game.
+	GameID OptUUID `json:"game_id"`
+	// Centrifugo subscription JWT for the game channel.
+	GameToken OptString `json:"game_token"`
+	// Current 5x5 board state.
+	Board [][]string `json:"board"`
+	// ID of the player whose turn it is.
+	CurrentTurnUID OptUUID           `json:"current_turn_uid"`
+	MoveNumber     OptInt            `json:"move_number"`
+	Status         OptGameStatus     `json:"status"`
+	Players        []PlayerGameState `json:"players"`
+}
+
+// GetGameID returns the value of GameID.
+func (s *ActiveGame) GetGameID() OptUUID {
+	return s.GameID
+}
+
+// GetGameToken returns the value of GameToken.
+func (s *ActiveGame) GetGameToken() OptString {
+	return s.GameToken
+}
+
+// GetBoard returns the value of Board.
+func (s *ActiveGame) GetBoard() [][]string {
+	return s.Board
+}
+
+// GetCurrentTurnUID returns the value of CurrentTurnUID.
+func (s *ActiveGame) GetCurrentTurnUID() OptUUID {
+	return s.CurrentTurnUID
+}
+
+// GetMoveNumber returns the value of MoveNumber.
+func (s *ActiveGame) GetMoveNumber() OptInt {
+	return s.MoveNumber
+}
+
+// GetStatus returns the value of Status.
+func (s *ActiveGame) GetStatus() OptGameStatus {
+	return s.Status
+}
+
+// GetPlayers returns the value of Players.
+func (s *ActiveGame) GetPlayers() []PlayerGameState {
+	return s.Players
+}
+
+// SetGameID sets the value of GameID.
+func (s *ActiveGame) SetGameID(val OptUUID) {
+	s.GameID = val
+}
+
+// SetGameToken sets the value of GameToken.
+func (s *ActiveGame) SetGameToken(val OptString) {
+	s.GameToken = val
+}
+
+// SetBoard sets the value of Board.
+func (s *ActiveGame) SetBoard(val [][]string) {
+	s.Board = val
+}
+
+// SetCurrentTurnUID sets the value of CurrentTurnUID.
+func (s *ActiveGame) SetCurrentTurnUID(val OptUUID) {
+	s.CurrentTurnUID = val
+}
+
+// SetMoveNumber sets the value of MoveNumber.
+func (s *ActiveGame) SetMoveNumber(val OptInt) {
+	s.MoveNumber = val
+}
+
+// SetStatus sets the value of Status.
+func (s *ActiveGame) SetStatus(val OptGameStatus) {
+	s.Status = val
+}
+
+// SetPlayers sets the value of Players.
+func (s *ActiveGame) SetPlayers(val []PlayerGameState) {
+	s.Players = val
+}
+
 // Ref: #/components/schemas/AuthRequest
 type AuthRequest struct {
 	// User's email.
@@ -92,6 +194,8 @@ type AuthResponse struct {
 	CentrifugoToken OptString `json:"centrifugo_token"`
 	// Centrifugo subscription JWT for the lobby channel.
 	LobbyToken OptString `json:"lobby_token"`
+	// Present when the player is currently in an active game. Use this to reconnect after a disconnect.
+	ActiveGame OptActiveGame `json:"active_game"`
 }
 
 // GetPlayer returns the value of Player.
@@ -109,6 +213,11 @@ func (s *AuthResponse) GetLobbyToken() OptString {
 	return s.LobbyToken
 }
 
+// GetActiveGame returns the value of ActiveGame.
+func (s *AuthResponse) GetActiveGame() OptActiveGame {
+	return s.ActiveGame
+}
+
 // SetPlayer sets the value of Player.
 func (s *AuthResponse) SetPlayer(val OptPlayer) {
 	s.Player = val
@@ -124,8 +233,16 @@ func (s *AuthResponse) SetLobbyToken(val OptString) {
 	s.LobbyToken = val
 }
 
+// SetActiveGame sets the value of ActiveGame.
+func (s *AuthResponse) SetActiveGame(val OptActiveGame) {
+	s.ActiveGame = val
+}
+
 func (*AuthResponse) authRes() {}
 
+// A cell position on the 5×5 board, used in word_path. The character at each cell is resolved
+// server-side from the current board state; clients do not need to send it. The new letter being
+// placed is provided separately in new_letter.char.
 // Ref: #/components/schemas/BoardCell
 type BoardCell struct {
 	Row int `json:"row"`
@@ -283,8 +400,10 @@ type GameSummary struct {
 	// Game ID.
 	ID OptUUID `json:"id"`
 	// IDs of players participating in the game.
-	PlayerIds []uuid.UUID   `json:"player_ids"`
-	Status    OptGameStatus `json:"status"`
+	PlayerIds []uuid.UUID `json:"player_ids"`
+	// Players with EXP info.
+	Players []LobbyPlayer `json:"players"`
+	Status  OptGameStatus `json:"status"`
 	// When the game was started (Unix timestamp in milliseconds).
 	StartedAt OptInt64 `json:"started_at"`
 }
@@ -297,6 +416,11 @@ func (s *GameSummary) GetID() OptUUID {
 // GetPlayerIds returns the value of PlayerIds.
 func (s *GameSummary) GetPlayerIds() []uuid.UUID {
 	return s.PlayerIds
+}
+
+// GetPlayers returns the value of Players.
+func (s *GameSummary) GetPlayers() []LobbyPlayer {
+	return s.Players
 }
 
 // GetStatus returns the value of Status.
@@ -319,6 +443,11 @@ func (s *GameSummary) SetPlayerIds(val []uuid.UUID) {
 	s.PlayerIds = val
 }
 
+// SetPlayers sets the value of Players.
+func (s *GameSummary) SetPlayers(val []LobbyPlayer) {
+	s.Players = val
+}
+
 // SetStatus sets the value of Status.
 func (s *GameSummary) SetStatus(val OptGameStatus) {
 	s.Status = val
@@ -332,6 +461,10 @@ func (s *GameSummary) SetStartedAt(val OptInt64) {
 type JoinGameConflict ErrorResponse
 
 func (*JoinGameConflict) joinGameRes() {}
+
+type JoinGameInternalServerError ErrorResponse
+
+func (*JoinGameInternalServerError) joinGameRes() {}
 
 type JoinGameNotFound ErrorResponse
 
@@ -413,6 +546,34 @@ func (s *ListGamesResponse) SetGames(val []GameSummary) {
 
 func (*ListGamesResponse) listGamesRes() {}
 
+// Ref: #/components/schemas/LobbyPlayer
+type LobbyPlayer struct {
+	// Player's ID.
+	UID OptUUID `json:"uid"`
+	// Player's total EXP.
+	Exp OptInt64 `json:"exp"`
+}
+
+// GetUID returns the value of UID.
+func (s *LobbyPlayer) GetUID() OptUUID {
+	return s.UID
+}
+
+// GetExp returns the value of Exp.
+func (s *LobbyPlayer) GetExp() OptInt64 {
+	return s.Exp
+}
+
+// SetUID sets the value of UID.
+func (s *LobbyPlayer) SetUID(val OptUUID) {
+	s.UID = val
+}
+
+// SetExp sets the value of Exp.
+func (s *LobbyPlayer) SetExp(val OptInt64) {
+	s.Exp = val
+}
+
 type MoveGameBadRequest ErrorResponse
 
 func (*MoveGameBadRequest) moveGameRes() {}
@@ -420,6 +581,10 @@ func (*MoveGameBadRequest) moveGameRes() {}
 type MoveGameConflict ErrorResponse
 
 func (*MoveGameConflict) moveGameRes() {}
+
+type MoveGameInternalServerError ErrorResponse
+
+func (*MoveGameInternalServerError) moveGameRes() {}
 
 type MoveGameNotFound ErrorResponse
 
@@ -497,10 +662,10 @@ type MoveResponse struct {
 	// Updated 5x5 board state.
 	Board [][]string `json:"board"`
 	// ID of the player whose turn it is now.
-	CurrentTurnUID OptUUID       `json:"current_turn_uid"`
-	Players        []PlayerScore `json:"players"`
-	Status         OptGameStatus `json:"status"`
-	MoveNumber     OptInt        `json:"move_number"`
+	CurrentTurnUID OptUUID           `json:"current_turn_uid"`
+	Players        []PlayerGameState `json:"players"`
+	Status         OptGameStatus     `json:"status"`
+	MoveNumber     OptInt            `json:"move_number"`
 }
 
 // GetBoard returns the value of Board.
@@ -514,7 +679,7 @@ func (s *MoveResponse) GetCurrentTurnUID() OptUUID {
 }
 
 // GetPlayers returns the value of Players.
-func (s *MoveResponse) GetPlayers() []PlayerScore {
+func (s *MoveResponse) GetPlayers() []PlayerGameState {
 	return s.Players
 }
 
@@ -539,7 +704,7 @@ func (s *MoveResponse) SetCurrentTurnUID(val OptUUID) {
 }
 
 // SetPlayers sets the value of Players.
-func (s *MoveResponse) SetPlayers(val []PlayerScore) {
+func (s *MoveResponse) SetPlayers(val []PlayerGameState) {
 	s.Players = val
 }
 
@@ -554,6 +719,52 @@ func (s *MoveResponse) SetMoveNumber(val OptInt) {
 }
 
 func (*MoveResponse) moveGameRes() {}
+
+// NewOptActiveGame returns new OptActiveGame with value set to v.
+func NewOptActiveGame(v ActiveGame) OptActiveGame {
+	return OptActiveGame{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptActiveGame is optional ActiveGame.
+type OptActiveGame struct {
+	Value ActiveGame
+	Set   bool
+}
+
+// IsSet returns true if OptActiveGame was set.
+func (o OptActiveGame) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptActiveGame) Reset() {
+	var v ActiveGame
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptActiveGame) SetTo(v ActiveGame) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptActiveGame) Get() (v ActiveGame, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptActiveGame) Or(d ActiveGame) ActiveGame {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
 
 // NewOptGameStatus returns new OptGameStatus with value set to v.
 func NewOptGameStatus(v GameStatus) OptGameStatus {
@@ -917,6 +1128,8 @@ type Player struct {
 	Sid OptString `json:"sid"`
 	// Player's API Key that the client needs to provide when making API calls.
 	Key OptString `json:"key"`
+	// Player's total EXP.
+	Exp OptInt64 `json:"exp"`
 }
 
 // GetUID returns the value of UID.
@@ -944,6 +1157,11 @@ func (s *Player) GetKey() OptString {
 	return s.Key
 }
 
+// GetExp returns the value of Exp.
+func (s *Player) GetExp() OptInt64 {
+	return s.Exp
+}
+
 // SetUID sets the value of UID.
 func (s *Player) SetUID(val OptUUID) {
 	s.UID = val
@@ -969,44 +1187,85 @@ func (s *Player) SetKey(val OptString) {
 	s.Key = val
 }
 
-// Ref: #/components/schemas/PlayerScore
-type PlayerScore struct {
+// SetExp sets the value of Exp.
+func (s *Player) SetExp(val OptInt64) {
+	s.Exp = val
+}
+
+// Ref: #/components/schemas/PlayerGameState
+type PlayerGameState struct {
 	// Player's ID.
 	UID OptUUID `json:"uid"`
+	// Player's total EXP at the time of the event.
+	Exp OptInt64 `json:"exp"`
+	// EXP earned in this game (only present in game_over events).
+	ExpGained OptInt `json:"exp_gained"`
 	// Number of points scored in the current game.
 	Score OptInt `json:"score"`
 	// Number of words submitted by the player.
 	WordsCount OptInt `json:"words_count"`
+	// List of words submitted by the player in this game.
+	Words []string `json:"words"`
 }
 
 // GetUID returns the value of UID.
-func (s *PlayerScore) GetUID() OptUUID {
+func (s *PlayerGameState) GetUID() OptUUID {
 	return s.UID
 }
 
+// GetExp returns the value of Exp.
+func (s *PlayerGameState) GetExp() OptInt64 {
+	return s.Exp
+}
+
+// GetExpGained returns the value of ExpGained.
+func (s *PlayerGameState) GetExpGained() OptInt {
+	return s.ExpGained
+}
+
 // GetScore returns the value of Score.
-func (s *PlayerScore) GetScore() OptInt {
+func (s *PlayerGameState) GetScore() OptInt {
 	return s.Score
 }
 
 // GetWordsCount returns the value of WordsCount.
-func (s *PlayerScore) GetWordsCount() OptInt {
+func (s *PlayerGameState) GetWordsCount() OptInt {
 	return s.WordsCount
 }
 
+// GetWords returns the value of Words.
+func (s *PlayerGameState) GetWords() []string {
+	return s.Words
+}
+
 // SetUID sets the value of UID.
-func (s *PlayerScore) SetUID(val OptUUID) {
+func (s *PlayerGameState) SetUID(val OptUUID) {
 	s.UID = val
 }
 
+// SetExp sets the value of Exp.
+func (s *PlayerGameState) SetExp(val OptInt64) {
+	s.Exp = val
+}
+
+// SetExpGained sets the value of ExpGained.
+func (s *PlayerGameState) SetExpGained(val OptInt) {
+	s.ExpGained = val
+}
+
 // SetScore sets the value of Score.
-func (s *PlayerScore) SetScore(val OptInt) {
+func (s *PlayerGameState) SetScore(val OptInt) {
 	s.Score = val
 }
 
 // SetWordsCount sets the value of WordsCount.
-func (s *PlayerScore) SetWordsCount(val OptInt) {
+func (s *PlayerGameState) SetWordsCount(val OptInt) {
 	s.WordsCount = val
+}
+
+// SetWords sets the value of Words.
+func (s *PlayerGameState) SetWords(val []string) {
+	s.Words = val
 }
 
 // Ref: #/components/schemas/PlayerState
@@ -1086,6 +1345,40 @@ func (s *PlayerState) SetGameID(val OptUUID) {
 }
 
 func (*PlayerState) getPlayerStateUIDRes() {}
+
+type ProposeEndGameConflict ErrorResponse
+
+func (*ProposeEndGameConflict) proposeEndGameRes() {}
+
+// ProposeEndGameNoContent is response for ProposeEndGame operation.
+type ProposeEndGameNoContent struct{}
+
+func (*ProposeEndGameNoContent) proposeEndGameRes() {}
+
+type ProposeEndGameNotFound ErrorResponse
+
+func (*ProposeEndGameNotFound) proposeEndGameRes() {}
+
+type ProposeEndGameUnauthorized ErrorResponse
+
+func (*ProposeEndGameUnauthorized) proposeEndGameRes() {}
+
+type RejectEndGameConflict ErrorResponse
+
+func (*RejectEndGameConflict) rejectEndGameRes() {}
+
+// RejectEndGameNoContent is response for RejectEndGame operation.
+type RejectEndGameNoContent struct{}
+
+func (*RejectEndGameNoContent) rejectEndGameRes() {}
+
+type RejectEndGameNotFound ErrorResponse
+
+func (*RejectEndGameNotFound) rejectEndGameRes() {}
+
+type RejectEndGameUnauthorized ErrorResponse
+
+func (*RejectEndGameUnauthorized) rejectEndGameRes() {}
 
 // Ref: #/components/schemas/SignupRequest
 type SignupRequest struct {

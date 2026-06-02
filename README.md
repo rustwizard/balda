@@ -1,5 +1,7 @@
 # Balda
 
+[Русская версия](README.ru.md)
+
 A multiplayer turn-based word game server written in Go, with a real-time Svelte 5 frontend. Players compete on a 5×5 letter grid, placing letters to form valid Russian words and score points.
 
 > Work in progress — personal "just for fun" project.
@@ -64,6 +66,10 @@ balda/
 └── docker-compose.yml
 ```
 
+## Architecture
+
+System architecture is documented as a [C4 model](docs/architecture.md) (all four levels: Context, Container, Component, Code).
+
 ## Getting Started
 
 ### Prerequisites
@@ -73,12 +79,30 @@ balda/
 ### Run with Docker Compose
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 Starts PostgreSQL, Redis, Centrifugo, the game server on port `9666`, and the frontend on port `8080`.
 
-Open `http://localhost:8080` to play.
+Open `http://localhost:8080` to play. The frontend is also reachable from other devices on your local network via `http://<host-ip>:8080` (e.g. `http://192.168.1.42:8080`).
+
+### Frontend development
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite dev server listens on all interfaces (`0.0.0.0:5173`), so you can open the game from a phone or another computer on the same Wi-Fi network at `http://<host-ip>:5173`.
+
+Proxy targets for the backend and Centrifugo can be configured via environment variables (see `frontend/.env.example`):
+
+```bash
+BALDA_API_PROXY_URL=http://127.0.0.1:9666 \
+BALDA_CENTRIFUGO_PROXY_URL=http://127.0.0.1:8000 \
+npm run dev
+```
 
 ### Rebuild and restart
 
@@ -145,6 +169,9 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 | POST | `/games/{id}/join` | Join an existing waiting game |
 | POST | `/games/{id}/move` | Submit a move (place letter + word) |
 | POST | `/games/{id}/skip` | Skip the current turn |
+| POST | `/games/{id}/propose-end` | Propose to end the game early |
+| POST | `/games/{id}/accept-end` | Accept the opponent's end proposal |
+| POST | `/games/{id}/reject-end` | Reject the opponent's end proposal |
 
 ### POST /signup
 
@@ -181,7 +208,13 @@ Creates a new game in `waiting` status. Returns a `game_token` for subscribing t
 ```json
 // Response
 {
-  "game": { "id": "…", "player_ids": ["<creator>"], "status": "waiting", "started_at": 1712600000000 },
+  "game": {
+    "id": "…",
+    "player_ids": ["<creator>"],
+    "players": [{ "uid": "<creator>", "exp": 42 }],
+    "status": "waiting",
+    "started_at": 1712600000000
+  },
   "game_token": "…"
 }
 ```
@@ -193,7 +226,13 @@ Joins a waiting game. When the second player joins, the game starts immediately.
 ```json
 // Response
 {
-  "game": { "id": "…", "player_ids": ["<creator>", "<joiner>"], "status": "in_progress", "started_at": 1712600000000 },
+  "game": {
+    "id": "…",
+    "player_ids": ["<creator>", "<joiner>"],
+    "players": [{ "uid": "<creator>", "exp": 42 }, { "uid": "<joiner>", "exp": 17 }],
+    "status": "in_progress",
+    "started_at": 1712600000000
+  },
   "game_token": "…",
   "board": [["","","","",""],["","","","",""],["с","л","о","в","о"],["","","","",""],["","","","",""]],
   "current_turn_uid": "<creator-uid>"
@@ -240,10 +279,25 @@ After auth, the client connects to Centrifugo using `centrifugo_token`. Events f
 | Channel | Event type | When |
 |---------|-----------|------|
 | `lobby` | `game_created` | After `POST /games` |
+| `lobby` | `lobby_update` | Whenever the active game list changes |
 | `lobby` + `game:{id}` | `game_started` | After `POST /games/{id}/join` |
 | `game:{id}` | `game_state` | On turn start and after each accepted move |
 | `game:{id}` | `turn_change` | On every turn change (any reason) |
+| `game:{id}` | `skip_warn` | Each time a player skips a turn |
+| `game:{id}` | `end_proposal` | When a player proposes to end the game early |
+| `game:{id}` | `end_proposal_result` | When the opponent accepts or rejects the proposal |
 | `game:{id}` | `game_over` | When the game ends |
+
+### `lobby_update`
+
+Sent to the `lobby` channel whenever the active game list changes. The client replaces its local list with the received `games` array.
+
+```json
+{ "type": "lobby_update", "games": [
+  { "id": "…", "player_ids": ["…"], "players": [{"uid":"…","exp":42}],
+    "status": "waiting", "started_at": 1712600000000 }
+]}
+```
 
 ### `game_state`
 
@@ -251,8 +305,8 @@ Full board snapshot — sent after game start and after each move.
 
 ```json
 { "type": "game_state", "game_id": "…", "board": [["","…"]],
-  "current_turn_uid": "…", "players": [{"uid":"…","score":0,"words_count":0}],
-  "status": "in_progress", "move_number": 0 }
+  "current_turn_uid": "…", "move_number": 0, "status": "in_progress",
+  "players": [{"uid":"…","exp":42,"score":0,"words_count":0,"words":[]}] }
 ```
 
 ### `turn_change`
@@ -266,14 +320,39 @@ General turn change notification — sent on every turn start. The `reason` fiel
 
 Possible `reason` values: `game_start`, `move`, `skip`, `timeout`.
 
+### `skip_warn`
+
+Sent each time a player skips a turn. `skips_left` reaches 0 on the final skip; `game_over` follows immediately.
+
+```json
+{ "type": "skip_warn", "game_id": "…", "player_uid": "…",
+  "skips_used": 1, "skips_left": 2 }
+```
+
+### `end_proposal`
+
+Sent when a player proposes to end the game early.
+
+```json
+{ "type": "end_proposal", "game_id": "…", "proposer_uid": "…" }
+```
+
+### `end_proposal_result`
+
+Sent when the opponent responds to the proposal. If rejected, `remaining_ms` carries the remaining turn time so the timer can be restored.
+
+```json
+{ "type": "end_proposal_result", "game_id": "…", "accepted": false, "remaining_ms": 34200 }
+```
+
 ### `game_over`
 
 ```json
 { "type": "game_over", "game_id": "…", "winner_uid": "…",
-  "players": [{"uid":"…","score":5,"words_count":2}] }
+  "players": [{"uid":"…","exp":55,"score":5,"words_count":2,"exp_gained":13}] }
 ```
 
-`winner_uid` is absent on a draw.
+Sent when the game ends — either because the board became full, a player was kicked, or both players agreed to end early. `winner_uid` is absent on a draw. `exp_gained` reflects experience earned this game.
 
 ---
 
@@ -296,7 +375,15 @@ A 5×5 grid. The starting word occupies the center row (row index 2). Coordinate
 - Each player has **60 seconds** per turn.
 - On timeout the turn passes to the other player automatically; no action from either client is needed.
 - After **3 consecutive timeouts**, the player is kicked and the game ends.
-- A player can skip a turn voluntarily via `POST /games/{id}/skip`.
+- A player can skip a turn voluntarily via `POST /games/{id}/skip`. After **3 consecutive skips** the game ends.
+- The game also ends automatically when the board is full (all 25 cells are filled).
+
+### Proposing to End Early
+
+- Any player may propose to end the game via `POST /games/{id}/propose-end`.
+- The opponent can accept (`POST /games/{id}/accept-end`) or reject (`POST /games/{id}/reject-end`) the proposal.
+- If accepted, the game ends immediately with the current scores.
+- If rejected, the current turn resumes from the time remaining when the proposal was made.
 
 ### Word Validation
 
@@ -315,16 +402,21 @@ Submitted words must:
 Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over an internal channel.
 
 ```
-┌─────────────────────┬────────────────────┬─────────────────────┐
-│ State               │ Event              │ Next State          │
-├─────────────────────┼────────────────────┼─────────────────────┤
-│ WaitingForMove      │ MoveSubmitted      │ WaitingForMove      │
-│ WaitingForMove      │ TurnSkipped        │ WaitingForMove      │
-│ WaitingForMove      │ TurnTimeout        │ PlayerTimedOut      │
-├─────────────────────┼────────────────────┼─────────────────────┤
-│ PlayerTimedOut      │ AckTimeout         │ WaitingForMove      │
-│ PlayerTimedOut      │ Kick               │ GameOver            │
-└─────────────────────┴────────────────────┴─────────────────────┘
+┌──────────────────────────┬────────────────────┬──────────────────────────┐
+│ State                    │ Event              │ Next State               │
+├──────────────────────────┼────────────────────┼──────────────────────────┤
+│ WaitingForMove           │ MoveSubmitted      │ WaitingForMove           │
+│ WaitingForMove           │ TurnSkipped        │ WaitingForMove           │
+│ WaitingForMove           │ TurnTimeout        │ PlayerTimedOut           │
+│ WaitingForMove           │ BoardFull          │ GameOver                 │
+│ WaitingForMove           │ ProposeEnd         │ WaitingForEndProposal    │
+├──────────────────────────┼────────────────────┼──────────────────────────┤
+│ WaitingForEndProposal    │ EndProposalAccepted│ GameOver                 │
+│ WaitingForEndProposal    │ EndProposalRejected│ WaitingForMove           │
+├──────────────────────────┼────────────────────┼──────────────────────────┤
+│ PlayerTimedOut           │ AckTimeout         │ WaitingForMove           │
+│ PlayerTimedOut           │ Kick               │ GameOver                 │
+└──────────────────────────┴────────────────────┴──────────────────────────┘
 ```
 
 - A 60-second timer fires `TurnTimeout` automatically. The `Coordinator` (`internal/gamecoord/`) acknowledges it via `AckTimeout`, advancing to the next player.
@@ -349,17 +441,38 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | created_at | timestamp | |
 | updated_at | timestamp | |
 
-**user_state**
+**player_state**
 
 | Column | Type | Notes |
 |--------|------|-------|
 | user_id | bigint | PK, FK → users |
+| player_id | uuid | unique player identifier |
 | nickname | text | auto-generated |
 | exp | bigint | experience points |
 | flags | bigint | feature flags |
 | lives | bigint | |
 | created_at | timestamp | |
 | updated_at | timestamp | |
+
+**game_results**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | bigserial | PK |
+| game_id | uuid | unique |
+| winner_id | uuid | null on draw |
+| finish_reason | text | `board_full`, `kick`, `accept_end` |
+| finished_at | timestamptz | |
+
+**game_result_players**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| game_result_id | bigint | FK → game_results |
+| player_id | uuid | |
+| score | int | |
+| words_count | int | |
+| exp_gained | int | |
 
 ---
 
@@ -381,7 +494,7 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | `--redis.username` | | Redis username |
 | `--redis.password` | | Redis password |
 | `--redis.db_num` | `0` | Redis database number |
-| `--redis.expiration` | `30s` | Session expiration duration |
+| `--redis.expiration` | `5m` | Session expiration duration |
 | `--centrifugo.api_url` | | Centrifugo HTTP API URL |
 | `--centrifugo.api_key` | | Centrifugo API key |
 | `--centrifugo.token_hmac_secret_key` | | Secret for signing Centrifugo tokens |

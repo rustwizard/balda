@@ -20,6 +20,7 @@ var (
 	ErrWordAlreadyUsed     = errors.New("game: word already used")
 	ErrWordNotInDictionary = errors.New("game: word not found in dictionary")
 	ErrWordIsInitialWord   = errors.New("game: word is the initial board word")
+	ErrNotOpponent         = errors.New("game: only the opponent can respond to an end proposal")
 )
 
 const (
@@ -46,7 +47,11 @@ type Notifier interface {
 	NotifyTimeout(playerID string, consecutive int, willKick bool)
 	NotifySkip(playerID string, consecutive int, willEnd bool)
 	NotifyKick(playerID string)
+	NotifyBoardFull()
 	NotifyTurnStart(playerID string)
+	NotifyEndProposed(proposerID string)
+	NotifyEndAccepted()
+	NotifyEndRejected(remainingTurn time.Duration)
 }
 
 type Player struct {
@@ -60,19 +65,20 @@ type Player struct {
 }
 
 type Game struct {
-	mu           sync.Mutex
-	state        GameState
-	players      []*Player
-	board        *LettersTable
-	current      int
-	turn         *Turn
-	eventCh      chan TurnEvent
-	done         chan struct{}
-	notifier     Notifier
-	turnDuration time.Duration // 0 means use TurnDuration constant
+	mu                  sync.Mutex
+	state               GameState
+	players             []*Player
+	board               *LettersTable
+	current             int
+	turn                *Turn
+	eventCh             chan TurnEvent
+	done                chan struct{}
+	notifier            Notifier
+	turnDuration        time.Duration // 0 means use TurnDuration constant
+	pausedTurnRemaining time.Duration // remaining turn time when paused for end proposal
 }
 
-func (g *Game) СheckWordExistence(word string) bool {
+func (g *Game) CheckWordExistence(word string) bool {
 	if _, ok := Dict.Definition[normalizeWord(word)]; !ok {
 		return false
 	}
@@ -178,7 +184,10 @@ func (g *Game) Run(ctx context.Context) {
 func (g *Game) dispatch(ev TurnEvent) {
 	t, ok := fsmTable[g.state][ev]
 	if !ok {
-		slog.Info("game dispatch", slog.Any("ignored event", ev), "state", g.state)
+		slog.Warn("game fsm: unexpected event ignored",
+			slog.String("event", ev.String()),
+			slog.String("state", g.state.String()),
+		)
 		return
 	}
 	t.action(g)      // action runs first; may queue follow-up events
@@ -240,6 +249,50 @@ func (g *Game) onKick() {
 	// StateGameOver committed by dispatch; shutdown follows in Run.
 }
 
+func (g *Game) onBoardFull() {
+	g.notifier.NotifyBoardFull()
+}
+
+// --- EndProposed actions ---
+
+func (g *Game) onEndProposed() {
+	g.cancelTimer()
+	elapsed := time.Since(g.turn.StartedAt)
+	d := g.turnDuration
+	if d == 0 {
+		d = TurnDuration
+	}
+	remaining := d - elapsed
+	// Guarantee the proposer gets at least 1/6 of a full turn after rejection
+	// (≥10 s on a standard 60 s turn) so the game never resumes with a near-zero timer.
+	if minRemaining := d / 6; remaining < minRemaining {
+		remaining = minRemaining
+	}
+	g.pausedTurnRemaining = remaining
+	g.notifier.NotifyEndProposed(g.currentPlayer().ID)
+}
+
+func (g *Game) onEndAccepted() {
+	g.notifier.NotifyEndAccepted()
+}
+
+func (g *Game) onEndRejected() {
+	remaining := g.pausedTurnRemaining
+	g.pausedTurnRemaining = 0
+	p := g.currentPlayer()
+	g.turn = &Turn{
+		PlayerID:  p.ID,
+		StartedAt: time.Now(),
+		timer: time.AfterFunc(remaining, func() {
+			select {
+			case g.eventCh <- EventTurnTimeout:
+			case <-g.done:
+			}
+		}),
+	}
+	g.notifier.NotifyEndRejected(remaining)
+}
+
 func (g *Game) currentPlayer() *Player { return g.players[g.current] }
 
 func (g *Game) advanceTurn() {
@@ -298,10 +351,12 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 	}
 
 	newLetterUsed := false
-	for _, l := range word {
+	for i, l := range word {
 		if l.RowID == newLetter.RowID && l.ColID == newLetter.ColID {
 			newLetterUsed = true
-			break
+			word[i].Char = newLetter.Char
+		} else if cell := g.board.Table[l.RowID][l.ColID]; cell != nil {
+			word[i].Char = cell.Char
 		}
 	}
 	if !newLetterUsed {
@@ -320,7 +375,7 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 		g.mu.Unlock()
 		return ErrWordIsInitialWord
 	}
-	if !g.СheckWordExistence(wordStr) {
+	if !g.CheckWordExistence(wordStr) {
 		g.mu.Unlock()
 		return ErrWordNotInDictionary
 	}
@@ -335,10 +390,15 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 	p.Words = append(p.Words, wordStr)
 	p.Score += len(word)
 
+	boardFull := g.board.IsFull()
 	g.mu.Unlock()
 
+	ev := EventMoveSubmitted
+	if boardFull {
+		ev = EventBoardFull
+	}
 	select {
-	case g.eventCh <- EventMoveSubmitted:
+	case g.eventCh <- ev:
 	case <-g.done:
 	}
 	return nil
@@ -372,20 +432,37 @@ func (g *Game) BoardSnapshot() [5][5]string {
 	return g.board.AsStrings()
 }
 
-// PlayerScore holds a player's UID and current score for external consumers.
-type PlayerScore struct {
+// BoardIsFull reports whether every cell on the 5×5 board is occupied.
+func (g *Game) BoardIsFull() bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.board.IsFull()
+}
+
+// FillCell places a letter directly on the board without validation.
+// Only safe to call before Run() starts (no concurrent access).
+func (g *Game) FillCell(row, col uint8, char string) {
+	g.board.Table[row][col] = &Letter{RowID: row, ColID: col, Char: char}
+}
+
+// PlayerState holds a player's UID and current score for external consumers.
+type PlayerState struct {
 	UID        string
+	Exp        int
 	Score      int
 	WordsCount int
+	Words      []string
 }
 
 // PlayerScores returns a snapshot of each player's score and word count.
-func (g *Game) PlayerScores() []PlayerScore {
+func (g *Game) PlayerScores() []PlayerState {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	out := make([]PlayerScore, len(g.players))
+	out := make([]PlayerState, len(g.players))
 	for i, p := range g.players {
-		out[i] = PlayerScore{UID: p.ID, Score: p.Score, WordsCount: len(p.Words)}
+		words := make([]string, len(p.Words))
+		copy(words, p.Words)
+		out[i] = PlayerState{UID: p.ID, Exp: p.Exp, Score: p.Score, WordsCount: len(p.Words), Words: words}
 	}
 	return out
 }
@@ -471,8 +548,78 @@ func (g *Game) IsTakenWord(word string) bool {
 	return false
 }
 
+// ProposeEnd signals that playerID wants to end the game (e.g. no valid moves).
+// Only the current player may call this when the game is in WaitingForMove state.
+func (g *Game) ProposeEnd(playerID string) error {
+	g.mu.Lock()
+	if g.state != StateWaitingForMove {
+		g.mu.Unlock()
+		return ErrWrongState
+	}
+	if g.currentPlayer().ID != playerID {
+		g.mu.Unlock()
+		return ErrNotYourTurn
+	}
+	g.mu.Unlock()
+	select {
+	case g.eventCh <- EventEndProposed:
+	case <-g.done:
+	}
+	return nil
+}
+
+// AcceptEnd signals that playerID (the opponent) accepts the end-game proposal.
+func (g *Game) AcceptEnd(playerID string) error {
+	g.mu.Lock()
+	if g.state != StateEndProposed {
+		g.mu.Unlock()
+		return ErrWrongState
+	}
+	if g.currentPlayer().ID == playerID {
+		g.mu.Unlock()
+		return ErrNotOpponent
+	}
+	g.mu.Unlock()
+	select {
+	case g.eventCh <- EventEndAccepted:
+	case <-g.done:
+	}
+	return nil
+}
+
+// RejectEnd signals that playerID (the opponent) rejects the end-game proposal.
+func (g *Game) RejectEnd(playerID string) error {
+	g.mu.Lock()
+	if g.state != StateEndProposed {
+		g.mu.Unlock()
+		return ErrWrongState
+	}
+	if g.currentPlayer().ID == playerID {
+		g.mu.Unlock()
+		return ErrNotOpponent
+	}
+	g.mu.Unlock()
+	select {
+	case g.eventCh <- EventEndRejected:
+	case <-g.done:
+	}
+	return nil
+}
+
 // Done returns a channel that is closed when the game has finished running.
 // Safe to call concurrently. Follows the same idiom as context.Context.Done().
 func (g *Game) Done() <-chan struct{} {
 	return g.done
 }
+
+// NoopNotifier is a no-op implementation of Notifier.
+type NoopNotifier struct{}
+
+func (*NoopNotifier) NotifyTimeout(_ string, _ int, _ bool) {}
+func (*NoopNotifier) NotifySkip(_ string, _ int, _ bool)    {}
+func (*NoopNotifier) NotifyKick(_ string)                   {}
+func (*NoopNotifier) NotifyBoardFull()                      {}
+func (*NoopNotifier) NotifyTurnStart(_ string)              {}
+func (*NoopNotifier) NotifyEndProposed(_ string)            {}
+func (*NoopNotifier) NotifyEndAccepted()                    {}
+func (*NoopNotifier) NotifyEndRejected(_ time.Duration)     {}

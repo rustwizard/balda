@@ -43,6 +43,10 @@ func (n *snapshotNotifier) NotifyTurnStart(_ string) {
 func (n *snapshotNotifier) NotifyTimeout(_ string, _ int, _ bool) {}
 func (n *snapshotNotifier) NotifySkip(_ string, _ int, _ bool)    {}
 func (n *snapshotNotifier) NotifyKick(_ string)                   {}
+func (n *snapshotNotifier) NotifyBoardFull()                           {}
+func (n *snapshotNotifier) NotifyEndProposed(_ string)                 {}
+func (n *snapshotNotifier) NotifyEndAccepted()                         {}
+func (n *snapshotNotifier) NotifyEndRejected(_ time.Duration)          {}
 
 func TestBoardSnapshot_NoRace(t *testing.T) {
 	addTestWord(t, testWordStr)

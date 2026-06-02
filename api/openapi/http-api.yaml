@@ -182,6 +182,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: '#/components/responses/InternalServerError'
 
   /games/{id}/move:
     post:
@@ -233,6 +235,126 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: Not the player's turn or game not in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+
+  /games/{id}/propose-end:
+    post:
+      operationId: proposeEndGame
+      summary: Propose to end the game
+      description: |
+        The current player proposes to end the game (e.g. no valid moves are available).
+        The turn timer is paused until the opponent responds.
+        Only the player whose turn it currently is may call this.
+      tags:
+        - Games
+      security:
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
+      parameters:
+        - $ref: '#/components/parameters/ApiSessionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      responses:
+        "204":
+          description: Proposal sent successfully; waiting for opponent's response
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Not the player's turn, game not in progress, or proposal already pending
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /games/{id}/accept-end:
+    post:
+      operationId: acceptEndGame
+      summary: Accept the opponent's end-game proposal
+      description: |
+        The opponent accepts the end-game proposal. The game ends immediately with
+        the current scores. Only the non-proposing player may call this.
+      tags:
+        - Games
+      security:
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
+      parameters:
+        - $ref: '#/components/parameters/ApiSessionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      responses:
+        "204":
+          description: Proposal accepted; game is now over
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: No end proposal is pending or player is not the opponent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /games/{id}/reject-end:
+    post:
+      operationId: rejectEndGame
+      summary: Reject the opponent's end-game proposal
+      description: |
+        The opponent rejects the end-game proposal. The game resumes with the
+        remaining turn time (minimum 10 seconds). Only the non-proposing player may call this.
+      tags:
+        - Games
+      security:
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
+      parameters:
+        - $ref: '#/components/parameters/ApiSessionHeader'
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      responses:
+        "204":
+          description: Proposal rejected; game continues
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: No end proposal is pending or player is not the opponent
           content:
             application/json:
               schema:
@@ -325,6 +447,16 @@ components:
             status: 401
             message: "Session required"
             type: "Unauthorized"
+    InternalServerError:
+      description: Unexpected internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: 500
+            message: "internal server error"
+            type: "InternalServerError"
 
   schemas:
     Error:
@@ -414,6 +546,10 @@ components:
           description: Player's API Key that the client needs to provide when making API calls.
           example: some_api_key
           type: string
+        exp:
+          description: Player's total EXP
+          type: integer
+          format: int64
 
     AuthRequest:
       type: object
@@ -441,6 +577,39 @@ components:
         lobby_token:
           description: Centrifugo subscription JWT for the lobby channel
           type: string
+        active_game:
+          description: Present when the player is currently in an active game. Use this to reconnect after a disconnect.
+          $ref: "#/components/schemas/ActiveGame"
+
+    ActiveGame:
+      type: object
+      properties:
+        game_id:
+          description: ID of the active game
+          type: string
+          format: uuid
+        game_token:
+          description: Centrifugo subscription JWT for the game channel
+          type: string
+        board:
+          description: Current 5x5 board state
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        current_turn_uid:
+          description: ID of the player whose turn it is
+          type: string
+          format: uuid
+        move_number:
+          type: integer
+        status:
+          $ref: "#/components/schemas/GameStatus"
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerGameState"
 
     GameStatus:
       type: string
@@ -449,6 +618,18 @@ components:
         - in_progress
         - finished
       description: Current state of the game
+
+    LobbyPlayer:
+      type: object
+      properties:
+        uid:
+          description: Player's ID
+          type: string
+          format: uuid
+        exp:
+          description: Player's total EXP
+          type: integer
+          format: int64
 
     GameSummary:
       type: object
@@ -464,6 +645,11 @@ components:
           items:
             type: string
             format: uuid
+        players:
+          description: Players with EXP info
+          type: array
+          items:
+            $ref: "#/components/schemas/LobbyPlayer"
         status:
           $ref: "#/components/schemas/GameStatus"
         started_at:
@@ -512,6 +698,11 @@ components:
           type: string
 
     BoardCell:
+      description: >
+        A cell position on the 5×5 board, used in word_path.
+        The character at each cell is resolved server-side from the current board state;
+        clients do not need to send it. The new letter being placed is provided separately
+        in new_letter.char.
       type: object
       required:
         - row
@@ -575,25 +766,37 @@ components:
         players:
           type: array
           items:
-            $ref: "#/components/schemas/PlayerScore"
+            $ref: "#/components/schemas/PlayerGameState"
         status:
           $ref: "#/components/schemas/GameStatus"
         move_number:
           type: integer
 
-    PlayerScore:
+    PlayerGameState:
       type: object
       properties:
         uid:
           description: Player's ID
           type: string
           format: uuid
+        exp:
+          description: Player's total EXP at the time of the event
+          type: integer
+          format: int64
+        exp_gained:
+          description: EXP earned in this game (only present in game_over events)
+          type: integer
         score:
           description: Number of points scored in the current game
           type: integer
         words_count:
           description: Number of words submitted by the player
           type: integer
+        words:
+          description: List of words submitted by the player in this game
+          type: array
+          items:
+            type: string
 
     EvGameCreated:
       type: object
@@ -646,7 +849,7 @@ components:
         players:
           type: array
           items:
-            $ref: "#/components/schemas/PlayerScore"
+            $ref: "#/components/schemas/PlayerGameState"
         status:
           $ref: "#/components/schemas/GameStatus"
         move_number:
@@ -671,7 +874,39 @@ components:
         players:
           type: array
           items:
-            $ref: "#/components/schemas/PlayerScore"
+            $ref: "#/components/schemas/PlayerGameState"
+
+    EvEndProposal:
+      type: object
+      description: Published to game:{id} when the current player proposes to end the game
+      properties:
+        type:
+          type: string
+          enum: [end_proposal]
+        game_id:
+          type: string
+          format: uuid
+        proposer_uid:
+          description: ID of the player who proposed to end
+          type: string
+          format: uuid
+
+    EvEndProposalResult:
+      type: object
+      description: Published to game:{id} when the opponent responds to the end proposal
+      properties:
+        type:
+          type: string
+          enum: [end_proposal_result]
+        game_id:
+          type: string
+          format: uuid
+        accepted:
+          type: boolean
+        remaining_ms:
+          description: Remaining turn time in milliseconds (only present when accepted=false)
+          type: integer
+          format: int64
 
     PlayerState:
       type: object

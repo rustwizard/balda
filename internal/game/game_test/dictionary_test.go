@@ -1,10 +1,11 @@
 package game
 
 import (
-	"github.com/rustwizard/balda/internal/game"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/rustwizard/balda/internal/game"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewDictionary(t *testing.T) {

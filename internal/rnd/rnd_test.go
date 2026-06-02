@@ -1,8 +1,9 @@
 package rnd
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func FuzzInt(f *testing.F) {

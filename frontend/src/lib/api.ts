@@ -80,3 +80,15 @@ export function submitMove(gameId: string, apiKey: string, sessionId: string, pa
 export function skipTurn(gameId: string, apiKey: string, sessionId: string): Promise<void> {
   return apiFetch(`/games/${gameId}/skip`, { method: 'POST' }, apiKey, sessionId);
 }
+
+export function proposeEnd(gameId: string, apiKey: string, sessionId: string): Promise<void> {
+  return apiFetch(`/games/${gameId}/propose-end`, { method: 'POST' }, apiKey, sessionId);
+}
+
+export function acceptEnd(gameId: string, apiKey: string, sessionId: string): Promise<void> {
+  return apiFetch(`/games/${gameId}/accept-end`, { method: 'POST' }, apiKey, sessionId);
+}
+
+export function rejectEnd(gameId: string, apiKey: string, sessionId: string): Promise<void> {
+  return apiFetch(`/games/${gameId}/reject-end`, { method: 'POST' }, apiKey, sessionId);
+}

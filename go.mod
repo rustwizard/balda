@@ -4,8 +4,8 @@ go 1.26
 
 require (
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.8.0
-	github.com/jackc/tern/v2 v2.3.5
+	github.com/jackc/pgx/v5 v5.9.2
+	github.com/jackc/tern/v2 v2.4.1
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/rustwizard/cleargo v0.0.8
 	github.com/spf13/cobra v1.10.2
@@ -13,17 +13,19 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.40.0
-	golang.org/x/net v0.51.0 // indirect
+	golang.org/x/net v0.52.0 // indirect
 	google.golang.org/grpc v1.79.3 // indirect
 )
 
 require (
+	github.com/centrifugal/centrifuge-go v0.10.12
 	github.com/go-faster/errors v0.7.1
 	github.com/go-faster/jx v1.2.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/ogen-go/ogen v1.20.1
-	go.opentelemetry.io/otel v1.40.0
-	go.opentelemetry.io/otel/metric v1.40.0
-	go.opentelemetry.io/otel/trace v1.40.0
+	go.opentelemetry.io/otel v1.41.0
+	go.opentelemetry.io/otel/metric v1.41.0
+	go.opentelemetry.io/otel/trace v1.41.0
 )
 
 require (
@@ -34,7 +36,6 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-	github.com/centrifugal/centrifuge-go v0.10.12 // indirect
 	github.com/centrifugal/protocol v0.16.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
@@ -57,7 +58,6 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.3.1 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
@@ -108,11 +108,11 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.1 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
+	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/exp v0.0.0-20230725093048-515e97ebf090 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
+	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

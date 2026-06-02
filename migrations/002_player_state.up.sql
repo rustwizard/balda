@@ -15,3 +15,8 @@ create table if not exists player_state
 alter table player_state
     add constraint player_state_users_user_id_fk
         foreign key (user_id) references users;
+
+---- create above / drop below ----
+
+alter table player_state drop constraint if exists player_state_users_user_id_fk;
+drop table if exists player_state;

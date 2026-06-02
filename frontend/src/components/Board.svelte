@@ -18,11 +18,14 @@
   }
 
   function getCellClasses(row: number, col: number, hasLetter: boolean) {
-    const base = 'relative flex items-center justify-center rounded-xl text-[clamp(20px,5vw,32px)] font-bold uppercase select-none transition-all active:scale-95';
+    const base = 'relative flex items-center justify-center aspect-square w-full rounded-xl text-[clamp(20px,5vw,32px)] font-bold uppercase select-none transition-all active:scale-95';
     
     if (hasLetter) {
       if (isSelected(row, col)) {
         return `${base} bg-gradient-to-b from-amber-200 to-amber-300 text-stone-800 shadow-[0_2px_0_#d4d0c8,0_3px_6px_rgba(0,0,0,0.06)] ring-2 ring-blue-500`;
+      }
+      if (isNewLetter(row, col)) {
+        return `${base} bg-blue-50 text-blue-700 ring-2 ring-blue-500 ring-dashed shadow-[0_2px_0_#93c5fd]`;
       }
       return `${base} bg-gradient-to-b from-[#f3e9d8] to-[#e6d5b8] text-stone-800 shadow-[0_4px_0_#c9b896,0_6px_10px_rgba(0,0,0,0.12)]`;
     }

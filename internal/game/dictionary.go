@@ -3,10 +3,12 @@ package game
 import (
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/rustwizard/balda/internal/rnd"
 	"io"
 	"unicode/utf8"
+
+	"github.com/rustwizard/balda/internal/rnd"
 )
 
 //go:embed assets/russian_nouns_with_definition.json
@@ -29,17 +31,17 @@ func NewDictionary() (*Dictionary, error) {
 	if err != nil {
 		return dict, fmt.Errorf("game: dictionary: %w", err)
 	}
-	defer f.Close()
+	defer f.Close() //nolint:errcheck
 
 	dec := json.NewDecoder(f)
 	for {
 		var words map[string]interface{}
 		err = dec.Decode(&words)
-		if err != nil && err != io.EOF {
+		if err != nil && !errors.Is(err, io.EOF) {
 			return dict, fmt.Errorf("game: dictionary: decode: %w", err)
 		}
 
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 

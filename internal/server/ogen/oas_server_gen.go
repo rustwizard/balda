@@ -8,6 +8,13 @@ import (
 
 // Handler handles operations described by OpenAPI v3 specification.
 type Handler interface {
+	// AcceptEndGame implements acceptEndGame operation.
+	//
+	// The opponent accepts the end-game proposal. The game ends immediately with
+	// the current scores. Only the non-proposing player may call this.
+	//
+	// POST /games/{id}/accept-end
+	AcceptEndGame(ctx context.Context, params AcceptEndGameParams) (AcceptEndGameRes, error)
 	// Auth implements auth operation.
 	//
 	// Auth request.
@@ -56,6 +63,21 @@ type Handler interface {
 	//
 	// POST /session/ping
 	Ping(ctx context.Context, params PingParams) (PingRes, error)
+	// ProposeEndGame implements proposeEndGame operation.
+	//
+	// The current player proposes to end the game (e.g. no valid moves are available).
+	// The turn timer is paused until the opponent responds.
+	// Only the player whose turn it currently is may call this.
+	//
+	// POST /games/{id}/propose-end
+	ProposeEndGame(ctx context.Context, params ProposeEndGameParams) (ProposeEndGameRes, error)
+	// RejectEndGame implements rejectEndGame operation.
+	//
+	// The opponent rejects the end-game proposal. The game resumes with the
+	// remaining turn time (minimum 10 seconds). Only the non-proposing player may call this.
+	//
+	// POST /games/{id}/reject-end
+	RejectEndGame(ctx context.Context, params RejectEndGameParams) (RejectEndGameRes, error)
 	// Signup implements signup operation.
 	//
 	// Sign-up request.

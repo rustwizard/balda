@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -17,7 +18,7 @@ func TestSessionService(t *testing.T) {
 	addr, cleanup := startRedis(ctx, t)
 	defer cleanup()
 
-	svc := session.NewService(session.Config{Addr: addr, Expiration: 30 * time.Second})
+	svc := session.NewService(session.Config{Addr: addr, Expiration: 30 * time.Second}, redis.NewClient(&redis.Options{Addr: addr}))
 
 	t.Run("Save and Get", func(t *testing.T) {
 		u := &session.User{Sid: "test_sid", UID: 1000}

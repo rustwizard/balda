@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 )
 
 type Client struct {
@@ -18,7 +19,7 @@ func NewClient(apiURL, apiKey string) *Client {
 	return &Client{
 		apiURL: apiURL,
 		apiKey: apiKey,
-		http:   &http.Client{},
+		http:   &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -44,7 +45,7 @@ func (c *Client) Publish(ctx context.Context, channel string, data any) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("centrifugo: unexpected status %d", resp.StatusCode)

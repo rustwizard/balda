@@ -15,6 +15,115 @@ import (
 	"github.com/ogen-go/ogen/validate"
 )
 
+// AcceptEndGameParams is parameters of acceptEndGame operation.
+type AcceptEndGameParams struct {
+	XAPISession string
+	// ID of the game.
+	ID uuid.UUID
+}
+
+func unpackAcceptEndGameParams(packed middleware.Parameters) (params AcceptEndGameParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-API-Session",
+			In:   "header",
+		}
+		params.XAPISession = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeAcceptEndGameParams(args [1]string, argsEscaped bool, r *http.Request) (params AcceptEndGameParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-API-Session.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-API-Session",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XAPISession = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-API-Session",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // CreateGameParams is parameters of createGame operation.
 type CreateGameParams struct {
 	XAPISession string
@@ -518,6 +627,224 @@ func decodePingParams(args [0]string, argsEscaped bool, r *http.Request) (params
 		return params, &ogenerrors.DecodeParamError{
 			Name: "X-API-Session",
 			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// ProposeEndGameParams is parameters of proposeEndGame operation.
+type ProposeEndGameParams struct {
+	XAPISession string
+	// ID of the game.
+	ID uuid.UUID
+}
+
+func unpackProposeEndGameParams(packed middleware.Parameters) (params ProposeEndGameParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-API-Session",
+			In:   "header",
+		}
+		params.XAPISession = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeProposeEndGameParams(args [1]string, argsEscaped bool, r *http.Request) (params ProposeEndGameParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-API-Session.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-API-Session",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XAPISession = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-API-Session",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
+// RejectEndGameParams is parameters of rejectEndGame operation.
+type RejectEndGameParams struct {
+	XAPISession string
+	// ID of the game.
+	ID uuid.UUID
+}
+
+func unpackRejectEndGameParams(packed middleware.Parameters) (params RejectEndGameParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-API-Session",
+			In:   "header",
+		}
+		params.XAPISession = packed[key].(string)
+	}
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeRejectEndGameParams(args [1]string, argsEscaped bool, r *http.Request) (params RejectEndGameParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-API-Session.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-API-Session",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XAPISession = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-API-Session",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
 			Err:  err,
 		}
 	}

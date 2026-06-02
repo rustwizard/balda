@@ -1,12 +1,15 @@
-import type { GameSummary, PlayerState, EvGameState, EvGameOver, EvTurnChange, EvSkipWarn, MoveResponse } from '../types';
+import type { GameSummary, PlayerGameState, EvGameState, EvGameOver, EvTurnChange, EvEndProposalResult, EvEndProposal, EvSkipWarn, EvLobbyUpdate, MoveResponse } from '../types';
 
 export type GamePhase = 'auth' | 'lobby' | 'waiting' | 'playing' | 'finished';
 
 export interface PlayerInfo {
   uid: string;
   nickname: string;
+  exp: number;
+  expGained: number;
   score: number;
   wordsCount: number;
+  words: string[];
   consecutiveSkips: number;
 }
 
@@ -16,6 +19,7 @@ export function createGameState() {
   let sessionId = $state<string>('');
   let playerUid = $state<string>('');
   let nickname = $state<string>('');
+  let exp = $state<number>(0);
   let centrifugoToken = $state<string>('');
   let lobbyToken = $state<string>('');
 
@@ -30,6 +34,13 @@ export function createGameState() {
 
   // In-game notification (replaces browser alert)
   let notif = $state<{ message: string; kind: 'error' | 'warn' } | null>(null);
+
+  // Lobby game list — updated via lobby_update Centrifugo events
+  let lobbyGames = $state<GameSummary[]>([]);
+
+  // End proposal
+  let endProposalPending = $state<boolean>(false);
+  let endProposalByMe = $state<boolean>(false);
 
   // Turn interaction
   let selectedPath = $state<{ row: number; col: number }[]>([]);
@@ -47,11 +58,12 @@ export function createGameState() {
     board = Array.from({ length: 5 }, () => Array(5).fill(''));
   }
 
-  function setAuth(data: { apiKey: string; sessionId: string; playerUid: string; nickname: string; centrifugoToken: string; lobbyToken: string }) {
+  function setAuth(data: { apiKey: string; sessionId: string; playerUid: string; nickname: string; exp: number; centrifugoToken: string; lobbyToken: string }) {
     apiKey = data.apiKey;
     sessionId = data.sessionId;
     playerUid = data.playerUid;
     nickname = data.nickname;
+    exp = data.exp;
     centrifugoToken = data.centrifugoToken;
     lobbyToken = data.lobbyToken;
   }
@@ -64,6 +76,8 @@ export function createGameState() {
     newLetterCell = null;
     currentWord = '';
     winnerUid = null;
+    endProposalPending = false;
+    endProposalByMe = false;
   }
 
   function setWaiting(g: GameSummary) {
@@ -80,30 +94,53 @@ export function createGameState() {
     currentWord = '';
     winnerUid = null;
     turnSecondsLeft = 60;
-    players = g.player_ids.map((uid) => ({
-      uid,
-      nickname: uid === playerUid ? nickname : 'Соперник',
-      score: 0,
-      wordsCount: 0,
-      consecutiveSkips: 0,
-    }));
+    if (g.players && g.players.length > 0) {
+      players = g.players.map((p) => ({
+        uid: p.uid,
+        nickname: p.uid === playerUid ? nickname : 'Соперник',
+        exp: p.exp ?? 0,
+        expGained: 0,
+        score: 0,
+        wordsCount: 0,
+        words: [],
+        consecutiveSkips: 0,
+      }));
+    } else {
+      players = g.player_ids.map((uid) => ({
+        uid,
+        nickname: uid === playerUid ? nickname : 'Соперник',
+        exp: 0,
+        expGained: 0,
+        score: 0,
+        wordsCount: 0,
+        words: [],
+        consecutiveSkips: 0,
+      }));
+    }
+  }
+
+  function mergePlayerState(p: PlayerGameState): PlayerInfo {
+    const existing = players.find((ep) => ep.uid === p.uid);
+    return {
+      uid: p.uid,
+      nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
+      exp: p.exp ?? existing?.exp ?? 0,
+      expGained: p.exp_gained ?? 0,
+      score: p.score,
+      wordsCount: p.words_count ?? 0,
+      words: p.words ?? existing?.words ?? [],
+      consecutiveSkips: existing?.consecutiveSkips ?? 0,
+    };
   }
 
   function applyGameState(ev: EvGameState) {
     board = ev.board;
     currentTurnUid = ev.current_turn_uid;
     moveNumber = ev.move_number;
-    players = ev.players.map((p) => {
-      const existing = players.find((ep) => ep.uid === p.uid);
-      return {
-        uid: p.uid,
-        nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
-        score: p.score,
-        wordsCount: p.words_count ?? 0,
-        consecutiveSkips: existing?.consecutiveSkips ?? 0,
-      };
-    });
-    if (ev.status === 'finished') {
+    players = ev.players.map(mergePlayerState);
+    if (ev.status === 'in_progress') {
+      phase = 'playing';
+    } else if (ev.status === 'finished') {
       phase = 'finished';
     }
     selectedPath = [];
@@ -116,16 +153,20 @@ export function createGameState() {
   function finishGame(ev: EvGameOver) {
     phase = 'finished';
     winnerUid = ev.winner_uid;
-    players = ev.players.map((p) => {
-      const existing = players.find((ep) => ep.uid === p.uid);
-      return {
-        uid: p.uid,
-        nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
-        score: p.score,
-        wordsCount: p.words_count ?? 0,
-        consecutiveSkips: existing?.consecutiveSkips ?? 0,
-      };
-    });
+    players = ev.players.map(mergePlayerState);
+  }
+
+  function applyEndProposal(ev: EvEndProposal) {
+    endProposalPending = true;
+    endProposalByMe = ev.proposer_uid === playerUid;
+  }
+
+  function applyEndProposalResult(ev: EvEndProposalResult) {
+    endProposalPending = false;
+    endProposalByMe = false;
+    if (!ev.accepted) {
+      turnSecondsLeft = Math.ceil((ev.remaining_ms ?? 0) / 1000);
+    }
   }
 
   function applySkipWarn(ev: EvSkipWarn) {
@@ -140,22 +181,15 @@ export function createGameState() {
     selectedPath = [];
     newLetterCell = null;
     currentWord = '';
+    endProposalPending = false;
+    endProposalByMe = false;
   }
 
   function applyMoveResponse(resp: MoveResponse) {
     board = resp.board;
     currentTurnUid = resp.current_turn_uid;
     moveNumber = resp.move_number;
-    players = resp.players.map((p) => {
-      const existing = players.find((ep) => ep.uid === p.uid);
-      return {
-        uid: p.uid,
-        nickname: existing?.nickname || (p.uid === playerUid ? nickname : 'Соперник'),
-        score: p.score,
-        wordsCount: p.words_count ?? 0,
-        consecutiveSkips: 0,
-      };
-    });
+    players = resp.players.map((p) => ({ ...mergePlayerState(p), consecutiveSkips: 0 }));
     if (resp.status === 'finished') {
       phase = 'finished';
     }
@@ -223,6 +257,14 @@ export function createGameState() {
     currentWord = '';
   }
 
+  function applyLobbyUpdate(ev: EvLobbyUpdate) {
+    lobbyGames = ev.games;
+  }
+
+  function setLobbyGames(gs: GameSummary[]) {
+    lobbyGames = gs;
+  }
+
   function showNotif(message: string, kind: 'error' | 'warn' = 'error') {
     notif = { message, kind };
   }
@@ -236,6 +278,7 @@ export function createGameState() {
     get sessionId() { return sessionId; },
     get playerUid() { return playerUid; },
     get nickname() { return nickname; },
+    get exp() { return exp; },
     get centrifugoToken() { return centrifugoToken; },
     get lobbyToken() { return lobbyToken; },
     get phase() { return phase; },
@@ -254,6 +297,9 @@ export function createGameState() {
     get myPlayer() { return myPlayer; },
     get opponent() { return opponent; },
     get notif() { return notif; },
+    get lobbyGames() { return lobbyGames; },
+    get endProposalPending() { return endProposalPending; },
+    get endProposalByMe() { return endProposalByMe; },
 
     setAuth,
     setLobby,
@@ -262,7 +308,11 @@ export function createGameState() {
     applyGameState,
     applyMoveResponse,
     applyTurnChange,
+    applyEndProposal,
+    applyEndProposalResult,
     applySkipWarn,
+    applyLobbyUpdate,
+    setLobbyGames,
     finishGame,
     setTurnTimer,
     tickTimer,

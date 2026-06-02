@@ -13,11 +13,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
-	"github.com/rustwizard/balda/internal/notifier"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/balda/internal/service"
@@ -31,7 +31,6 @@ import (
 )
 
 const testAPIToken = "test-api-token"
-
 
 func startRedis(ctx context.Context, t *testing.T) (addr string, cleanup func()) {
 	t.Helper()
@@ -94,18 +93,18 @@ func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 	sess := session.NewService(session.Config{
 		Addr:       redisAddr,
 		Expiration: 30 * time.Second,
-	})
+	}, redis.NewClient(&redis.Options{Addr: redisAddr}))
 
-	lby := lobby.New(func(ctx context.Context, _ string, players []*game.Player, n game.Notifier) (*game.Game, error) {
-		return game.NewGame(players, n)
+	lby := lobby.New(func(_ context.Context, _ string, players []*game.Player, n game.Notifier) (*game.Game, error) {
+		return game.NewGameWithWord(players, "масло", n)
 	})
 	mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-		_, err := lby.StartGame(ctx, players, &notifier.Noop{})
+		_, err := lby.StartGame(ctx, players, &game.NoopNotifier{})
 		return err
 	})
 
 	s := storage.New(pool, 10*time.Second)
-	svc := service.New(lby, mm, s, &notifier.Noop{})
+	svc := service.New(lby, mm, s)
 
 	return &coreSetup{
 		svc:  svc,
@@ -239,6 +238,59 @@ func TestAuthHandler(t *testing.T) {
 		require.True(t, isErr, "expected *ErrorResponse, got %T", res)
 		assert.Equal(t, http.StatusUnauthorized, errResp.Status.Value)
 	})
+
+	t.Run("no active_game when player has no game", func(t *testing.T) {
+		res, err := h.Auth(ctx, &baldaapi.AuthRequest{
+			Email:    "auth.user@example.org",
+			Password: "mypassword",
+		})
+		require.NoError(t, err)
+
+		resp, ok := res.(*baldaapi.AuthResponse)
+		require.True(t, ok)
+		assert.False(t, resp.ActiveGame.IsSet(), "expected active_game to be absent")
+	})
+
+	t.Run("active_game returned after joining an in_progress game", func(t *testing.T) {
+		// Sign up two players and start a game.
+		creatorRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
+			Firstname: "Reconnect", Lastname: "Creator", Email: "reconnect.creator@example.org", Password: "pass",
+		})
+		require.NoError(t, err)
+		creator := creatorRes.(*baldaapi.SignupResponse).User.Value
+
+		joinerRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
+			Firstname: "Reconnect", Lastname: "Joiner", Email: "reconnect.joiner@example.org", Password: "pass",
+		})
+		require.NoError(t, err)
+		joiner := joinerRes.(*baldaapi.SignupResponse).User.Value
+
+		createRes, err := h.CreateGame(ctx, baldaapi.CreateGameParams{XAPISession: creator.Sid.Value})
+		require.NoError(t, err)
+		gameID := createRes.(*baldaapi.CreateGameResponse).Game.Value.ID.Value
+
+		_, err = h.JoinGame(ctx, baldaapi.JoinGameParams{XAPISession: joiner.Sid.Value, ID: gameID})
+		require.NoError(t, err)
+
+		// Creator re-authenticates — should get active_game.
+		res, err := h.Auth(ctx, &baldaapi.AuthRequest{
+			Email:    "reconnect.creator@example.org",
+			Password: "pass",
+		})
+		require.NoError(t, err)
+
+		resp, ok := res.(*baldaapi.AuthResponse)
+		require.True(t, ok)
+		require.True(t, resp.ActiveGame.IsSet(), "expected active_game to be set")
+
+		ag := resp.ActiveGame.Value
+		assert.Equal(t, gameID, ag.GameID.Value)
+		assert.NotEmpty(t, ag.GameToken.Value)
+		assert.Len(t, ag.Board, 5)
+		assert.NotEmpty(t, ag.CurrentTurnUID.Value)
+		assert.Equal(t, baldaapi.GameStatusInProgress, ag.Status.Value)
+		assert.Len(t, ag.Players, 2)
+	})
 }
 
 func TestGetUsersStateUIDHandler(t *testing.T) {
@@ -320,7 +372,7 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 		{ID: uid1.String()},
 		{ID: uid2.String()},
 	}
-	_, err = lby.StartGame(ctx, players, &notifier.Noop{})
+	_, err = lby.StartGame(ctx, players, &game.NoopNotifier{})
 	require.NoError(t, err)
 
 	t.Run("player in active game has GameID set", func(t *testing.T) {
