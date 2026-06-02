@@ -209,9 +209,8 @@ func TestSubmitWord_Success_PlacesLetterOnBoard(t *testing.T) {
 	nl := testNewLetter
 	require.NoError(t, g.SubmitWord("p1", &nl, testWord))
 
-	placed := g.Board().Table[testNewLetter.RowID][testNewLetter.ColID]
-	require.NotNil(t, placed)
-	assert.Equal(t, testNewLetter.Char, placed.Char)
+	snap := g.BoardSnapshot()
+	assert.Equal(t, testNewLetter.Char, snap[testNewLetter.RowID][testNewLetter.ColID])
 }
 
 // ─── integration tests ────────────────────────────────────────────────────────

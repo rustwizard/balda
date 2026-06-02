@@ -363,11 +363,13 @@ func NewGameWithWord(players []*Player, initWord string, n Notifier, opts ...Opt
 	return g, nil
 }
 
-// Board returns the game's letter board.
-func (g *Game) Board() *LettersTable {
+// BoardSnapshot returns a copy of the current board state.
+// The copy is made under the game mutex so callers never hold a raw pointer
+// to the board and can safely read the result without additional locking.
+func (g *Game) BoardSnapshot() [5][5]string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	return g.board
+	return g.board.AsStrings()
 }
 
 // PlayerScore holds a player's UID and current score for external consumers.

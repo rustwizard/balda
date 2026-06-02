@@ -17,7 +17,7 @@ import (
 
 func findValidMoveForGame(t *testing.T, g *game.Game) (game.Letter, []game.Letter, bool) {
 	t.Helper()
-	board := g.Board().AsStrings()
+	board := g.BoardSnapshot()
 
 	for start := 0; start < 5; start++ {
 		for end := start; end < 5; end++ {

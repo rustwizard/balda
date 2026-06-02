@@ -102,7 +102,7 @@ func (h *Handlers) MoveGame(ctx context.Context, req *baldaapi.MoveRequest, para
 	}
 
 	return &baldaapi.MoveResponse{
-		Board:          boardToSlice(rec.Game.Board().AsStrings()),
+		Board:          boardToSlice(rec.Game.BoardSnapshot()),
 		CurrentTurnUID: baldaapi.NewOptUUID(nextUID),
 		Players:        playerScoresToAPI(rec.Game.PlayerScores()),
 		Status:         baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),
@@ -156,7 +156,7 @@ func buildGameState(rec *lobby.GameRecord, currentTurnUID string) centrifugo.EvG
 	return centrifugo.EvGameState{
 		Type:           "game_state",
 		GameID:         rec.ID,
-		Board:          rec.Game.Board().AsStrings(),
+		Board:          rec.Game.BoardSnapshot(),
 		CurrentTurnUID: currentTurnUID,
 		Players:        players,
 		Status:         "in_progress",

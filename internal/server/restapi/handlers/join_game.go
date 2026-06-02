@@ -112,7 +112,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	gameState := centrifugo.EvGameState{
 		Type:           "game_state",
 		GameID:         rec.ID,
-		Board:          rec.Game.Board().AsStrings(),
+		Board:          rec.Game.BoardSnapshot(),
 		CurrentTurnUID: firstPlayerID,
 		Players:        players,
 		Status:         "in_progress",
@@ -135,7 +135,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 
 	// Build the board as a slice-of-slices for the HTTP response so the joining
 	// player can render the initial word immediately without racing Centrifugo.
-	rawBoard := rec.Game.Board().AsStrings()
+	rawBoard := rec.Game.BoardSnapshot()
 	boardSlice := make([][]string, len(rawBoard))
 	for i, row := range rawBoard {
 		r := make([]string, len(row))
