@@ -68,7 +68,7 @@ func setupHandlersWithCentrifugo(ctx context.Context, t *testing.T, cfAPIURL str
 	t.Helper()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient(cfAPIURL, testCentrifugoAPIKey)
-	h := handlers.New(core.svc, core.sess, testAPIToken, cf, testCentrifugoSecret)
+	h := handlers.New(core.svc, core.sess, core.pres, testAPIToken, cf, testCentrifugoSecret)
 	return h, core.cleanup
 }
 
