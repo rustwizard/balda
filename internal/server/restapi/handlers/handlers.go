@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"crypto/subtle"
 	"errors"
 	"log/slog"
 	"strconv"
@@ -72,20 +73,18 @@ func (h *Handlers) publishLobbyUpdate(ctx context.Context) {
 
 // HandleAPIKeyHeader implements baldaapi.SecurityHandler.
 func (h *Handlers) HandleAPIKeyHeader(ctx context.Context, _ baldaapi.OperationName, t baldaapi.APIKeyHeader) (context.Context, error) {
-	slog.Info("KeyAuth header handler called")
-	if t.APIKey == h.xAPIToken {
+	if subtle.ConstantTimeCompare([]byte(t.APIKey), []byte(h.xAPIToken)) == 1 {
 		return ctx, nil
 	}
-	slog.Error("access attempt with incorrect api key header", slog.String("token", t.APIKey))
+	slog.Error("access attempt with incorrect api key header")
 	return nil, errors.New("api key header: token error")
 }
 
 // HandleAPIKeyQueryParam implements baldaapi.SecurityHandler.
 func (h *Handlers) HandleAPIKeyQueryParam(ctx context.Context, _ baldaapi.OperationName, t baldaapi.APIKeyQueryParam) (context.Context, error) {
-	slog.Info("KeyAuth query param handler called")
-	if t.APIKey == h.xAPIToken {
+	if subtle.ConstantTimeCompare([]byte(t.APIKey), []byte(h.xAPIToken)) == 1 {
 		return ctx, nil
 	}
-	slog.Error("access attempt with incorrect api key query param", slog.String("token", t.APIKey))
+	slog.Error("access attempt with incorrect api key query param")
 	return nil, errors.New("api key param: token error")
 }
