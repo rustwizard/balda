@@ -36,29 +36,31 @@ HTTP-сервер создан явно как `&http.Server{...}` с `ReadTimeo
 **Предложение:** либо подключить (эндпоинт постановки в очередь + `go mm.Run(serverCtx)`),
 либо убрать из прод-пути до готовности фичи.
 
-### 5. `Player.Exp` не загружается из БД
-**Файлы:** `internal/lobby/lobby.go:82,121,154`
+### 5. ✅ `Player.Exp` не загружается из БД
+**Файлы:** `internal/service/balda_service.go:70,79`
 
-Игроки создаются как `&game.Player{ID: playerID}` — `Exp` всегда 0. Даже при включённом
-matchmaking подбор по рейтингу бессмыслен (все рейтинги нулевые).
+Реализовано: `CreateGame` и `JoinGame` загружают `exp` через `storage.GetPlayerByUID`
+(`SELECT player_id, COALESCE(exp, 0) FROM player_state`) и передают в `game.Player{Exp: p.Exp}`.
+Тестовые хелперы (`makePlayers` в `lobby_test`, `game_fsm_test`, `coord_test`, `list_games_test`,
+`handlers_test`) также обновлены для создания игроков с ненулевым `Exp`.
 
-**Предложение:** прокидывать `exp` из `player_state` при создании `Player`.
+### 6. ✅ Результаты игр не сохраняются
+**Файлы:** `internal/gamecoord/coord.go` (game_over), `internal/storage/game_result.go`
 
-### 6. Результаты игр не сохраняются
-**Файлы:** `internal/gamecoord/coord.go` (game_over), `internal/lobby/lobby.go` (`onDone`)
+Реализовано: `gamecoord.dispatchGameResult` вызывает `onGameOver` callback (провайдерится в
+`cmd/server.go` как `makeOnGameOverCallback`) до публикации в Centrifugo.
+`storage.SaveGameResult` в транзакции: (1) INSERT INTO `game_results`, (2) INSERT INTO
+`game_result_players` (score, words_count, exp_gained), (3) UPDATE `player_state SET exp = exp + $1`.
+Callback обёрнут в retry (3 попытки, backoff 100/200 мс) и учитывается в `pendingResults`
+WaitGroup для graceful shutdown. Комментарий в миграции `003_game_results.up.sql` обновлён
+с `'board_full'` на `'game_finished'`.
 
-После завершения партии очки/победитель/`exp` не записываются обратно в `player_state`.
-Рейтинговая система инертна, статистика теряется.
-
-**Предложение:** по `game_over` персистить итог (обновление `exp`, запись истории партий).
-
-### 7. Мёртвый/легаси-код в game.go
+### 7. ✅ Мёртвый/легаси-код в game.go
 **Файлы:** `internal/game/game.go:454` (`AddWordToCurrentPlayer`), `:460` (`IsTakenWord`)
 
-Оба метода используются только в тестах; реальную логику проверки/добавления слова делает
-`SubmitWord` инлайн. Дублирование и путаница.
-
-**Предложение:** удалить либо переиспользовать в `SubmitWord` (DRY).
+Реализовано: удалены `AddWordToCurrentPlayer` и `IsTakenWord`. Проверка дубликатов в
+`SubmitWord` оставлена как `slices.Contains` (быстро, без аллокаций). Тесты мёртвого кода
+удалены, лишние тесты на `IsTakenWord` убраны.
 
 ## 🟡 Средний приоритет (надёжность, дизайн, безопасность)
 

@@ -18,7 +18,7 @@ import (
 func makePlayers(ids ...string) []*game.Player {
 	out := make([]*game.Player, len(ids))
 	for i, id := range ids {
-		out[i] = &game.Player{ID: id}
+		out[i] = &game.Player{ID: id, Exp: i * 100}
 	}
 	return out
 }

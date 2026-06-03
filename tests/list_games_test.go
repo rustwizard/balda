@@ -29,8 +29,8 @@ func TestListGamesHandler(t *testing.T) {
 		assert.Empty(t, resp.Games)
 	})
 
-	p1 := &game.Player{ID: uuid.NewString()}
-	p2 := &game.Player{ID: uuid.NewString()}
+	p1 := &game.Player{ID: uuid.NewString(), Exp: 100}
+	p2 := &game.Player{ID: uuid.NewString(), Exp: 200}
 
 	rec, err := lby.StartGame(ctx, []*game.Player{p1, p2}, &game.NoopNotifier{})
 	require.NoError(t, err)
@@ -55,8 +55,8 @@ func TestListGamesHandler(t *testing.T) {
 		assert.ElementsMatch(t, []string{p1.ID, p2.ID}, gotIDs)
 	})
 
-	p3 := &game.Player{ID: uuid.NewString()}
-	p4 := &game.Player{ID: uuid.NewString()}
+	p3 := &game.Player{ID: uuid.NewString(), Exp: 300}
+	p4 := &game.Player{ID: uuid.NewString(), Exp: 400}
 
 	_, err = lby.StartGame(ctx, []*game.Player{p3, p4}, &game.NoopNotifier{})
 	require.NoError(t, err)

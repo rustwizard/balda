@@ -3,7 +3,7 @@ create table if not exists game_results
     id            bigserial primary key,
     game_id       uuid        not null unique,
     winner_id     uuid,                                                   -- null means draw
-    finish_reason text        not null,                                   -- 'board_full' | 'kick' | 'accept_end'
+    finish_reason text        not null,                                   -- 'game_finished' | 'kick' | 'accept_end'
     finished_at   timestamptz not null default now()
 );
 
