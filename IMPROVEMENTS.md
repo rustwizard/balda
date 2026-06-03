@@ -16,16 +16,14 @@
 Если все игроки подряд скипают (`consecutiveSkipsTotal >= len(players)`) — `onSkip`
 отправляет `EventGameFinished` как эвристику «нет доступных ходов».
 
-### 3. Нет graceful shutdown и таймаутов HTTP-сервера
+### 3. ✅ Нет graceful shutdown и таймаутов HTTP-сервера
 **Файлы:** `cmd/root.go:22` (`rootCmd.Execute()`), `cmd/server.go:159` (`http.ListenAndServe`)
 
-Используется `Execute()` вместо `ExecuteContext()` с `signal.NotifyContext`, контекст игр
-(`cmd.Context()`) фактически `context.Background()` и никогда не отменяется. Сервер поднимается
-голым `http.ListenAndServe` без `ReadTimeout/WriteTimeout/IdleTimeout` (риск Slowloris) и без
-`srv.Shutdown()`. При SIGTERM активные партии и соединения обрываются.
-
-**Предложение:** `signal.NotifyContext(SIGINT/SIGTERM)`, явный `&http.Server{...}` с таймаутами,
-graceful `Shutdown(ctx)`, отмена контекста лобби.
+Реализовано: `Execute()` заменён на `ExecuteContext()` с `signal.NotifyContext(SIGINT/SIGTERM)`.
+HTTP-сервер создан явно как `&http.Server{...}` с `ReadTimeout`, `WriteTimeout`, `IdleTimeout`
+и `ReadHeaderTimeout`. Сервер ожидает `<-cmd.Context().Done()` вместо ручного `signal.Notify`,
+после чего вызывается `lby.Shutdown()` (отмена контекста всех игр) и `httpSrv.Shutdown(ctx)`
+с таймаутом 30s. Дожидаются завершения `pendingResults` (сохранение результатов игр).
 
 ## 🟠 Высокий приоритет (незавершённый функционал, мёртвый код)
 
