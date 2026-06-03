@@ -70,12 +70,14 @@ WaitGroup для graceful shutdown. Комментарий в миграции `
 Реализовано: кириллическая `С` (U+0421) заменена на латинскую `C` (U+0043) в методе
 `CheckWordExistence`. Исправлено в PR #102 (`fix/method-typo`).
 
-### 9. Дублирование запроса player_id
-**Файл:** `internal/service/balda_service.go:49,62,73`
+### 9. ✅ Дублирование запроса player_id
+**Файл:** `internal/service/balda_service.go:70,79,87`
 
-Идентичный `SELECT player_id FROM player_state WHERE user_id=$1` повторён трижды.
-
-**Предложение:** свести `CreateGame`/`JoinGame` к уже существующему `playerIDByUID`.
+Реализовано: SQL-запрос вынесен в единый метод `storage.GetPlayerByUID`
+(`SELECT player_id, COALESCE(exp, 0) FROM player_state WHERE user_id = $1`).
+Сервисный слой использует этот метод: `CreateGame`/`JoinGame` получают
+`PlayerForGame` (player_id + exp), `playerIDByUID` — обёртка для методов,
+где нужен только player_id.
 
 ### 10. Утечка кредов в логи и шумное логирование
 **Файл:** `internal/server/restapi/handlers/handlers.go:47,51,57,61`
