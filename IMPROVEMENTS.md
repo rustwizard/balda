@@ -79,15 +79,12 @@ WaitGroup для graceful shutdown. Комментарий в миграции `
 `PlayerForGame` (player_id + exp), `playerIDByUID` — обёртка для методов,
 где нужен только player_id.
 
-### 10. Утечка кредов в логи и шумное логирование
-**Файл:** `internal/server/restapi/handlers/handlers.go:47,51,57,61`
+### 10. ✅ Утечка кредов в логи и шумное логирование
+**Файл:** `internal/server/restapi/handlers/handlers.go:74,84`
 
-При неверном ключе в лог пишется сам токен (`slog.String("token", t.APIKey)`).
-Плюс `slog.Info("KeyAuth ... handler called")` на каждый запрос. Сравнение `t.APIKey == h.xAPIToken`
-не constant-time (теоретическая тайминг-атака).
-
-**Предложение:** не логировать значение токена, понизить уровень/убрать info-шум,
-использовать `subtle.ConstantTimeCompare`.
+Реализовано: убрано логирование значения токена (`slog.String("token", ...)`), удалён
+шумный `slog.Info("KeyAuth ... handler called")` на каждый запрос. Сравнение токенов
+заменено на `subtle.ConstantTimeCompare` для защиты от timing-атак.
 
 ### 11. Единый статический API-токен на всех пользователей
 **Файлы:** `cmd/server.go:182`, `handlers.go`
