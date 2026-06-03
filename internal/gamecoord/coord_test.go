@@ -139,8 +139,8 @@ func TestPublishGameOver_PersistsBeforePublish(t *testing.T) {
 
 	cf := centrifugo.NewClient(ts.URL, "test-key")
 
-	p1 := &game.Player{ID: "p1", Score: 10}
-	p2 := &game.Player{ID: "p2", Score: 5}
+	p1 := &game.Player{ID: "p1", Score: 10, Exp: 100}
+	p2 := &game.Player{ID: "p2", Score: 5, Exp: 200}
 
 	coord := New("game-1", []*game.Player{p1, p2}, cf)
 	coord.SetOnGameOver(func(_ storage.GameResult) {

@@ -36,13 +36,13 @@ HTTP-сервер создан явно как `&http.Server{...}` с `ReadTimeo
 **Предложение:** либо подключить (эндпоинт постановки в очередь + `go mm.Run(serverCtx)`),
 либо убрать из прод-пути до готовности фичи.
 
-### 5. `Player.Exp` не загружается из БД
-**Файлы:** `internal/lobby/lobby.go:82,121,154`
+### 5. ✅ `Player.Exp` не загружается из БД
+**Файлы:** `internal/service/balda_service.go:70,79`
 
-Игроки создаются как `&game.Player{ID: playerID}` — `Exp` всегда 0. Даже при включённом
-matchmaking подбор по рейтингу бессмыслен (все рейтинги нулевые).
-
-**Предложение:** прокидывать `exp` из `player_state` при создании `Player`.
+Реализовано: `CreateGame` и `JoinGame` загружают `exp` через `storage.GetPlayerByUID`
+(`SELECT player_id, COALESCE(exp, 0) FROM player_state`) и передают в `game.Player{Exp: p.Exp}`.
+Тестовые хелперы (`makePlayers` в `lobby_test`, `game_fsm_test`, `coord_test`, `list_games_test`,
+`handlers_test`) также обновлены для создания игроков с ненулевым `Exp`.
 
 ### 6. Результаты игр не сохраняются
 **Файлы:** `internal/gamecoord/coord.go` (game_over), `internal/lobby/lobby.go` (`onDone`)
