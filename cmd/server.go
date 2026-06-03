@@ -5,10 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"os/signal"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -159,7 +156,14 @@ var serverCmd = &cobra.Command{
 		mux.Handle("/", srv)
 
 		addr := fmt.Sprintf("%s:%d", cfg.ServerAddr, cfg.ServerPort)
-		httpSrv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+		httpSrv := &http.Server{
+			Addr:              addr,
+			Handler:           mux,
+			ReadTimeout:       30 * time.Second,
+			WriteTimeout:      30 * time.Second,
+			IdleTimeout:       120 * time.Second,
+			ReadHeaderTimeout: 10 * time.Second,
+		}
 
 		go func() {
 			slog.Info("starting server", slog.String("addr", addr))
@@ -168,9 +172,7 @@ var serverCmd = &cobra.Command{
 			}
 		}()
 
-		quit := make(chan os.Signal, 1)
-		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-		<-quit
+		<-cmd.Context().Done()
 
 		slog.Info("shutting down server")
 
