@@ -44,13 +44,16 @@ HTTP-сервер создан явно как `&http.Server{...}` с `ReadTimeo
 Тестовые хелперы (`makePlayers` в `lobby_test`, `game_fsm_test`, `coord_test`, `list_games_test`,
 `handlers_test`) также обновлены для создания игроков с ненулевым `Exp`.
 
-### 6. Результаты игр не сохраняются
-**Файлы:** `internal/gamecoord/coord.go` (game_over), `internal/lobby/lobby.go` (`onDone`)
+### 6. ✅ Результаты игр не сохраняются
+**Файлы:** `internal/gamecoord/coord.go` (game_over), `internal/storage/game_result.go`
 
-После завершения партии очки/победитель/`exp` не записываются обратно в `player_state`.
-Рейтинговая система инертна, статистика теряется.
-
-**Предложение:** по `game_over` персистить итог (обновление `exp`, запись истории партий).
+Реализовано: `gamecoord.dispatchGameResult` вызывает `onGameOver` callback (провайдерится в
+`cmd/server.go` как `makeOnGameOverCallback`) до публикации в Centrifugo.
+`storage.SaveGameResult` в транзакции: (1) INSERT INTO `game_results`, (2) INSERT INTO
+`game_result_players` (score, words_count, exp_gained), (3) UPDATE `player_state SET exp = exp + $1`.
+Callback обёрнут в retry (3 попытки, backoff 100/200 мс) и учитывается в `pendingResults`
+WaitGroup для graceful shutdown. Комментарий в миграции `003_game_results.up.sql` обновлён
+с `'board_full'` на `'game_finished'`.
 
 ### 7. Мёртвый/легаси-код в game.go
 **Файлы:** `internal/game/game.go:454` (`AddWordToCurrentPlayer`), `:460` (`IsTakenWord`)
