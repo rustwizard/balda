@@ -55,13 +55,12 @@ Callback обёрнут в retry (3 попытки, backoff 100/200 мс) и у�
 WaitGroup для graceful shutdown. Комментарий в миграции `003_game_results.up.sql` обновлён
 с `'board_full'` на `'game_finished'`.
 
-### 7. Мёртвый/легаси-код в game.go
+### 7. ✅ Мёртвый/легаси-код в game.go
 **Файлы:** `internal/game/game.go:454` (`AddWordToCurrentPlayer`), `:460` (`IsTakenWord`)
 
-Оба метода используются только в тестах; реальную логику проверки/добавления слова делает
-`SubmitWord` инлайн. Дублирование и путаница.
-
-**Предложение:** удалить либо переиспользовать в `SubmitWord` (DRY).
+Реализовано: удалены `AddWordToCurrentPlayer` и `IsTakenWord`. Проверка дубликатов в
+`SubmitWord` оставлена как `slices.Contains` (быстро, без аллокаций). Тесты мёртвого кода
+удалены, лишние тесты на `IsTakenWord` убраны.
 
 ## 🟡 Средний приоритет (надёжность, дизайн, безопасность)
 

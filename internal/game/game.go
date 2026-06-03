@@ -537,24 +537,6 @@ func (g *Game) shutdown() {
 	}
 }
 
-func (g *Game) AddWordToCurrentPlayer(word string) {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	g.currentPlayer().Words = append(g.currentPlayer().Words, word)
-}
-
-func (g *Game) IsTakenWord(word string) bool {
-	word = normalizeWord(word)
-	for _, player := range g.players {
-		for _, pword := range player.Words {
-			if normalizeWord(pword) == word {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // ProposeEnd signals that playerID wants to end the game (e.g. no valid moves).
 // Only the current player may call this when the game is in WaitingForMove state.
 func (g *Game) ProposeEnd(playerID string) error {
