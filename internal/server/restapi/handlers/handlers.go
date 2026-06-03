@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/rustwizard/balda/internal/centrifugo"
+	"github.com/rustwizard/balda/internal/presence"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/service"
 	"github.com/rustwizard/balda/internal/session"
@@ -18,13 +19,14 @@ import (
 type Handlers struct {
 	svc                       *service.Balda
 	sess                      *session.Service
+	pres                      *presence.Service
 	xAPIToken                 string
 	cf                        *centrifugo.Client
 	centrifugoTokenHMACSecret string
 }
 
-func New(svc *service.Balda, sess *session.Service, xAPIToken string, cf *centrifugo.Client, centrifugoTokenHMACSecret string) *Handlers {
-	return &Handlers{svc: svc, sess: sess, xAPIToken: xAPIToken, cf: cf, centrifugoTokenHMACSecret: centrifugoTokenHMACSecret}
+func New(svc *service.Balda, sess *session.Service, pres *presence.Service, xAPIToken string, cf *centrifugo.Client, centrifugoTokenHMACSecret string) *Handlers {
+	return &Handlers{svc: svc, sess: sess, pres: pres, xAPIToken: xAPIToken, cf: cf, centrifugoTokenHMACSecret: centrifugoTokenHMACSecret}
 }
 
 // generateCentrifugoTokens returns a connection token and a lobby subscription token for the given user.

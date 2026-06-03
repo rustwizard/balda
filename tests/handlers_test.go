@@ -18,6 +18,7 @@ import (
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
+	"github.com/rustwizard/balda/internal/presence"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/balda/internal/service"
@@ -62,6 +63,7 @@ func startRedis(ctx context.Context, t *testing.T) (addr string, cleanup func())
 type coreSetup struct {
 	svc     *service.Balda
 	sess    *session.Service
+	pres    *presence.Service
 	lby     *lobby.Lobby
 	cleanup func()
 }
@@ -90,10 +92,12 @@ func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 
 	redisAddr, redisCleanup := startRedis(ctx, t)
 
+	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
 	sess := session.NewService(session.Config{
 		Addr:       redisAddr,
 		Expiration: 30 * time.Second,
-	}, redis.NewClient(&redis.Options{Addr: redisAddr}))
+	}, rdb)
+	pres := presence.NewService(presence.Config{}, rdb)
 
 	lby := lobby.New(func(_ context.Context, _ string, players []*game.Player, n game.Notifier) (*game.Game, error) {
 		return game.NewGameWithWord(players, "масло", n)
@@ -109,6 +113,7 @@ func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 	return &coreSetup{
 		svc:  svc,
 		sess: sess,
+		pres: pres,
 		lby:  lby,
 		cleanup: func() {
 			pool.Close()
@@ -123,7 +128,7 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.sess, testAPIToken, cf, "test-secret")
+	h := handlers.New(core.svc, core.sess, core.pres, testAPIToken, cf, "test-secret")
 	return h, core.cleanup
 }
 
@@ -342,7 +347,7 @@ func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.sess, testAPIToken, cf, "test-secret")
+	h := handlers.New(core.svc, core.sess, core.pres, testAPIToken, cf, "test-secret")
 	return h, core.lby, core.cleanup
 }
 

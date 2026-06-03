@@ -16,6 +16,7 @@ import (
 	"github.com/rustwizard/balda/internal/gamecoord"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
+	"github.com/rustwizard/balda/internal/presence"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/balda/internal/service"
 	"github.com/rustwizard/balda/internal/storage"
@@ -78,6 +79,7 @@ type Config struct {
 	ServerPort int
 	Pg         PgConfig
 	Session    session.Config
+	Presence   presence.Config
 	XAPIToken  string
 	Centrifugo CentrifugoConfig
 }
@@ -107,12 +109,14 @@ var serverCmd = &cobra.Command{
 		}
 		defer pool.Close()
 
-		sess := session.NewService(cfg.Session, redis.NewClient(&redis.Options{
+		rdb := redis.NewClient(&redis.Options{
 			Addr:     cfg.Session.Addr,
 			Username: cfg.Session.Username,
 			Password: cfg.Session.Password,
 			DB:       cfg.Session.DBNum,
-		}))
+		})
+		sess := session.NewService(cfg.Session, rdb)
+		pres := presence.NewService(cfg.Presence, rdb)
 
 		cf := centrifugo.NewClient(cfg.Centrifugo.APIURL, cfg.Centrifugo.APIKey)
 
@@ -137,7 +141,7 @@ var serverCmd = &cobra.Command{
 
 		svc := service.New(lby, mm, s)
 
-		h := handlers.New(svc, sess, cfg.XAPIToken, cf, cfg.Centrifugo.TokenHMACSecret)
+		h := handlers.New(svc, sess, pres, cfg.XAPIToken, cf, cfg.Centrifugo.TokenHMACSecret)
 
 		srv, err := baldaapi.NewServer(h, h, baldaapi.WithPathPrefix("/balda/api/v1"))
 		if err != nil {
@@ -229,6 +233,7 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 func init() {
 	serverCmd.Flags().AddFlagSet(cfg.Flags("server"))
 	serverCmd.Flags().AddFlagSet(cfg.Session.Flags("redis"))
+	serverCmd.Flags().AddFlagSet(cfg.Presence.Flags("presence"))
 }
 
 // gameResultSaver matches *storage.Storage so the callback can be unit-tested.
