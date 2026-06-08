@@ -36,12 +36,13 @@ Two-token scheme, modelled on OAuth 2.0 best practices:
 ```
 Header: { "alg": "HS256", "typ": "JWT" }
 Claims: {
-  "sub":  "<uid>",          // internal user_id (int64 as string)
-  "pid":  "<player_id>",   // player UUID (public game identifier)
-  "role": "player",        // "player" | "admin"
-  "jti":  "<uuid>",        // unique token ID (for optional blacklisting)
+  "sub":  "<uid_string>",   // RFC 7519: string; strconv.FormatInt(uid, 10)
+  "uid":  <uid_int64>,      // custom claim for direct Go use (avoids string parsing in hot path)
+  "pid":  "<player_uuid>",  // player UUID (public game identifier)
+  "role": "player",         // "player" | "admin"
+  "jti":  "<uuid>",         // unique token ID (required for logout blacklisting)
   "iat":  <unix>,
-  "exp":  <unix>            // iat + 3600 (1 hour)
+  "exp":  <unix>             // iat + 3600 (1 hour)
 }
 Signature: HMAC-SHA256(header + "." + claims, JWT_SECRET)
 ```
@@ -53,7 +54,8 @@ Signature: HMAC-SHA256(header + "." + claims, JWT_SECRET)
 #### Refresh Token
 
 - Opaque random string: `hex(32 random bytes)` — 64-char hex string.
-- Only a **bcrypt hash** of it is stored in the DB (`refresh_tokens.token_hash`).
+- Only an **HMAC-SHA256 hash** of it is stored in the DB (`refresh_tokens.token_hash`):
+  `HMAC-SHA256(JWT_SECRET, rawToken)` — deterministic, enabling indexed lookup; 32 bytes of token entropy make brute-force infeasible without a slow hash.
 - TTL: 30 days.
 - **Rotated on each use**: presenting a refresh token issues a new pair and invalidates the old one.
 - Revoked on logout and on suspicious replay detection.
@@ -140,7 +142,10 @@ Body: { "refresh_token": "<opaque>" }   // optional; revokes this device's refre
 Server:
   1. Validate access_token (must be valid)
   2. Mark refresh_token row revoked=true (if provided)
-  3. Optionally: add jti to Redis blacklist for remaining access_token lifetime
+  3. Add jti to Redis blacklist with TTL = remaining access_token lifetime
+     Key: "jwt:blacklist:<jti>", Value: "1", TTL: claims.exp - now()
+     Without this step a logged-out access token remains valid for up to 1 hour.
+     BearerAuth middleware must check this key after signature verification.
 
 Response 204
 ```
@@ -210,7 +215,8 @@ Role is stored in `users.role TEXT NOT NULL DEFAULT 'player'` and embedded in th
 - Rotate by changing the env var and forcing re-login (all existing access tokens become invalid immediately; refresh tokens remain valid until a new access token is requested with the new secret, at which point verification fails and the client must re-login).
 
 ### Refresh Token Storage
-- Only the **bcrypt hash** (`cost=10`) of the opaque token is stored in the DB — a DB dump does not expose usable tokens.
+- Only an **HMAC-SHA256 hash** (`HMAC-SHA256(JWT_SECRET, rawToken)`) of the opaque token is stored in the DB — a DB dump without the secret does not expose usable tokens.
+- Unlike bcrypt, HMAC-SHA256 is deterministic, enabling direct indexed lookup (`WHERE token_hash = $1`). bcrypt is unsuitable here because its non-deterministic output (salted) makes SQL lookup impossible without a full-table scan.
 - The raw token is sent to the client once and never stored server-side.
 
 ### Replay Attack Prevention
@@ -226,16 +232,21 @@ Role is stored in `users.role TEXT NOT NULL DEFAULT 'player'` and embedded in th
 Implement as middleware using a sliding window counter in Redis (reuse existing Redis client).
 
 ### HTTPS
-All tokens must be transmitted over TLS only. The server should set
-`Strict-Transport-Security: max-age=63072000` and reject plain HTTP in production.
+All tokens must be transmitted over TLS only. Configure the reverse proxy (nginx/caddy) to set
+`Strict-Transport-Security: max-age=63072000` and redirect plain HTTP to HTTPS.
 
 ### Token Lifetime Summary
 | Token | TTL | Storage |
 |-------|-----|---------|
 | Access token (JWT) | 1 hour | Client only (memory / secure storage) |
-| Refresh token | 30 days | DB (`refresh_tokens`) — hashed |
+| Refresh token | 30 days | DB (`refresh_tokens`) — HMAC-SHA256 hashed |
 | Centrifugo connection JWT | 24 hours | Client only |
 | Centrifugo subscription JWT | 24 hours | Client only |
+
+> **Note:** Centrifugo JWTs have a 24-hour TTL while access tokens expire in 1 hour. This means
+> a revoked user can still send WebSocket events for up to 24 hours. Acceptable for the current
+> scale; if tighter revocation is needed, reduce Centrifugo TTL to match the access token and
+> re-issue Centrifugo tokens on each access token refresh.
 
 ---
 
@@ -255,7 +266,7 @@ ALTER TABLE users
 CREATE TABLE refresh_tokens (
   token_id   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    BIGINT      NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-  token_hash TEXT        NOT NULL UNIQUE,   -- bcrypt hash of the opaque token
+  token_hash TEXT        NOT NULL UNIQUE,   -- HMAC-SHA256(JWT_SECRET, rawToken)
   issued_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL,
   revoked    BOOLEAN     NOT NULL DEFAULT false,
@@ -281,7 +292,7 @@ ALTER TABLE users
 New file: `internal/storage/token.go`
 
 ```go
-// SaveRefreshToken stores a bcrypt-hashed refresh token.
+// SaveRefreshToken stores an HMAC-SHA256-hashed refresh token.
 func (s *Balda) SaveRefreshToken(ctx context.Context, uid int64, tokenHash string, expiresAt time.Time, ua, ip string) error
 
 // GetRefreshToken fetches a non-revoked token row by hash.
@@ -300,17 +311,33 @@ New file: `internal/auth/jwt.go`
 
 ```go
 type Claims struct {
-    UID      int64     `json:"sub"`
+    // Sub is the string representation of the internal user_id (int64).
+    // RFC 7519 §4.1.2 defines "sub" as a string — store int64 separately.
+    UID      int64     `json:"uid"`
     PlayerID uuid.UUID `json:"pid"`
     Role     string    `json:"role"`
-    jwt.RegisteredClaims
+    jwt.RegisteredClaims // RegisteredClaims.Subject (string) carries strconv.FormatInt(uid, 10)
 }
 
 func GenerateAccessToken(uid int64, pid uuid.UUID, role, secret string) (string, error)
 func ParseAccessToken(tokenStr, secret string) (*Claims, error)
 ```
 
+> **Note on `sub`:** RFC 7519 defines `sub` as a string. Set `RegisteredClaims.Subject = strconv.FormatInt(uid, 10)` and keep `uid int64` as a custom claim for direct use in Go. This avoids type-mismatch rejections by client-side JWT libraries that strictly validate the `sub` type.
+
 Reuse `golang-jwt/jwt` (already a transitive dependency via `internal/centrifugo/token.go`).
+
+Add to the same file or `internal/auth/token.go`:
+
+```go
+// HashRefreshToken returns HMAC-SHA256(jwtSecret, rawToken) as a hex string.
+// Deterministic — safe for use as a unique DB index key.
+func HashRefreshToken(secret, rawToken string) string {
+    mac := hmac.New(sha256.New, []byte(secret))
+    mac.Write([]byte(rawToken))
+    return hex.EncodeToString(mac.Sum(nil))
+}
+```
 
 ### OpenAPI Spec Changes (`api/openapi/http-api.yaml`)
 
