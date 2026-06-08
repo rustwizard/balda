@@ -80,6 +80,18 @@ func TestSubmitWord_WrongPlayer(t *testing.T) {
 	assert.ErrorIs(t, err, game.ErrNotYourTurn)
 }
 
+func TestSubmitWord_WordTooShort(t *testing.T) {
+	n := &mockNotifier{}
+	g, _ := makeGameWithBoard(t, n, testBoardWord, "p1", "p2")
+
+	short := []game.Letter{
+		{RowID: 2, ColID: 0},
+		{RowID: 2, ColID: 1},
+	}
+	err := g.SubmitWord("p1", &testNewLetter, short)
+	assert.ErrorIs(t, err, game.ErrWordTooShort)
+}
+
 func TestSubmitWord_DuplicateCell(t *testing.T) {
 	n := &mockNotifier{}
 	g, _ := makeGameWithBoard(t, n, testBoardWord, "p1", "p2")
@@ -98,9 +110,10 @@ func TestSubmitWord_WordHasGaps(t *testing.T) {
 	n := &mockNotifier{}
 	g, _ := makeGameWithBoard(t, n, testBoardWord, "p1", "p2")
 
-	// в(2,0) to е(3,3): Manhattan distance = 1+3 = 4 ≠ 1 → gap.
+	// в(2,0)→о(2,1)→е(3,3): distance о→е = |2-3|+|1-3| = 3 ≠ 1 → gap.
 	gapped := []game.Letter{
 		{RowID: 2, ColID: 0, Char: "в"},
+		{RowID: 2, ColID: 1, Char: "о"},
 		{RowID: 3, ColID: 3, Char: "е"},
 	}
 	err := g.SubmitWord("p1", &testNewLetter, gapped)
@@ -146,9 +159,10 @@ func TestSubmitWord_WordNotInDictionary(t *testing.T) {
 	n := &mockNotifier{}
 	g, _ := makeGameWithBoard(t, n, testBoardWord, "p1", "p2")
 
-	// "не" (negation particle) is not a Russian noun — not in the dictionary.
-	// Path: н(2,3)→е(3,3), adjacent ✓, includes new letter е(3,3) ✓.
+	// "лне" is not a Russian noun — not in the dictionary.
+	// Path: л(2,2)→н(2,3)→е(3,3), all adjacent ✓, includes new letter е(3,3) ✓.
 	notNoun := []game.Letter{
+		{RowID: 2, ColID: 2, Char: "л"},
 		{RowID: 2, ColID: 3, Char: "н"},
 		{RowID: 3, ColID: 3, Char: "е"},
 	}
@@ -175,12 +189,14 @@ func TestSubmitWord_LetterPlaceTaken(t *testing.T) {
 func TestSubmitWord_LetterWrongPlace(t *testing.T) {
 	n := &mockNotifier{}
 	g, _ := makeGameWithBoard(t, n, testBoardWord, "p1", "p2")
-	// Row 0, col 2: needs letter at (1,2) below it, but row 1 is empty.
-	addTestWord(t, "еф")
+	// (0,2) has no adjacent existing letter — placement is invalid.
+	// Path (0,2)→(1,2)→(1,3) is adjacent and 3 letters, includes new letter ✓.
+	addTestWord(t, "ефг")
 	badPos := game.Letter{RowID: 0, ColID: 2, Char: "е"}
 	word := []game.Letter{
 		{RowID: 0, ColID: 2, Char: "е"},
 		{RowID: 1, ColID: 2, Char: "ф"},
+		{RowID: 1, ColID: 3, Char: "г"},
 	}
 	err := g.SubmitWord("p1", &badPos, word)
 	assert.ErrorIs(t, err, game.ErrWrongLetterPlace)

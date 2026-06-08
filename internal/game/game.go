@@ -16,6 +16,7 @@ var (
 	ErrWrongState          = errors.New("game: wrong state for this action")
 	ErrWordHasGaps         = errors.New("game: word path has gaps between letters")
 	ErrDuplicateCell       = errors.New("game: word path uses the same cell twice")
+	ErrWordTooShort        = errors.New("game: word must be at least 3 letters long")
 	ErrNewLetterNotInWord  = errors.New("game: new letter must be included in the word")
 	ErrWordAlreadyUsed     = errors.New("game: word already used")
 	ErrWordNotInDictionary = errors.New("game: word not found in dictionary")
@@ -347,6 +348,10 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 	if g.currentPlayer().ID != playerID {
 		g.mu.Unlock()
 		return ErrNotYourTurn
+	}
+	if len(word) < 3 {
+		g.mu.Unlock()
+		return ErrWordTooShort
 	}
 	if HasDuplicateCells(word) {
 		g.mu.Unlock()
