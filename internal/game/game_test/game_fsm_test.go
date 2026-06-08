@@ -306,14 +306,16 @@ func fillBoardExcept(g *game.Game, skipRow, skipCol uint8) {
 	}
 }
 
-// submitLastMove places "б" at (3,3) adjacent to н(2,3), forming word "нб".
+// submitLastMove places "б" at (3,3) adjacent to н(2,3), forming word "ябн":
+// я(3,2)→б(3,3)→н(2,3), all adjacent, 3 letters.
 func submitLastMove(t *testing.T, g *game.Game, playerID string) {
 	t.Helper()
-	addTestWord(t, "нб")
+	addTestWord(t, "ябн")
 	nl := game.Letter{RowID: 3, ColID: 3, Char: "б"}
 	path := []game.Letter{
-		{RowID: 2, ColID: 3, Char: "н"},
+		{RowID: 3, ColID: 2, Char: "я"},
 		{RowID: 3, ColID: 3, Char: "б"},
+		{RowID: 2, ColID: 3, Char: "н"},
 	}
 	require.NoError(t, g.SubmitWord(playerID, &nl, path))
 }

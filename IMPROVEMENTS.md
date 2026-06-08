@@ -70,14 +70,16 @@ WaitGroup для graceful shutdown. Комментарий в миграции `
 Реализовано: кириллическая `С` (U+0421) заменена на латинскую `C` (U+0043) в методе
 `CheckWordExistence`. Исправлено в PR #102 (`fix/method-typo`).
 
-### 9. ✅ Дублирование запроса player_id
-**Файл:** `internal/service/balda_service.go:70,79,87`
+### 9. ✅ Дублирование запроса player_id + все SQL-запросы в storage-слой
+**Файлы:** `internal/service/balda_service.go`, `internal/server/restapi/handlers/auth.go`,
+`handlers/signup.go`, `handlers/player_state.go`, `internal/storage/user.go`, `internal/storage/player.go`
 
-Реализовано: SQL-запрос вынесен в единый метод `storage.GetPlayerByUID`
-(`SELECT player_id, COALESCE(exp, 0) FROM player_state WHERE user_id = $1`).
-Сервисный слой использует этот метод: `CreateGame`/`JoinGame` получают
-`PlayerForGame` (player_id + exp), `playerIDByUID` — обёртка для методов,
-где нужен только player_id.
+Реализовано (ветка `refactor/storage-layer`): все SQL-запросы вынесены в storage-слой.
+- Добавлены методы `storage.AuthUser`, `storage.CreateUser` (файл `storage/user.go`).
+- Добавлены методы `storage.GetPlayerState`, `storage.GetPlayerByUID` (файл `storage/player.go`).
+- `service.Balda` лишился метода `DB()` — хендлеры больше не трогают `Pool()` напрямую.
+- Хендлеры `auth.go`, `signup.go`, `player_state.go` работают только через сервисный слой.
+- Лишний `pgx.BeginTxFunc` в `GetPlayerStateUID` (одиночный SELECT) убран.
 
 ### 10. ✅ Утечка кредов в логи и шумное логирование
 **Файл:** `internal/server/restapi/handlers/handlers.go:74,84`
@@ -104,13 +106,12 @@ WaitGroup для graceful shutdown. Комментарий в миграции `
 
 **Предложение:** различать `errors.Is(err, pgx.ErrNoRows)` → 401, иначе → 500.
 
-### 13. Не проверяется минимальная длина слова (≥3)
-**Файл:** `internal/game/game.go:280` (`SubmitWord`)
+### 13. ✅ Не проверяется минимальная длина слова (≥3)
+**Файл:** `internal/game/game.go` (`SubmitWord`)
 
-README обещает «3+ буквы», но код отбраковывает только пути длиной <2 (`GapsBetweenLetters`).
-Двухбуквенное слово из словаря пройдёт.
-
-**Предложение:** добавить явную проверку `len(word) >= 3` (или вынести константу).
+Реализовано (ветка `fix/min-word-length`): добавлен `ErrWordTooShort` и проверка
+`len(word) < 3` как первая после state/player-проверок. Тесты, использовавшие
+2-буквенные пути, обновлены до 3-буквенных.
 
 ### 14. Дублирование и рассинхрон публикаций game_state
 **Файлы:** `internal/server/restapi/handlers/move_game.go:91-97`, `internal/gamecoord/coord.go:51-64`

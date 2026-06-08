@@ -63,11 +63,13 @@ func (h *Handlers) MoveGame(ctx context.Context, req *baldaapi.MoveRequest, para
 				Message: baldaapi.NewOptString(err.Error()),
 				Type:    baldaapi.NewOptString("Conflict"),
 			}, nil
-		case errors.Is(err, game.ErrWordHasGaps),
+		case errors.Is(err, game.ErrWordTooShort),
+			errors.Is(err, game.ErrWordHasGaps),
 			errors.Is(err, game.ErrNewLetterNotInWord),
 			errors.Is(err, game.ErrWordAlreadyUsed),
 			errors.Is(err, game.ErrWordIsInitialWord),
 			errors.Is(err, game.ErrWordNotInDictionary),
+			errors.Is(err, game.ErrDuplicateCell),
 			errors.Is(err, game.ErrWrongLetterPlace),
 			errors.Is(err, game.ErrLetterPlaceTaken):
 			return &baldaapi.MoveGameBadRequest{
