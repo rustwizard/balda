@@ -20,7 +20,7 @@ func findValidMoveForGame(t *testing.T, g *game.Game) (game.Letter, []game.Lette
 	board := g.BoardSnapshot()
 
 	for start := 0; start < 5; start++ {
-		for end := start; end < 5; end++ {
+		for end := start + 1; end < 5; end++ { // segment must be ≥ 2 so total path ≥ 3
 			segment := make([]game.Letter, 0, end-start+1)
 			for c := start; c <= end; c++ {
 				segment = append(segment, game.Letter{RowID: 2, ColID: uint8(c), Char: board[2][c]})
@@ -132,9 +132,10 @@ func TestMoveGameHandler(t *testing.T) {
 
 	t.Run("invalid word returns 400", func(t *testing.T) {
 		gid := newGame(t)
+		// щ(1,2)→?(2,2)→?(2,3): 3 cells, щ not adjacent to any existing letter → ErrWrongLetterPlace → 400
 		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "щ"},
-			WordPath:  []baldaapi.BoardCell{{Row: 1, Col: 2}, {Row: 2, Col: 2}},
+			WordPath:  []baldaapi.BoardCell{{Row: 1, Col: 2}, {Row: 2, Col: 2}, {Row: 2, Col: 3}},
 		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gid})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameBadRequest)
@@ -144,9 +145,10 @@ func TestMoveGameHandler(t *testing.T) {
 
 	t.Run("new letter not in word path returns 400", func(t *testing.T) {
 		gid := newGame(t)
+		// new letter at (1,2) not present in word_path → ErrNewLetterNotInWord → 400
 		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "а"},
-			WordPath:  []baldaapi.BoardCell{{Row: 2, Col: 1}, {Row: 2, Col: 2}},
+			WordPath:  []baldaapi.BoardCell{{Row: 2, Col: 1}, {Row: 2, Col: 2}, {Row: 2, Col: 3}},
 		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gid})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameBadRequest)
@@ -314,7 +316,7 @@ func TestMoveGameHTTP(t *testing.T) {
 	t.Run("invalid move returns 400", func(t *testing.T) {
 		body, _ := json.Marshal(map[string]any{
 			"new_letter": map[string]any{"row": 1, "col": 2, "char": "щ"},
-			"word_path":  []map[string]any{{"row": 1, "col": 2}, {"row": 2, "col": 2}},
+			"word_path":  []map[string]any{{"row": 1, "col": 2}, {"row": 2, "col": 2}, {"row": 2, "col": 3}},
 		})
 		req, _ := http.NewRequest(http.MethodPost, moveURL, bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
