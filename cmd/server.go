@@ -80,7 +80,6 @@ type Config struct {
 	Pg         PgConfig
 	Session    session.Config
 	Presence   presence.Config
-	XAPIToken  string
 	Centrifugo CentrifugoConfig
 }
 
@@ -141,7 +140,7 @@ var serverCmd = &cobra.Command{
 
 		svc := service.New(lby, mm, s)
 
-		h := handlers.New(svc, sess, pres, cfg.XAPIToken, cf, cfg.Centrifugo.TokenHMACSecret)
+		h := handlers.New(svc, sess, pres, cf, cfg.Centrifugo.TokenHMACSecret)
 
 		srv, err := baldaapi.NewServer(h, h, baldaapi.WithPathPrefix("/balda/api/v1"))
 		if err != nil {
@@ -223,7 +222,6 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	f.StringVar(&c.Pg.Password, "pg.password", "", "postgres password")
 	f.IntVar(&c.Pg.MaxPoolSize, "pg.max_pool_size", 10, "postgres max pool size")
 	f.StringVar(&c.Pg.SSL, "pg.ssl", "disable", "postgres ssl")
-	f.StringVar(&c.XAPIToken, prefix+"x_api_token", "", "x-api-token for header or query param")
 	f.StringVar(&c.Centrifugo.APIURL, "centrifugo.api_url", "http://127.0.0.1:8000/api", "centrifugo api url")
 	f.StringVar(&c.Centrifugo.APIKey, "centrifugo.api_key", "", "centrifugo api key")
 	f.StringVar(&c.Centrifugo.TokenHMACSecret, "centrifugo.token_hmac_secret_key", "", "centrifugo token hmac secret")

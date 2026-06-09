@@ -236,14 +236,14 @@ func TestSkipGameHandler(t *testing.T) {
 }
 
 func TestMoveGameHTTP(t *testing.T) {
-	srv, email, password, cleanup := setupServer(t)
+	srv, email, password, apiKey, cleanup := setupServer(t)
 	defer cleanup()
 
 	// Auth creator
 	authBody, _ := json.Marshal(map[string]string{"email": email, "password": password})
 	authReq, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(authBody))
 	authReq.Header.Set("Content-Type", "application/json")
-	authReq.Header.Set("X-API-Key", testAPIToken)
+	authReq.Header.Set("X-API-Key", apiKey)
 	resp, err := http.DefaultClient.Do(authReq)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -259,7 +259,7 @@ func TestMoveGameHTTP(t *testing.T) {
 
 	// Create game
 	createReq, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/games", http.NoBody)
-	createReq.Header.Set("X-API-Key", testAPIToken)
+	createReq.Header.Set("X-API-Key", apiKey)
 	createReq.Header.Set("X-API-Session", creatorSid)
 	createResp, err := http.DefaultClient.Do(createReq)
 	require.NoError(t, err)
@@ -275,7 +275,7 @@ func TestMoveGameHTTP(t *testing.T) {
 
 	// Join game
 	joinReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/balda/api/v1/games/%s/join", srv.URL, gameID), http.NoBody)
-	joinReq.Header.Set("X-API-Key", testAPIToken)
+	joinReq.Header.Set("X-API-Key", apiKey)
 	joinReq.Header.Set("X-API-Session", joinerSid)
 	joinResp, err := http.DefaultClient.Do(joinReq)
 	require.NoError(t, err)
@@ -305,7 +305,7 @@ func TestMoveGameHTTP(t *testing.T) {
 		})
 		req, _ := http.NewRequest(http.MethodPost, moveURL, bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-API-Session", "bad-sid")
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -320,7 +320,7 @@ func TestMoveGameHTTP(t *testing.T) {
 		})
 		req, _ := http.NewRequest(http.MethodPost, moveURL, bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-API-Session", creatorSid)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -336,13 +336,13 @@ func TestMoveGameHTTP(t *testing.T) {
 }
 
 func TestSkipGameHTTP(t *testing.T) {
-	srv, email, password, cleanup := setupServer(t)
+	srv, email, password, apiKey, cleanup := setupServer(t)
 	defer cleanup()
 
 	authBody, _ := json.Marshal(map[string]string{"email": email, "password": password})
 	authReq, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(authBody))
 	authReq.Header.Set("Content-Type", "application/json")
-	authReq.Header.Set("X-API-Key", testAPIToken)
+	authReq.Header.Set("X-API-Key", apiKey)
 	resp, err := http.DefaultClient.Do(authReq)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -357,7 +357,7 @@ func TestSkipGameHTTP(t *testing.T) {
 	joinerSid := postSignup(t, srv, "http.skipjoiner@example.org", "pass")
 
 	createReq, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/games", http.NoBody)
-	createReq.Header.Set("X-API-Key", testAPIToken)
+	createReq.Header.Set("X-API-Key", apiKey)
 	createReq.Header.Set("X-API-Session", creatorSid)
 	createResp, err := http.DefaultClient.Do(createReq)
 	require.NoError(t, err)
@@ -372,7 +372,7 @@ func TestSkipGameHTTP(t *testing.T) {
 	gameID := createBody.Game.ID
 
 	joinReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/balda/api/v1/games/%s/join", srv.URL, gameID), http.NoBody)
-	joinReq.Header.Set("X-API-Key", testAPIToken)
+	joinReq.Header.Set("X-API-Key", apiKey)
 	joinReq.Header.Set("X-API-Session", joinerSid)
 	joinResp, err := http.DefaultClient.Do(joinReq)
 	require.NoError(t, err)
@@ -383,7 +383,7 @@ func TestSkipGameHTTP(t *testing.T) {
 
 	t.Run("valid skip returns 204", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodPost, skipURL, http.NoBody)
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-API-Session", creatorSid)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -394,7 +394,7 @@ func TestSkipGameHTTP(t *testing.T) {
 	t.Run("wrong turn returns 409", func(t *testing.T) {
 		// After creator skipped, it's joiner's turn. Creator tries to skip again.
 		req, _ := http.NewRequest(http.MethodPost, skipURL, http.NoBody)
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-API-Session", creatorSid)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

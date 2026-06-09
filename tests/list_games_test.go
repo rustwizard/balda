@@ -82,7 +82,7 @@ func TestListGamesHandler(t *testing.T) {
 }
 
 func TestListGamesHTTP(t *testing.T) {
-	srv, email, password, cleanup := setupServer(t)
+	srv, email, password, apiKey, cleanup := setupServer(t)
 	defer cleanup()
 
 	gamesURL := srv.URL + "/balda/api/v1/games"
@@ -92,7 +92,7 @@ func TestListGamesHTTP(t *testing.T) {
 		body, _ := json.Marshal(map[string]string{"email": email, "password": password})
 		req, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		return req
 	}())
 	require.NoError(t, err)
@@ -121,7 +121,7 @@ func TestListGamesHTTP(t *testing.T) {
 	t.Run("valid api key returns 200 with games array", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)

@@ -41,6 +41,26 @@ func (b *Balda) AuthUser(ctx context.Context, email, password string) (UserAuth,
 	return u, nil
 }
 
+// ValidateAPIKey reports whether the given string is a valid UUID that exists
+// as an api_key in the users table. Invalid UUID format returns false without
+// hitting the database.
+func (b *Balda) ValidateAPIKey(ctx context.Context, apiKey string) (bool, error) {
+	parsed, err := uuid.Parse(apiKey)
+	if err != nil {
+		return false, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, b.t)
+	defer cancel()
+
+	var exists bool
+	if err := b.db.QueryRow(ctx,
+		`SELECT EXISTS(SELECT 1 FROM users WHERE api_key = $1)`, parsed,
+	).Scan(&exists); err != nil {
+		return false, fmt.Errorf("validate api key: %w", err)
+	}
+	return exists, nil
+}
+
 // CreateUser inserts a new user and their player_state in a single transaction.
 func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, password, nickname string) (UserCreated, error) {
 	ctx, cancel := context.WithTimeout(ctx, b.t)
