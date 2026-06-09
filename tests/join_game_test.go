@@ -108,14 +108,14 @@ func TestJoinGameHandler(t *testing.T) {
 }
 
 func TestJoinGameHTTP(t *testing.T) {
-	srv, email, password, cleanup := setupServer(t)
+	srv, email, password, apiKey, cleanup := setupServer(t)
 	defer cleanup()
 
 	// Auth the pre-seeded creator (X-API-Key is required).
 	authBody, _ := json.Marshal(map[string]string{"email": email, "password": password})
 	authReq, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(authBody))
 	authReq.Header.Set("Content-Type", "application/json")
-	authReq.Header.Set("X-API-Key", testAPIToken)
+	authReq.Header.Set("X-API-Key", apiKey)
 	resp, err := http.DefaultClient.Do(authReq)
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -131,7 +131,7 @@ func TestJoinGameHTTP(t *testing.T) {
 
 	// Creator creates a waiting game.
 	createReq, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/games", http.NoBody)
-	createReq.Header.Set("X-API-Key", testAPIToken)
+	createReq.Header.Set("X-API-Key", apiKey)
 	createReq.Header.Set("X-API-Session", creatorSid)
 	createResp, err := http.DefaultClient.Do(createReq)
 	require.NoError(t, err)
@@ -159,7 +159,7 @@ func TestJoinGameHTTP(t *testing.T) {
 
 	t.Run("unknown session returns 401", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodPost, joinURL, http.NoBody)
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-API-Session", "bad-sid")
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -170,7 +170,7 @@ func TestJoinGameHTTP(t *testing.T) {
 	t.Run("unknown game id returns 404", func(t *testing.T) {
 		url := fmt.Sprintf("%s/balda/api/v1/games/%s/join", srv.URL, uuid.New())
 		req, _ := http.NewRequest(http.MethodPost, url, http.NoBody)
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-API-Session", joinerSid)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestJoinGameHTTP(t *testing.T) {
 
 	t.Run("valid join returns 200 with in_progress status", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodPost, joinURL, http.NoBody)
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-API-Session", joinerSid)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

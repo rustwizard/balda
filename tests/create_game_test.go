@@ -66,7 +66,7 @@ func TestCreateGameHandler(t *testing.T) {
 }
 
 func TestCreateGameHTTP(t *testing.T) {
-	srv, email, password, cleanup := setupServer(t)
+	srv, email, password, apiKey, cleanup := setupServer(t)
 	defer cleanup()
 
 	gamesURL := srv.URL + "/balda/api/v1/games"
@@ -75,7 +75,7 @@ func TestCreateGameHTTP(t *testing.T) {
 		body, _ := json.Marshal(map[string]string{"email": email, "password": password})
 		req, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		return req
 	}())
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestCreateGameHTTP(t *testing.T) {
 	t.Run("unknown session returns 401", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-API-Session", "unknown-sid")
 
 		resp, err := http.DefaultClient.Do(req)
@@ -116,7 +116,7 @@ func TestCreateGameHTTP(t *testing.T) {
 	t.Run("valid request creates game and returns 200", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)

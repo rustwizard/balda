@@ -68,7 +68,7 @@ func setupHandlersWithCentrifugo(ctx context.Context, t *testing.T, cfAPIURL str
 	t.Helper()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient(cfAPIURL, testCentrifugoAPIKey)
-	h := handlers.New(core.svc, core.sess, core.pres, testAPIToken, cf, testCentrifugoSecret)
+	h := handlers.New(core.svc, core.sess, core.pres, cf, testCentrifugoSecret)
 	return h, core.cleanup
 }
 
@@ -139,6 +139,7 @@ func TestCreateGame_PublishesEvGameCreated(t *testing.T) {
 	var signupResp baldaapi.SignupResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &signupResp))
 	sid := signupResp.User.Value.Sid.Value
+	apiKey := signupResp.User.Value.Key.Value
 	cfToken := signupResp.CentrifugoToken.Value
 	lobbyToken := signupResp.LobbyToken.Value
 
@@ -148,7 +149,7 @@ func TestCreateGame_PublishesEvGameCreated(t *testing.T) {
 	// create game
 	w = httptest.NewRecorder()
 	req := newReq(t, http.MethodPost, "/balda/api/v1/games", nil)
-	req.Header.Set("X-API-Key", testAPIToken)
+	req.Header.Set("X-API-Key", apiKey)
 	req.Header.Set("X-API-Session", sid)
 	srv.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
@@ -179,13 +180,13 @@ func TestJoinGame_PublishesEvGameStarted(t *testing.T) {
 	require.NoError(t, err)
 
 	// signup player 1 and player 2
-	p1Sid, p1CfToken, p1LobbyToken := signupPlayer(t, srv, "player1@test.com")
-	p2Sid, _, _ := signupPlayer(t, srv, "player2@test.com")
+	p1Sid, p1CfToken, p1LobbyToken, p1APIKey := signupPlayer(t, srv, "player1@test.com")
+	p2Sid, _, _, _ := signupPlayer(t, srv, "player2@test.com")
 
 	// player 1 creates a game
 	w := httptest.NewRecorder()
 	req := newReq(t, http.MethodPost, "/balda/api/v1/games", nil)
-	req.Header.Set("X-API-Key", testAPIToken)
+	req.Header.Set("X-API-Key", p1APIKey)
 	req.Header.Set("X-API-Session", p1Sid)
 	srv.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
@@ -202,7 +203,7 @@ func TestJoinGame_PublishesEvGameStarted(t *testing.T) {
 	// player 2 joins
 	w = httptest.NewRecorder()
 	req = newReq(t, http.MethodPost, "/balda/api/v1/games/"+gameID+"/join", nil)
-	req.Header.Set("X-API-Key", testAPIToken)
+	req.Header.Set("X-API-Key", p1APIKey)
 	req.Header.Set("X-API-Session", p2Sid)
 	srv.ServeHTTP(w, req)
 	require.Equal(t, http.StatusOK, w.Code)
@@ -232,7 +233,7 @@ func TestJoinGame_PublishesEvGameStarted(t *testing.T) {
 	}
 }
 
-func signupPlayer(t *testing.T, srv http.Handler, email string) (sid, cfToken, lobbyToken string) {
+func signupPlayer(t *testing.T, srv http.Handler, email string) (sid, cfToken, lobbyToken, apiKey string) {
 	t.Helper()
 	body, _ := json.Marshal(map[string]string{
 		"firstname": "Test", "lastname": "Player",
@@ -244,7 +245,7 @@ func signupPlayer(t *testing.T, srv http.Handler, email string) (sid, cfToken, l
 
 	var resp baldaapi.SignupResponse
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
-	return resp.User.Value.Sid.Value, resp.CentrifugoToken.Value, resp.LobbyToken.Value
+	return resp.User.Value.Sid.Value, resp.CentrifugoToken.Value, resp.LobbyToken.Value, resp.User.Value.Key.Value
 }
 
 func newReq(t *testing.T, method, path string, body []byte) *http.Request {

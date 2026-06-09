@@ -31,7 +31,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-const testAPIToken = "test-api-token"
 
 func startRedis(ctx context.Context, t *testing.T) (addr string, cleanup func()) {
 	t.Helper()
@@ -128,7 +127,7 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.sess, core.pres, testAPIToken, cf, "test-secret")
+	h := handlers.New(core.svc, core.sess, core.pres, cf, "test-secret")
 	return h, core.cleanup
 }
 
@@ -347,7 +346,7 @@ func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.sess, core.pres, testAPIToken, cf, "test-secret")
+	h := handlers.New(core.svc, core.sess, core.pres, cf, "test-secret")
 	return h, core.lby, core.cleanup
 }
 
@@ -483,7 +482,7 @@ func TestPingHandler(t *testing.T) {
 }
 
 func TestPingHTTP(t *testing.T) {
-	srv, email, password, cleanup := setupServer(t)
+	srv, email, password, apiKey, cleanup := setupServer(t)
 	defer cleanup()
 
 	// Auth to get the session SID.
@@ -491,7 +490,7 @@ func TestPingHTTP(t *testing.T) {
 	req, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", testAPIToken)
+	req.Header.Set("X-API-Key", apiKey)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
@@ -525,7 +524,7 @@ func TestPingHTTP(t *testing.T) {
 	t.Run("unknown sid returns 401", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, pingURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-Request-ID", "1")
 		req.Header.Set("X-API-Session", "unknown-sid")
 
@@ -538,7 +537,7 @@ func TestPingHTTP(t *testing.T) {
 	t.Run("valid session returns 204 with response headers", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, pingURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 		req.Header.Set("X-Request-ID", "42")
 		req.Header.Set("X-API-Session", sid)
 
@@ -554,7 +553,8 @@ func TestPingHTTP(t *testing.T) {
 
 // setupServer returns an httptest.Server wired with a full ogen server
 // (including security middleware) plus a seeded user for auth requests.
-func setupServer(t *testing.T) (srv *httptest.Server, email, password string, cleanup func()) {
+// apiKey is the per-user UUID that must be sent as X-API-Key on protected endpoints.
+func setupServer(t *testing.T) (srv *httptest.Server, email, password, apiKey string, cleanup func()) {
 	t.Helper()
 	h, cleanupHandlers := setupHandlers(t)
 
@@ -566,19 +566,22 @@ func setupServer(t *testing.T) (srv *httptest.Server, email, password string, cl
 	// Seed a user so auth requests have a valid target.
 	email, password = "sec.user@example.org", "secpass"
 	ctx := context.Background()
-	_, err = h.Signup(ctx, &baldaapi.SignupRequest{
+	res, err := h.Signup(ctx, &baldaapi.SignupRequest{
 		Firstname: "Sec",
 		Lastname:  "User",
 		Email:     email,
 		Password:  password,
 	})
 	require.NoError(t, err)
+	signupRes, ok := res.(*baldaapi.SignupResponse)
+	require.True(t, ok)
+	apiKey = signupRes.User.Value.Key.Value
 
 	cleanup = func() {
 		srv.Close()
 		cleanupHandlers()
 	}
-	return srv, email, password, cleanup
+	return srv, email, password, apiKey, cleanup
 }
 
 // postSignup signs up a new user via HTTP and returns their session ID.
@@ -620,7 +623,7 @@ func postAuth(t *testing.T, srv *httptest.Server, email, password string) *http.
 }
 
 func TestSecurityHandlers(t *testing.T) {
-	srv, email, password, cleanup := setupServer(t)
+	srv, email, password, apiKey, cleanup := setupServer(t)
 	defer cleanup()
 
 	t.Run("HandleAPIKeyHeader: valid key returns 200", func(t *testing.T) {
@@ -629,7 +632,7 @@ func TestSecurityHandlers(t *testing.T) {
 			bytes.NewReader(body))
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Key", testAPIToken)
+		req.Header.Set("X-API-Key", apiKey)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -654,7 +657,7 @@ func TestSecurityHandlers(t *testing.T) {
 	t.Run("HandleAPIKeyQueryParam: valid key returns 200", func(t *testing.T) {
 		body, _ := json.Marshal(map[string]string{"email": email, "password": password})
 		req, err := http.NewRequest(http.MethodPost,
-			srv.URL+"/balda/api/v1/auth?api_key="+testAPIToken,
+			srv.URL+"/balda/api/v1/auth?api_key="+apiKey,
 			bytes.NewReader(body))
 		require.NoError(t, err)
 		req.Header.Set("Content-Type", "application/json")

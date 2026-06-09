@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"crypto/subtle"
 	"errors"
 	"log/slog"
 	"strconv"
@@ -20,13 +19,12 @@ type Handlers struct {
 	svc                       *service.Balda
 	sess                      *session.Service
 	pres                      *presence.Service
-	xAPIToken                 string
 	cf                        *centrifugo.Client
 	centrifugoTokenHMACSecret string
 }
 
-func New(svc *service.Balda, sess *session.Service, pres *presence.Service, xAPIToken string, cf *centrifugo.Client, centrifugoTokenHMACSecret string) *Handlers {
-	return &Handlers{svc: svc, sess: sess, pres: pres, xAPIToken: xAPIToken, cf: cf, centrifugoTokenHMACSecret: centrifugoTokenHMACSecret}
+func New(svc *service.Balda, sess *session.Service, pres *presence.Service, cf *centrifugo.Client, centrifugoTokenHMACSecret string) *Handlers {
+	return &Handlers{svc: svc, sess: sess, pres: pres, cf: cf, centrifugoTokenHMACSecret: centrifugoTokenHMACSecret}
 }
 
 // generateCentrifugoTokens returns a connection token and a lobby subscription token for the given user.
@@ -75,18 +73,28 @@ func (h *Handlers) publishLobbyUpdate(ctx context.Context) {
 
 // HandleAPIKeyHeader implements baldaapi.SecurityHandler.
 func (h *Handlers) HandleAPIKeyHeader(ctx context.Context, _ baldaapi.OperationName, t baldaapi.APIKeyHeader) (context.Context, error) {
-	if subtle.ConstantTimeCompare([]byte(t.APIKey), []byte(h.xAPIToken)) == 1 {
-		return ctx, nil
+	ok, err := h.svc.ValidateAPIKey(ctx, t.APIKey)
+	if err != nil {
+		slog.Error("api key header: db error", slog.Any("error", err))
+		return nil, errors.New("api key header: internal error")
 	}
-	slog.Error("access attempt with incorrect api key header")
-	return nil, errors.New("api key header: token error")
+	if !ok {
+		slog.Error("access attempt with incorrect api key header")
+		return nil, errors.New("api key header: token error")
+	}
+	return ctx, nil
 }
 
 // HandleAPIKeyQueryParam implements baldaapi.SecurityHandler.
 func (h *Handlers) HandleAPIKeyQueryParam(ctx context.Context, _ baldaapi.OperationName, t baldaapi.APIKeyQueryParam) (context.Context, error) {
-	if subtle.ConstantTimeCompare([]byte(t.APIKey), []byte(h.xAPIToken)) == 1 {
-		return ctx, nil
+	ok, err := h.svc.ValidateAPIKey(ctx, t.APIKey)
+	if err != nil {
+		slog.Error("api key query param: db error", slog.Any("error", err))
+		return nil, errors.New("api key param: internal error")
 	}
-	slog.Error("access attempt with incorrect api key query param")
-	return nil, errors.New("api key param: token error")
+	if !ok {
+		slog.Error("access attempt with incorrect api key query param")
+		return nil, errors.New("api key param: token error")
+	}
+	return ctx, nil
 }
