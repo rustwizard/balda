@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
@@ -22,11 +23,18 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 
 	u, err := h.svc.AuthUser(ctx, req.Email, req.Password)
 	if err != nil {
-		slog.Error("auth: wrong email/password or db error", slog.Any("error", err))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return &baldaapi.ErrorResponse{
+				Message: baldaapi.NewOptString("invalid email or password"),
+				Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
+				Type:    baldaapi.NewOptString("Unauthorized"),
+			}, nil
+		}
+		slog.Error("auth: db error", slog.Any("error", err))
 		return &baldaapi.ErrorResponse{
-			Message: baldaapi.NewOptString(""),
-			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-			Type:    baldaapi.NewOptString("Auth Error"),
+			Message: baldaapi.NewOptString("internal error"),
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Type:    baldaapi.NewOptString("InternalServerError"),
 		}, nil
 	}
 
@@ -43,9 +51,9 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 		if err != nil {
 			slog.Error("auth: create sid", slog.Any("error", err))
 			return &baldaapi.ErrorResponse{
-				Message: baldaapi.NewOptString(""),
-				Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-				Type:    baldaapi.NewOptString("Auth Error"),
+				Message: baldaapi.NewOptString("internal error"),
+				Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+				Type:    baldaapi.NewOptString("InternalServerError"),
 			}, nil
 		}
 		player.Sid = baldaapi.NewOptString(sidStr)
@@ -70,9 +78,9 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 	if err != nil {
 		slog.Error("auth: get sid", slog.Any("error", err))
 		return &baldaapi.ErrorResponse{
-			Message: baldaapi.NewOptString(""),
-			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-			Type:    baldaapi.NewOptString("Auth Error"),
+			Message: baldaapi.NewOptString("internal error"),
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Type:    baldaapi.NewOptString("InternalServerError"),
 		}, nil
 	}
 
