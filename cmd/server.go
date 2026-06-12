@@ -126,6 +126,10 @@ var serverCmd = &cobra.Command{
 
 		lby := lobby.New(func(_ context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
 			coord := gamecoord.New(gameID, players, cf)
+			// Bot games are intentionally not persisted: the bot is not a real
+			// player_state row, so there is no valid player_id for game_results.
+			// game_over is still published to Centrifugo so the frontend can finish
+			// the game UI normally.
 			if !hasBotPlayer(players) {
 				coord.SetOnGameOver(makeOnGameOverCallback(s, &pendingResults))
 			}
