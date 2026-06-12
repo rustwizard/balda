@@ -59,7 +59,8 @@ Callback обёрнут в retry (3 попытки, backoff 100/200 мс) и у�
 **Файл:** `internal/server/restapi/handlers/handlers.go`
 
 Убрано логирование значения токена, удалён шумный `slog.Info("KeyAuth ... handler called")`.
-Сравнение токенов заменено на `subtle.ConstantTimeCompare` для защиты от timing-атак.
+Валидация токена вынесена в `storage.ValidateAPIKey` — проверка UUID формата + запрос
+`SELECT EXISTS` в БД (см. пункт 9).
 
 ### 9. Единый статический API-токен заменён на персональные ключи
 **Файлы:** `cmd/server.go`, `internal/server/restapi/handlers/handlers.go`,
