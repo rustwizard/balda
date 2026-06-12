@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/rand"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	"github.com/rustwizard/balda/internal/game"
@@ -44,8 +45,31 @@ type RandomValidStrategy struct {
 	trie *Trie
 }
 
+var (
+	globalTrie     *Trie
+	globalTrieOnce sync.Once
+)
+
+// globalBotTrie returns a singleton trie built from the production dictionary.
+func globalBotTrie() *Trie {
+	globalTrieOnce.Do(func() {
+		words := make([]string, 0, len(game.Dict.Definition))
+		for w := range game.Dict.Definition {
+			words = append(words, normalizeWord(w))
+		}
+		globalTrie = NewTrie(words)
+	})
+	return globalTrie
+}
+
 // NewRandomValidStrategy builds a strategy backed by a trie of all dictionary words.
+// When the production dictionary is used, the underlying trie is shared across
+// all strategy instances to avoid rebuilding it for every bot.
 func NewRandomValidStrategy(dict *game.Dictionary) *RandomValidStrategy {
+	if dict == game.Dict {
+		return &RandomValidStrategy{trie: globalBotTrie()}
+	}
+
 	words := make([]string, 0, len(dict.Definition))
 	for w := range dict.Definition {
 		words = append(words, normalizeWord(w))

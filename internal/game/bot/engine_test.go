@@ -17,6 +17,14 @@ func makeBoardWithWord(word string) [5][5]string {
 	return board
 }
 
+func TestNewRandomValidStrategy_SharesTrieForGlobalDict(t *testing.T) {
+	s1 := NewRandomValidStrategy(game.Dict)
+	s2 := NewRandomValidStrategy(game.Dict)
+	if s1.trie != s2.trie {
+		t.Fatal("expected NewRandomValidStrategy to share the trie for game.Dict")
+	}
+}
+
 func TestRandomValidStrategy_FindMove(t *testing.T) {
 	dict := &game.Dictionary{
 		Definition: map[string]string{
