@@ -25,6 +25,9 @@ func normalizeWord(word string) string {
 // ё is normalized to е by the game package, so it is omitted here.
 var russianAlphabet = []rune("абвгдежзийклмнопрстуфхцчшщъыьэюя")
 
+// boardDirections are the four orthogonal moves allowed on the 5×5 board.
+var boardDirections = [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
+
 // Engine wraps a strategy and the dictionary trie.
 type Engine struct {
 	strategy Strategy
@@ -136,6 +139,9 @@ func (s *RandomValidStrategy) findWordFrom(board [5][5]string, letter game.Lette
 	temp[letter.RowID][letter.ColID] = letter.Char
 
 	var result []game.Letter
+	// visited is shared by all DFS runs and reset to the zero value before each
+	// starting cell. Arrays are value types in Go, so the assignment below copies
+	// the whole matrix rather than creating a shared reference.
 	var visited [5][5]bool
 	var dfs func(row, col uint8, path []game.Letter, word string, usedNew bool)
 	dfs = func(row, col uint8, path []game.Letter, word string, usedNew bool) {
@@ -150,8 +156,7 @@ func (s *RandomValidStrategy) findWordFrom(board [5][5]string, letter game.Lette
 			}
 		}
 		// Balda allows only horizontal and vertical adjacency (Manhattan distance == 1).
-		directions := [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
-		for _, d := range directions {
+		for _, d := range boardDirections {
 			nr := int(row) + d[0]
 			nc := int(col) + d[1]
 			if nr < 0 || nr >= 5 || nc < 0 || nc >= 5 {

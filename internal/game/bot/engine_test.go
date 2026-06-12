@@ -2,11 +2,16 @@ package bot
 
 import (
 	"testing"
+	"unicode/utf8"
 
 	"github.com/rustwizard/balda/internal/game"
 )
 
-func makeBoardWithWord(word string) [5][5]string {
+func makeBoardWithWord(t *testing.T, word string) [5][5]string {
+	t.Helper()
+	if utf8.RuneCountInString(word) > 5 {
+		t.Fatalf("makeBoardWithWord: word %q is longer than 5 runes", word)
+	}
 	var board [5][5]string
 	row := uint8(2)
 	idx := 0
@@ -36,7 +41,7 @@ func TestRandomValidStrategy_FindMove(t *testing.T) {
 	}
 	strategy := NewRandomValidStrategy(dict)
 
-	board := makeBoardWithWord("котка")
+	board := makeBoardWithWord(t, "котка")
 	letter, path, err := strategy.MakeMove(board, nil)
 	if err != nil {
 		t.Fatalf("expected move, got error: %v", err)
@@ -93,7 +98,7 @@ func TestRandomValidStrategy_YoNormalized(t *testing.T) {
 
 	// Center row contains "елк"; placing 'а' can form "ёлка" which is
 	// normalized to "елка" by the game package.
-	board := makeBoardWithWord("елк")
+	board := makeBoardWithWord(t, "елк")
 	_, path, err := strategy.MakeMove(board, nil)
 	if err != nil {
 		t.Fatalf("expected move, got error: %v", err)
@@ -113,7 +118,7 @@ func TestRandomValidStrategy_RespectsUsedWords(t *testing.T) {
 	}
 	strategy := NewRandomValidStrategy(dict)
 
-	board := makeBoardWithWord("котка")
+	board := makeBoardWithWord(t, "котка")
 	// If "кот" is already used, the bot should not return it again.
 	// There may still be other valid moves; we only check that the returned
 	// word is not the used one when a move is found.
