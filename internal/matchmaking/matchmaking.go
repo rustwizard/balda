@@ -82,6 +82,11 @@ func (q *Queue) EnqueueAt(p *game.Player, at time.Time) error {
 	if _, ok := q.indexed[p.ID]; ok {
 		return ErrAlreadyQueued
 	}
+	// Matchmaking is only for human players. Normalize an unset type so callers
+	// do not need to know the player taxonomy.
+	if p.Type == game.PlayerTypeUnknown {
+		p.Type = game.PlayerTypeHuman
+	}
 	e := &entry{player: p, enqueuedAt: at}
 	q.entries = append(q.entries, e)
 	q.indexed[p.ID] = e

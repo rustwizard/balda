@@ -79,6 +79,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	for _, p := range rec.Players {
 		pid, err := uuid.Parse(p.ID)
 		if err != nil {
+			slog.Warn("join_game: skip player with invalid id", slog.String("playerID", p.ID), slog.Any("error", err))
 			continue
 		}
 		playerIDs = append(playerIDs, pid)

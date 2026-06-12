@@ -45,8 +45,15 @@ func (n *Notifier) NotifyTurnStart(playerID string) {
 	go func() {
 		thinkingTime := thinkingMin + time.Duration(rand.Int63n(int64(thinkingMax-thinkingMin)))
 		// Ensure the previous event has time to be published before the bot acts.
-		time.Sleep(thinkingTime)
+		select {
+		case <-n.g.Done():
+			return
+		case <-time.After(thinkingTime):
+		}
 
+		if n.gameIsDone() {
+			return
+		}
 		board := n.g.BoardSnapshot()
 		usedWords := n.g.UsedWords()
 
@@ -74,6 +81,10 @@ func (n *Notifier) NotifyTurnStart(playerID string) {
 			letter, path, err = r.letter, r.path, r.err
 		}
 
+		if n.gameIsDone() {
+			return
+		}
+
 		if err != nil {
 			slog.Warn("bot: no move found, skipping", slog.String("playerID", n.botPlayerID), slog.Any("error", err))
 			if skipErr := n.g.Skip(n.botPlayerID); skipErr != nil {
@@ -91,6 +102,15 @@ func (n *Notifier) NotifyTurnStart(playerID string) {
 	}()
 }
 
+func (n *Notifier) gameIsDone() bool {
+	select {
+	case <-n.g.Done():
+		return true
+	default:
+		return false
+	}
+}
+
 // NotifyTimeout is a no-op for bots.
 func (n *Notifier) NotifyTimeout(_ string, _ int, _ bool) {}
 
@@ -103,8 +123,19 @@ func (n *Notifier) NotifyKick(_ string) {}
 // NotifyGameFinished is a no-op for bots.
 func (n *Notifier) NotifyGameFinished() {}
 
-// NotifyEndProposed is a no-op for bots (bot never proposes end).
-func (n *Notifier) NotifyEndProposed(_ string) {}
+// NotifyEndProposed is called when the opponent proposes to end the game.
+// The bot auto-accepts in a goroutine because this notification is dispatched
+// while the game mutex is held.
+func (n *Notifier) NotifyEndProposed(proposerID string) {
+	if proposerID == n.botPlayerID {
+		return
+	}
+	go func() {
+		if err := n.g.AcceptEnd(n.botPlayerID); err != nil {
+			slog.Warn("bot: auto-accept end proposal failed", slog.String("playerID", n.botPlayerID), slog.Any("error", err))
+		}
+	}()
+}
 
 // NotifyEndAccepted is a no-op for bots.
 func (n *Notifier) NotifyEndAccepted() {}

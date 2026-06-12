@@ -145,27 +145,7 @@ func GapsBetweenLetters(word []Letter) bool {
 }
 
 func NewGame(players []*Player, n Notifier, opts ...Option) (*Game, error) {
-	for i, p := range players {
-		if p.Type == PlayerTypeUnknown {
-			return nil, fmt.Errorf("game: player %d: %w", i, ErrUnknownPlayerType)
-		}
-	}
-
-	board, err := NewLettersTable(Dict.RandomFiveLetterWord())
-	if err != nil {
-		return nil, err
-	}
-	g := &Game{
-		players:  players,
-		eventCh:  make(chan TurnEvent, 4), // buffered: timer + auto-kick can queue simultaneously
-		done:     make(chan struct{}),
-		board:    board,
-		notifier: n,
-	}
-	for _, opt := range opts {
-		opt(g)
-	}
-	return g, nil
+	return NewGameWithWord(players, Dict.RandomFiveLetterWord(), n, opts...)
 }
 
 func (g *Game) Run(ctx context.Context) {

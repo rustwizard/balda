@@ -101,7 +101,8 @@ func (s *Balda) CreateGameWithBot(ctx context.Context, uid int64) (*lobby.GameRe
 		Exp:  0,
 		Type: game.PlayerTypeBot,
 	}
-	return s.lby.StartGame(ctx, []*game.Player{human, botPlayer}, &game.NoopNotifier{})
+	// Use a background context so the bot game outlives the HTTP request.
+	return s.lby.StartGame(context.Background(), []*game.Player{human, botPlayer}, &game.NoopNotifier{})
 }
 
 func (s *Balda) playerIDByUID(ctx context.Context, uid int64) (string, error) {

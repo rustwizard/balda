@@ -94,11 +94,7 @@ func (h *Handlers) CreateGameWithBot(ctx context.Context, params baldaapi.Create
 	}
 	h.publishLobbyUpdate(ctx)
 
-	// The human player (index 0) always moves first.
-	firstPlayerID := ""
-	if len(rec.Players) > 0 {
-		firstPlayerID = rec.Players[0].ID
-	}
+	firstPlayerID := rec.Game.CurrentPlayerID()
 
 	gameToken, err := centrifugo.GenerateSubscriptionToken(
 		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,

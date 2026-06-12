@@ -139,9 +139,10 @@ func (s *RandomValidStrategy) findWordFrom(board [5][5]string, letter game.Lette
 	temp[letter.RowID][letter.ColID] = letter.Char
 
 	var result []game.Letter
-	// visited is shared by all DFS runs and reset to the zero value before each
-	// starting cell. Arrays are value types in Go, so the assignment below copies
-	// the whole matrix rather than creating a shared reference.
+	// visited tracks cells in the current DFS path. It is shared by recursive
+	// calls for a single start cell and reset when the outer loop moves to the
+	// next start cell. Arrays are value types in Go, so `visited = [5][5]bool{}`
+	// copies the whole matrix rather than creating a shared reference.
 	var visited [5][5]bool
 	var dfs func(row, col uint8, path []game.Letter, word string, usedNew bool)
 	dfs = func(row, col uint8, path []game.Letter, word string, usedNew bool) {
