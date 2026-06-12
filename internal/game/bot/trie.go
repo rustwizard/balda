@@ -29,7 +29,7 @@ func (t *Trie) Insert(word string) {
 		}
 		next, ok := node.children[r]
 		if !ok {
-			next = &trieNode{children: make(map[rune]*trieNode)}
+			next = &trieNode{}
 			node.children[r] = next
 		}
 		node = next

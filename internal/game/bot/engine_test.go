@@ -94,11 +94,10 @@ func TestRandomValidStrategy_YoNormalized(t *testing.T) {
 	// Center row contains "елк"; placing 'а' can form "ёлка" which is
 	// normalized to "елка" by the game package.
 	board := makeBoardWithWord("елк")
-	letter, path, err := strategy.MakeMove(board, nil)
+	_, path, err := strategy.MakeMove(board, nil)
 	if err != nil {
 		t.Fatalf("expected move, got error: %v", err)
 	}
-	_ = letter
 
 	word := game.MakeWord(path)
 	if word != "елка" {
@@ -118,7 +117,7 @@ func TestRandomValidStrategy_RespectsUsedWords(t *testing.T) {
 	// If "кот" is already used, the bot should not return it again.
 	// There may still be other valid moves; we only check that the returned
 	// word is not the used one when a move is found.
-	letter, path, err := strategy.MakeMove(board, []string{"кот"})
+	_, path, err := strategy.MakeMove(board, []string{"кот"})
 	if err != nil {
 		return // no other valid moves on this board
 	}
@@ -126,5 +125,4 @@ func TestRandomValidStrategy_RespectsUsedWords(t *testing.T) {
 	if word == "кот" {
 		t.Fatal("bot returned an already used word")
 	}
-	_ = letter
 }

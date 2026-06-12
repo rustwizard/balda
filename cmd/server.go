@@ -124,6 +124,9 @@ var serverCmd = &cobra.Command{
 
 		var pendingResults sync.WaitGroup
 
+		// The notifier argument is intentionally ignored: the factory builds its own
+		// CompositeNotifier combining gamecoord.Coordinator and, for bot players,
+		// bot.Notifier.
 		lby := lobby.New(func(_ context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
 			coord := gamecoord.New(gameID, players, cf)
 			// Bot games are intentionally not persisted: the bot is not a real

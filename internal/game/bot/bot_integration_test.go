@@ -8,23 +8,11 @@ import (
 	"github.com/rustwizard/balda/internal/game"
 )
 
-// noopHumanNotifier discards all human-facing events for the integration test.
-type noopHumanNotifier struct{}
-
-func (noopHumanNotifier) NotifyTimeout(_ string, _ int, _ bool) {}
-func (noopHumanNotifier) NotifySkip(_ string, _ int, _ bool)    {}
-func (noopHumanNotifier) NotifyKick(_ string)                   {}
-func (noopHumanNotifier) NotifyGameFinished()                   {}
-func (noopHumanNotifier) NotifyTurnStart(_ string)              {}
-func (noopHumanNotifier) NotifyEndProposed(_ string)            {}
-func (noopHumanNotifier) NotifyEndAccepted()                    {}
-func (noopHumanNotifier) NotifyEndRejected(_ time.Duration)     {}
-
 func TestBotVsHuman_GameProgresses(t *testing.T) {
 	human := &game.Player{ID: "human", Type: game.PlayerTypeHuman}
 	botPlayer := &game.Player{ID: "bot", Type: game.PlayerTypeBot}
 
-	coord := noopHumanNotifier{}
+	coord := &game.NoopNotifier{}
 	engine := NewEngine(NewRandomValidStrategy(game.Dict))
 	botNotifier := NewNotifier(engine, botPlayer.ID)
 	composite := game.NewCompositeNotifier(coord, botNotifier)
