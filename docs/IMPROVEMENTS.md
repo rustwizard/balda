@@ -147,10 +147,9 @@ _Все критические задачи решены._
 ### 17. Мелочи в storage
 **Файл:** `internal/storage/storage.go`
 
-Поле `t time.Duration` хранится, но не используется. `func (b Balda) Pool()` — value receiver
-копирует структуру.
+`func (b Balda) Pool()` — value receiver копирует структуру.
 
-**Предложение:** удалить неиспользуемое поле; перейти на pointer receiver.
+**Предложение:** перейти на pointer receiver.
 
 ### 18. centrifugo.Client без таймаута
 **Файл:** `internal/centrifugo/client.go`
