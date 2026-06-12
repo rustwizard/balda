@@ -75,6 +75,29 @@ func TestRandomValidStrategy_NoValidMove(t *testing.T) {
 	}
 }
 
+func TestRandomValidStrategy_YoNormalized(t *testing.T) {
+	dict := &game.Dictionary{
+		Definition: map[string]string{
+			"ёлка": "новогоднее дерево",
+		},
+	}
+	strategy := NewRandomValidStrategy(dict)
+
+	// Center row contains "елк"; placing 'а' can form "ёлка" which is
+	// normalized to "елка" by the game package.
+	board := makeBoardWithWord("елк")
+	letter, path, err := strategy.MakeMove(board, nil)
+	if err != nil {
+		t.Fatalf("expected move, got error: %v", err)
+	}
+	_ = letter
+
+	word := game.MakeWord(path)
+	if word != "елка" {
+		t.Fatalf("expected normalized word 'елка', got %q", word)
+	}
+}
+
 func TestRandomValidStrategy_RespectsUsedWords(t *testing.T) {
 	dict := &game.Dictionary{
 		Definition: map[string]string{

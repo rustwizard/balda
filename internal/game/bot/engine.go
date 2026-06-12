@@ -3,6 +3,7 @@ package bot
 import (
 	"errors"
 	"math/rand"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/rustwizard/balda/internal/game"
@@ -10,6 +11,14 @@ import (
 
 // ErrNoMoveFound is returned when the bot cannot find any valid move.
 var ErrNoMoveFound = errors.New("bot: no valid move found")
+
+// normalizeWord replaces ё/Ё with е/Е so that words differing only by this
+// letter are treated as identical, matching the game package behavior.
+func normalizeWord(word string) string {
+	word = strings.ReplaceAll(word, "ё", "е")
+	word = strings.ReplaceAll(word, "Ё", "Е")
+	return word
+}
 
 // russianAlphabet contains normalized lowercase letters used by the dictionary.
 // ё is normalized to е by the game package, so it is omitted here.
@@ -39,7 +48,7 @@ type RandomValidStrategy struct {
 func NewRandomValidStrategy(dict *game.Dictionary) *RandomValidStrategy {
 	words := make([]string, 0, len(dict.Definition))
 	for w := range dict.Definition {
-		words = append(words, w)
+		words = append(words, normalizeWord(w))
 	}
 	return &RandomValidStrategy{trie: NewTrie(words)}
 }
@@ -100,26 +109,19 @@ func (s *RandomValidStrategy) findWordFrom(board [5][5]string, letter game.Lette
 	temp := board
 	temp[letter.RowID][letter.ColID] = letter.Char
 
-	visited := [5][5]bool{}
-	visited[letter.RowID][letter.ColID] = true
-
-	start := []game.Letter{letter}
-	prefix := letter.Char
-
-	if !s.trie.IsPrefix(prefix) {
-		return nil
-	}
-	if utf8.RuneCountInString(prefix) >= 3 && s.trie.IsWord(prefix) {
-		if _, ok := used[prefix]; !ok {
-			return start
-		}
-	}
-
 	var result []game.Letter
-	var dfs func(row, col uint8, path []game.Letter, word string)
-	dfs = func(row, col uint8, path []game.Letter, word string) {
+	var visited [5][5]bool
+	var dfs func(row, col uint8, path []game.Letter, word string, usedNew bool)
+	dfs = func(row, col uint8, path []game.Letter, word string, usedNew bool) {
 		if result != nil {
 			return
+		}
+		if usedNew && utf8.RuneCountInString(word) >= 3 && s.trie.IsWord(word) {
+			if _, ok := used[word]; !ok {
+				result = make([]game.Letter, len(path))
+				copy(result, path)
+				return
+			}
 		}
 		// Balda allows only horizontal and vertical adjacency (Manhattan distance == 1).
 		directions := [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}
@@ -140,21 +142,34 @@ func (s *RandomValidStrategy) findWordFrom(board [5][5]string, letter game.Lette
 			if !s.trie.IsPrefix(nextWord) {
 				continue
 			}
+			nextUsedNew := usedNew || (nr == int(letter.RowID) && nc == int(letter.ColID))
 			nextPath := make([]game.Letter, len(path)+1)
 			copy(nextPath, path)
 			nextPath[len(path)] = game.Letter{RowID: uint8(nr), ColID: uint8(nc), Char: ch}
-			if utf8.RuneCountInString(nextWord) >= 3 && s.trie.IsWord(nextWord) {
-				if _, ok := used[nextWord]; !ok {
-					result = nextPath
-					return
-				}
-			}
 			visited[nr][nc] = true
-			dfs(uint8(nr), uint8(nc), nextPath, nextWord)
+			dfs(uint8(nr), uint8(nc), nextPath, nextWord, nextUsedNew)
 			visited[nr][nc] = false
 		}
 	}
 
-	dfs(letter.RowID, letter.ColID, start, prefix)
-	return result
+	// Try every occupied cell as a starting point; the path must include the new letter.
+	for r := range temp {
+		for c := range temp[r] {
+			ch := temp[r][c]
+			if ch == "" {
+				continue
+			}
+			if !s.trie.IsPrefix(ch) {
+				continue
+			}
+			visited = [5][5]bool{}
+			visited[r][c] = true
+			startUsedNew := r == int(letter.RowID) && c == int(letter.ColID)
+			dfs(uint8(r), uint8(c), []game.Letter{{RowID: uint8(r), ColID: uint8(c), Char: ch}}, ch, startUsedNew)
+			if result != nil {
+				return result
+			}
+		}
+	}
+	return nil
 }
