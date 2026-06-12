@@ -151,12 +151,10 @@ _Все критические задачи решены._
 
 **Предложение:** перейти на pointer receiver.
 
-### 18. centrifugo.Client без таймаута
+### 18. ✅ centrifugo.Client — таймаут задан
 **Файл:** `internal/centrifugo/client.go`
 
-`http.Client{}` без `Timeout`; полагается только на ctx вызывающего.
-
-**Предложение:** задать дефолтный `Timeout` как страховку.
+`http.Client{}` заменён на `http.Client{Timeout: 10 * time.Second}`.
 
 ### 19. Dictionary.FiveLetters — map вместо slice
 **Файл:** `internal/game/dictionary.go`
