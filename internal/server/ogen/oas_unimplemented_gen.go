@@ -41,6 +41,16 @@ func (UnimplementedHandler) CreateGame(ctx context.Context, params CreateGamePar
 	return r, ht.ErrNotImplemented
 }
 
+// CreateGameWithBot implements createGameWithBot operation.
+//
+// Creates a new game where the authenticated player plays against a server-side bot.
+// The game starts immediately and the first move belongs to the human player.
+//
+// POST /games/with-bot
+func (UnimplementedHandler) CreateGameWithBot(ctx context.Context, params CreateGameWithBotParams) (r CreateGameWithBotRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetPlayerStateUID implements getPlayerStateUID operation.
 //
 // Get user state.

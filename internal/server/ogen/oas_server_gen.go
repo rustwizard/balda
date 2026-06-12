@@ -27,6 +27,13 @@ type Handler interface {
 	//
 	// POST /games
 	CreateGame(ctx context.Context, params CreateGameParams) (CreateGameRes, error)
+	// CreateGameWithBot implements createGameWithBot operation.
+	//
+	// Creates a new game where the authenticated player plays against a server-side bot.
+	// The game starts immediately and the first move belongs to the human player.
+	//
+	// POST /games/with-bot
+	CreateGameWithBot(ctx context.Context, params CreateGameWithBotParams) (CreateGameWithBotRes, error)
 	// GetPlayerStateUID implements getPlayerStateUID operation.
 	//
 	// Get user state.

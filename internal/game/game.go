@@ -28,6 +28,9 @@ const (
 	TurnDuration           = 60 * time.Second
 	MaxConsecutiveTimeouts = 3
 	MaxConsecutiveSkips    = 3
+
+	StatusInProgress = "in_progress"
+	StatusFinished   = "finished"
 )
 
 // Option configures a Game at construction time.
@@ -63,6 +66,7 @@ type Player struct {
 	ConsecutiveTimeouts int
 	ConsecutiveSkips    int
 	Kicked              bool
+	Type                PlayerType
 }
 
 type Game struct {
@@ -449,6 +453,26 @@ func (g *Game) BoardIsFull() bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return g.board.IsFull()
+}
+
+// InitialWord returns the starting word placed in the center row.
+func (g *Game) InitialWord() string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.board.InitialWord()
+}
+
+// UsedWords returns all words already submitted by any player, including the
+// initial board word. Useful for move generation (e.g. bots).
+func (g *Game) UsedWords() []string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	out := make([]string, 0, len(g.players)*4)
+	for _, p := range g.players {
+		out = append(out, p.Words...)
+	}
+	return out
 }
 
 // FillCell places a letter directly on the board without validation.

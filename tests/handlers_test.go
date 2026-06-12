@@ -31,7 +31,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-
 func startRedis(ctx context.Context, t *testing.T) (addr string, cleanup func()) {
 	t.Helper()
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{

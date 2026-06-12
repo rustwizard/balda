@@ -138,6 +138,38 @@ paths:
         "401":
           $ref: '#/components/responses/Unauthorized'
 
+  /games/with-bot:
+    post:
+      operationId: createGameWithBot
+      summary: Create and start a game against a bot
+      description: |
+        Creates a new game where the authenticated player plays against a server-side bot.
+        The game starts immediately and the first move belongs to the human player.
+      tags:
+        - Games
+      security:
+        - APIKeyHeader: []
+        - APIKeyQueryParam: []
+      parameters:
+        - $ref: '#/components/parameters/ApiSessionHeader'
+      responses:
+        "200":
+          description: Game against bot created and started successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinGameResponse"
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+        "409":
+          description: Player already in a game
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: '#/components/responses/InternalServerError'
+
   /games/{id}/join:
     post:
       operationId: joinGame

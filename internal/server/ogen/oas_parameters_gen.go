@@ -179,6 +179,61 @@ func decodeCreateGameParams(args [0]string, argsEscaped bool, r *http.Request) (
 	return params, nil
 }
 
+// CreateGameWithBotParams is parameters of createGameWithBot operation.
+type CreateGameWithBotParams struct {
+	XAPISession string
+}
+
+func unpackCreateGameWithBotParams(packed middleware.Parameters) (params CreateGameWithBotParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "X-API-Session",
+			In:   "header",
+		}
+		params.XAPISession = packed[key].(string)
+	}
+	return params
+}
+
+func decodeCreateGameWithBotParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateGameWithBotParams, _ error) {
+	h := uri.NewHeaderDecoder(r.Header)
+	// Decode header: X-API-Session.
+	if err := func() error {
+		cfg := uri.HeaderParameterDecodingConfig{
+			Name:    "X-API-Session",
+			Explode: false,
+		}
+		if err := h.HasParam(cfg); err == nil {
+			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToString(val)
+				if err != nil {
+					return err
+				}
+
+				params.XAPISession = c
+				return nil
+			}); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "X-API-Session",
+			In:   "header",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // GetPlayerStateUIDParams is parameters of getPlayerStateUID operation.
 type GetPlayerStateUIDParams struct {
 	// Player ID.

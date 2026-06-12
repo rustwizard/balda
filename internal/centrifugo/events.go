@@ -1,7 +1,9 @@
 package centrifugo
 
 const (
-	ChannelLobby = "lobby"
+	ChannelLobby         = "lobby"
+	GameStatusInProgress = "in_progress"
+	GameStatusFinished   = "finished"
 )
 
 func ChannelGame(gameID string) string {

@@ -18,28 +18,31 @@ var (
 		"GET":  "X-Api-Key,X-Api-Session",
 		"POST": "X-Api-Key,X-Api-Session",
 	}
+	rn7AllowedHeaders = map[string]string{
+		"POST": "X-Api-Key,X-Api-Session",
+	}
 	rn3AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session",
 	}
-	rn10AllowedHeaders = map[string]string{
-		"POST": "X-Api-Key,X-Api-Session",
-	}
 	rn11AllowedHeaders = map[string]string{
-		"POST": "Content-Type,X-Api-Key,X-Api-Session",
-	}
-	rn13AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session",
+	}
+	rn12AllowedHeaders = map[string]string{
+		"POST": "Content-Type,X-Api-Key,X-Api-Session",
 	}
 	rn14AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session",
 	}
-	rn17AllowedHeaders = map[string]string{
+	rn15AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session",
 	}
-	rn12AllowedHeaders = map[string]string{
+	rn18AllowedHeaders = map[string]string{
+		"POST": "X-Api-Key,X-Api-Session",
+	}
+	rn13AllowedHeaders = map[string]string{
 		"POST": "X-Api-Key,X-Api-Session,X-Request-Id",
 	}
-	rn16AllowedHeaders = map[string]string{
+	rn17AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 )
@@ -154,6 +157,37 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						break
 					}
 
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case 'w': // Prefix: "with-bot"
+						origElem := elem
+						if l := len("with-bot"); len(elem) >= l && elem[0:l] == "with-bot" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "POST":
+								s.handleCreateGameWithBotRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, notAllowedParams{
+									allowedMethods: "POST",
+									allowedHeaders: rn7AllowedHeaders,
+									acceptPost:     "",
+									acceptPatch:    "",
+								})
+							}
+
+							return
+						}
+
+						elem = origElem
+					}
 					// Param: "id"
 					// Match until "/"
 					idx := strings.IndexByte(elem, '/')
@@ -224,7 +258,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn10AllowedHeaders,
+										allowedHeaders: rn11AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -251,7 +285,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn11AllowedHeaders,
+										allowedHeaders: rn12AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -278,7 +312,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn13AllowedHeaders,
+										allowedHeaders: rn14AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -305,7 +339,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn14AllowedHeaders,
+										allowedHeaders: rn15AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -332,7 +366,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn17AllowedHeaders,
+										allowedHeaders: rn18AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -411,7 +445,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn12AllowedHeaders,
+								allowedHeaders: rn13AllowedHeaders,
 								acceptPost:     "",
 								acceptPatch:    "",
 							})
@@ -436,7 +470,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn16AllowedHeaders,
+								allowedHeaders: rn17AllowedHeaders,
 								acceptPost:     "application/json",
 								acceptPatch:    "",
 							})
@@ -613,6 +647,37 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 						break
 					}
 
+					if len(elem) == 0 {
+						break
+					}
+					switch elem[0] {
+					case 'w': // Prefix: "with-bot"
+						origElem := elem
+						if l := len("with-bot"); len(elem) >= l && elem[0:l] == "with-bot" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "POST":
+								r.name = CreateGameWithBotOperation
+								r.summary = "Create and start a game against a bot"
+								r.operationID = "createGameWithBot"
+								r.operationGroup = ""
+								r.pathPattern = "/games/with-bot"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
+						elem = origElem
+					}
 					// Param: "id"
 					// Match until "/"
 					idx := strings.IndexByte(elem, '/')
