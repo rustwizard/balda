@@ -201,6 +201,7 @@ func TestAuthHandler(t *testing.T) {
 		u := ok.Player.Value
 		assert.NotEqual(t, uuid.UUID{}, u.UID.Value)
 		assert.NotEmpty(t, u.Sid.Value)
+		assert.NotEmpty(t, u.Key.Value, "expected api key to be returned")
 	})
 
 	t.Run("session reuse on second login", func(t *testing.T) {
@@ -294,6 +295,97 @@ func TestAuthHandler(t *testing.T) {
 		assert.Equal(t, baldaapi.GameStatusInProgress, ag.Status.Value)
 		assert.Len(t, ag.Players, 2)
 	})
+}
+
+// TestAuthFlow verifies the full browser-facing auth flow over HTTP:
+// signup returns an API key, /auth is public (no API key required),
+// /auth returns the same API key, and that key can access protected endpoints.
+func TestAuthFlow(t *testing.T) {
+	srv, email, password, apiKey, cleanup := setupServer(t)
+	defer cleanup()
+	_ = email
+	_ = password
+	_ = apiKey
+
+	const flowEmail = "flow.user@example.org"
+	const flowPassword = "flowpass"
+
+	// Sign up via HTTP — no API key required.
+	signupBody, err := json.Marshal(map[string]string{
+		"firstname": "Flow",
+		"lastname":  "User",
+		"email":     flowEmail,
+		"password":  flowPassword,
+	})
+	require.NoError(t, err)
+	signupReq, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/signup", bytes.NewReader(signupBody))
+	require.NoError(t, err)
+	signupReq.Header.Set("Content-Type", "application/json")
+	signupResp, err := http.DefaultClient.Do(signupReq)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, signupResp.StatusCode)
+	var signupOut struct {
+		User struct {
+			UID string `json:"uid"`
+			Sid string `json:"sid"`
+			Key string `json:"key"`
+		} `json:"user"`
+	}
+	require.NoError(t, json.NewDecoder(signupResp.Body).Decode(&signupOut))
+	signupResp.Body.Close()
+	require.NotEmpty(t, signupOut.User.UID)
+	require.NotEmpty(t, signupOut.User.Sid)
+	require.NotEmpty(t, signupOut.User.Key, "signup should return an api key")
+
+	// Authenticate via HTTP — no API key required (public endpoint).
+	authBody, err := json.Marshal(map[string]string{
+		"email":    flowEmail,
+		"password": flowPassword,
+	})
+	require.NoError(t, err)
+	authReq, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(authBody))
+	require.NoError(t, err)
+	authReq.Header.Set("Content-Type", "application/json")
+	authResp, err := http.DefaultClient.Do(authReq)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, authResp.StatusCode)
+	var authOut struct {
+		Player struct {
+			UID string `json:"uid"`
+			Sid string `json:"sid"`
+			Key string `json:"key"`
+		} `json:"player"`
+	}
+	require.NoError(t, json.NewDecoder(authResp.Body).Decode(&authOut))
+	authResp.Body.Close()
+	require.NotEmpty(t, authOut.Player.Sid)
+	require.NotEmpty(t, authOut.Player.Key, "auth should return an api key")
+	assert.Equal(t, signupOut.User.UID, authOut.Player.UID)
+	assert.Equal(t, signupOut.User.Key, authOut.Player.Key, "auth should return the same api key as signup")
+
+	// The returned API key must work for a protected endpoint.
+	listReq, err := http.NewRequest(http.MethodGet, srv.URL+"/balda/api/v1/games", http.NoBody)
+	require.NoError(t, err)
+	listReq.Header.Set("X-API-Key", authOut.Player.Key)
+	listReq.Header.Set("X-API-Session", authOut.Player.Sid)
+	listResp, err := http.DefaultClient.Do(listReq)
+	require.NoError(t, err)
+	defer listResp.Body.Close()
+	assert.Equal(t, http.StatusOK, listResp.StatusCode, "returned api key should access protected endpoints")
+
+	// Auth with wrong password must still reject.
+	badAuthBody, err := json.Marshal(map[string]string{
+		"email":    flowEmail,
+		"password": "wrongpassword",
+	})
+	require.NoError(t, err)
+	badAuthReq, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(badAuthBody))
+	require.NoError(t, err)
+	badAuthReq.Header.Set("Content-Type", "application/json")
+	badAuthResp, err := http.DefaultClient.Do(badAuthReq)
+	require.NoError(t, err)
+	defer badAuthResp.Body.Close()
+	assert.Equal(t, http.StatusUnauthorized, badAuthResp.StatusCode)
 }
 
 func TestGetUsersStateUIDHandler(t *testing.T) {
