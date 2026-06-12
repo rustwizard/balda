@@ -85,18 +85,15 @@ func TestRandomValidStrategy_RespectsUsedWords(t *testing.T) {
 
 	board := makeBoardWithWord("котка")
 	// If "кот" is already used, the bot should not return it again.
-	_, _, err := strategy.MakeMove(board, []string{"кот"})
 	// There may still be other valid moves; we only check that the returned
 	// word is not the used one when a move is found.
-	if err == nil {
-		letter, path, err := strategy.MakeMove(board, []string{"кот"})
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		word := game.MakeWord(path)
-		if word == "кот" {
-			t.Fatal("bot returned an already used word")
-		}
-		_ = letter
+	letter, path, err := strategy.MakeMove(board, []string{"кот"})
+	if err != nil {
+		return // no other valid moves on this board
 	}
+	word := game.MakeWord(path)
+	if word == "кот" {
+		t.Fatal("bot returned an already used word")
+	}
+	_ = letter
 }
