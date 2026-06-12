@@ -42,6 +42,7 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 		UID:       baldaapi.NewOptUUID(u.PlayerID),
 		Firstname: baldaapi.NewOptString(u.Firstname),
 		Lastname:  baldaapi.NewOptString(u.Lastname),
+		Key:       baldaapi.NewOptString(u.APIKey),
 		Exp:       baldaapi.NewOptInt64(u.Exp),
 	}
 

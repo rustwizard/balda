@@ -37,7 +37,6 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 // operationRolesAPIKeyHeader is a private map storing roles per operation.
 var operationRolesAPIKeyHeader = map[string][]string{
 	AcceptEndGameOperation:     []string{},
-	AuthOperation:              []string{},
 	CreateGameOperation:        []string{},
 	CreateGameWithBotOperation: []string{},
 	JoinGameOperation:          []string{},
@@ -73,7 +72,6 @@ func GetRolesForAPIKeyHeader(operation string) []string {
 // operationRolesAPIKeyQueryParam is a private map storing roles per operation.
 var operationRolesAPIKeyQueryParam = map[string][]string{
 	AcceptEndGameOperation:     []string{},
-	AuthOperation:              []string{},
 	CreateGameOperation:        []string{},
 	CreateGameWithBotOperation: []string{},
 	JoinGameOperation:          []string{},

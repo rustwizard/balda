@@ -48,9 +48,6 @@ paths:
       summary: Auth request
       tags:
         - Auth
-      security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
       requestBody:
         required: true
         content:

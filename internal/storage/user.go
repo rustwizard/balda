@@ -14,6 +14,7 @@ type UserAuth struct {
 	Lastname  string
 	PlayerID  uuid.UUID
 	Exp       int64
+	APIKey    string
 }
 
 // UserCreated holds the data returned after a successful signup.
@@ -30,11 +31,11 @@ func (b *Balda) AuthUser(ctx context.Context, email, password string) (UserAuth,
 
 	var u UserAuth
 	err := b.db.QueryRow(ctx, `
-		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0)
+		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0), u.api_key
 		FROM users u
 		JOIN player_state ps ON ps.user_id = u.user_id
 		WHERE u.email = $1 AND u.hash_password = crypt($2, u.hash_password)
-	`, email, password).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp)
+	`, email, password).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp, &u.APIKey)
 	if err != nil {
 		return UserAuth{}, fmt.Errorf("auth user: %w", err)
 	}

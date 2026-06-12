@@ -12,7 +12,7 @@ import (
 
 var (
 	rn5AllowedHeaders = map[string]string{
-		"POST": "Content-Type,X-Api-Key",
+		"POST": "Content-Type",
 	}
 	rn6AllowedHeaders = map[string]string{
 		"GET":  "X-Api-Key,X-Api-Session",
