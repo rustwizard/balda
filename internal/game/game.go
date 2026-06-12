@@ -28,9 +28,6 @@ const (
 	TurnDuration           = 60 * time.Second
 	MaxConsecutiveTimeouts = 3
 	MaxConsecutiveSkips    = 3
-
-	StatusInProgress = "in_progress"
-	StatusFinished   = "finished"
 )
 
 // Option configures a Game at construction time.
