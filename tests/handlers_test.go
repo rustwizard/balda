@@ -372,8 +372,8 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 
 	// Start a game in the lobby so both players are in an active game.
 	players := []*game.Player{
-		{ID: uid1.String(), Exp: 100},
-		{ID: uid2.String(), Exp: 200},
+		{ID: uid1.String(), Exp: 100, Type: game.PlayerTypeHuman},
+		{ID: uid2.String(), Exp: 200, Type: game.PlayerTypeHuman},
 	}
 	_, err = lby.StartGame(ctx, players, &game.NoopNotifier{})
 	require.NoError(t, err)

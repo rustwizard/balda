@@ -4,6 +4,7 @@ package game
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -22,6 +23,7 @@ var (
 	ErrWordNotInDictionary = errors.New("game: word not found in dictionary")
 	ErrWordIsInitialWord   = errors.New("game: word is the initial board word")
 	ErrNotOpponent         = errors.New("game: only the opponent can respond to an end proposal")
+	ErrUnknownPlayerType   = errors.New("game: player type must be set")
 )
 
 const (
@@ -143,6 +145,12 @@ func GapsBetweenLetters(word []Letter) bool {
 }
 
 func NewGame(players []*Player, n Notifier, opts ...Option) (*Game, error) {
+	for i, p := range players {
+		if p.Type == PlayerTypeUnknown {
+			return nil, fmt.Errorf("game: player %d: %w", i, ErrUnknownPlayerType)
+		}
+	}
+
 	board, err := NewLettersTable(Dict.RandomFiveLetterWord())
 	if err != nil {
 		return nil, err
@@ -419,6 +427,12 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 
 // NewGameWithWord creates a Game with a specific initial board word instead of a random one.
 func NewGameWithWord(players []*Player, initWord string, n Notifier, opts ...Option) (*Game, error) {
+	for i, p := range players {
+		if p.Type == PlayerTypeUnknown {
+			return nil, fmt.Errorf("game: player %d: %w", i, ErrUnknownPlayerType)
+		}
+	}
+
 	board, err := NewLettersTable(initWord)
 	if err != nil {
 		return nil, err

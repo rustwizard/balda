@@ -163,7 +163,7 @@ func (h *Handlers) CreateGameWithBot(ctx context.Context, params baldaapi.Create
 func (b *Balda) CreateGameWithBot(ctx context.Context, userID int64) (*lobby.GameRecord, error) {
     pg, err := b.strg.GetPlayerByUID(ctx, userID)
     // ...
-    human := &game.Player{ID: pg.PlayerID.String(), Exp: pg.Exp}
+    human := &game.Player{ID: pg.PlayerID.String(), Exp: pg.Exp, Type: game.PlayerTypeHuman}
     botPlayer := &game.Player{
         ID:   uuid.New().String(),
         Exp:  0,

@@ -4,6 +4,7 @@ package game
 type PlayerType int
 
 const (
-	PlayerTypeHuman PlayerType = iota
+	PlayerTypeUnknown PlayerType = iota
+	PlayerTypeHuman
 	PlayerTypeBot
 )
