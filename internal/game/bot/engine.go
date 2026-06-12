@@ -130,6 +130,8 @@ func findEmptyCells(board [5][5]string) []cell {
 }
 
 func (s *RandomValidStrategy) findWordFrom(board [5][5]string, letter game.Letter, used map[string]struct{}) []game.Letter {
+	// Copy the 5x5 array by value so we can place the candidate letter
+	// without mutating the caller's board snapshot.
 	temp := board
 	temp[letter.RowID][letter.ColID] = letter.Char
 
