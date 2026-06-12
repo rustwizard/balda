@@ -48,7 +48,7 @@ func (n *Notifier) NotifyTurnStart(playerID string) {
 		time.Sleep(thinkingTime)
 
 		board := n.g.BoardSnapshot()
-		usedWords := append(n.g.UsedWords(), n.g.InitialWord())
+		usedWords := n.g.UsedWords()
 
 		ctx, cancel := context.WithTimeout(context.Background(), botMoveTimeout)
 		defer cancel()

@@ -48,7 +48,7 @@ func TestBotVsHuman_GameProgresses(t *testing.T) {
 	board := g.BoardSnapshot()
 	var moveLetter *game.Letter
 	var movePath []game.Letter
-	used := append(g.UsedWords(), g.InitialWord())
+	used := g.UsedWords()
 
 	for r := range board {
 		for c := range board[r] {

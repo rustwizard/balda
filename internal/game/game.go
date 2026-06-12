@@ -462,13 +462,15 @@ func (g *Game) InitialWord() string {
 	return g.board.InitialWord()
 }
 
-// UsedWords returns all words already submitted by any player, including the
-// initial board word. Useful for move generation (e.g. bots).
+// UsedWords returns all words that may not be played again: the initial board
+// word plus every word submitted by any player. Useful for move generation
+// (e.g. bots).
 func (g *Game) UsedWords() []string {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 
-	out := make([]string, 0, len(g.players)*4)
+	out := make([]string, 0, len(g.players)*4+1)
+	out = append(out, g.board.InitialWord())
 	for _, p := range g.players {
 		out = append(out, p.Words...)
 	}

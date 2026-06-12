@@ -193,7 +193,8 @@ func (l *Lobby) CreateWithBot(human, bot *game.Player) (*GameRecord, error) {
 func (g *Game) UsedWords() []string {
     g.mu.Lock()
     defer g.mu.Unlock()
-    var out []string
+    out := make([]string, 0, len(g.players)*4+1)
+    out = append(out, g.board.InitialWord())
     for _, p := range g.players {
         out = append(out, p.Words...)
     }
