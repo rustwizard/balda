@@ -48,6 +48,9 @@ func NewLettersTable(w string) (*LettersTable, error) {
 func (lt *LettersTable) InitialWord() string {
 	var word string
 	for _, v := range lt.Table[2] {
+		if v == nil {
+			continue
+		}
 		word += v.Char
 	}
 	return word
