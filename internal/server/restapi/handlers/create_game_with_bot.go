@@ -15,62 +15,49 @@ import (
 	"github.com/rustwizard/balda/internal/session"
 )
 
-// JoinGame implements baldaapi.Handler.
-func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams) (baldaapi.JoinGameRes, error) {
+// CreateGameWithBot implements baldaapi.Handler.
+func (h *Handlers) CreateGameWithBot(ctx context.Context, params baldaapi.CreateGameWithBotParams) (baldaapi.CreateGameWithBotRes, error) {
 	uid, err := h.sess.GetUID(params.XAPISession)
 	if err != nil {
 		if errors.Is(err, session.ErrNotFound) {
-			return &baldaapi.JoinGameUnauthorized{
+			return &baldaapi.CreateGameWithBotUnauthorized{
 				Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
 				Message: baldaapi.NewOptString("session not found"),
 				Type:    baldaapi.NewOptString("Unauthorized"),
 			}, nil
 		}
-		slog.Error("join_game: get uid", slog.String("sid", params.XAPISession), slog.Any("error", err))
-		return &baldaapi.JoinGameUnauthorized{
+		slog.Error("create_game_with_bot: get uid", slog.String("sid", params.XAPISession), slog.Any("error", err))
+		return &baldaapi.CreateGameWithBotUnauthorized{
 			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
 			Message: baldaapi.NewOptString("session unavailable"),
 			Type:    baldaapi.NewOptString("Unauthorized"),
 		}, nil
 	}
 
-	rec, err := h.svc.JoinGame(ctx, uid, params.ID.String())
+	rec, err := h.svc.CreateGameWithBot(ctx, uid)
 	if err != nil {
-		switch {
-		case errors.Is(err, lobby.ErrGameNotFound):
-			return &baldaapi.JoinGameNotFound{
-				Status:  baldaapi.NewOptInt(http.StatusNotFound),
-				Message: baldaapi.NewOptString("game not found"),
-				Type:    baldaapi.NewOptString("NotFound"),
-			}, nil
-		case errors.Is(err, lobby.ErrPlayerInGame):
-			return &baldaapi.JoinGameConflict{
+		if errors.Is(err, lobby.ErrPlayerInGame) {
+			return &baldaapi.CreateGameWithBotConflict{
 				Status:  baldaapi.NewOptInt(http.StatusConflict),
 				Message: baldaapi.NewOptString("player already in a game"),
 				Type:    baldaapi.NewOptString("Conflict"),
 			}, nil
-		case errors.Is(err, lobby.ErrGameNotWaiting), errors.Is(err, lobby.ErrGameFull):
-			return &baldaapi.JoinGameConflict{
-				Status:  baldaapi.NewOptInt(http.StatusConflict),
-				Message: baldaapi.NewOptString("game is not available for joining"),
-				Type:    baldaapi.NewOptString("Conflict"),
-			}, nil
-		default:
-			slog.Error("join_game: join", slog.Any("error", err))
-			return &baldaapi.JoinGameInternalServerError{
-				Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
-				Message: baldaapi.NewOptString("failed to join game"),
-				Type:    baldaapi.NewOptString("InternalServerError"),
-			}, nil
 		}
+		slog.Error("create_game_with_bot: create", slog.Any("error", err))
+		return &baldaapi.CreateGameWithBotInternalServerError{
+			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
+			Message: baldaapi.NewOptString("failed to create game with bot"),
+			Type:    baldaapi.NewOptString("InternalServerError"),
+		}, nil
 	}
 
 	gameID, err := uuid.Parse(rec.ID)
 	if err != nil {
-		slog.Error("join_game: parse game id", slog.Any("error", err))
-		return &baldaapi.JoinGameConflict{
+		slog.Error("create_game_with_bot: parse game id", slog.Any("error", err))
+		return &baldaapi.CreateGameWithBotInternalServerError{
 			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
 			Message: baldaapi.NewOptString("internal error"),
+			Type:    baldaapi.NewOptString("InternalServerError"),
 		}, nil
 	}
 
@@ -79,7 +66,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	for _, p := range rec.Players {
 		pid, err := uuid.Parse(p.ID)
 		if err != nil {
-			slog.Warn("join_game: skip player with invalid id", slog.String("playerID", p.ID), slog.Any("error", err))
+			slog.Warn("create_game_with_bot: skip player with invalid id", slog.String("playerID", p.ID), slog.Any("error", err))
 			continue
 		}
 		playerIDs = append(playerIDs, pid)
@@ -100,32 +87,27 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 		ev.PlayerIDs = append(ev.PlayerIDs, p.ID)
 	}
 	if err := h.cf.Publish(ctx, centrifugo.ChannelLobby, ev); err != nil {
-		slog.Error("join_game: publish to lobby", slog.Any("error", err))
+		slog.Error("create_game_with_bot: publish to lobby", slog.Any("error", err))
 	}
 	if err := h.cf.Publish(ctx, centrifugo.ChannelGame(rec.ID), ev); err != nil {
-		slog.Error("join_game: publish to game channel", slog.Any("error", err))
+		slog.Error("create_game_with_bot: publish to game channel", slog.Any("error", err))
 	}
 	h.publishLobbyUpdate(ctx)
 
-	// The creator (index 0) always moves first.
-	firstPlayerID := ""
-	if len(rec.Players) > 0 {
-		firstPlayerID = rec.Players[0].ID
-	}
+	firstPlayerID := rec.Game.CurrentPlayerID()
 
 	gameToken, err := centrifugo.GenerateSubscriptionToken(
 		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,
 	)
 	if err != nil {
-		slog.Error("join_game: generate game token", slog.Any("error", err))
-		return &baldaapi.JoinGameConflict{
+		slog.Error("create_game_with_bot: generate game token", slog.Any("error", err))
+		return &baldaapi.CreateGameWithBotInternalServerError{
 			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
 			Message: baldaapi.NewOptString("internal error"),
+			Type:    baldaapi.NewOptString("InternalServerError"),
 		}, nil
 	}
 
-	// Build the board as a slice-of-slices for the HTTP response so the joining
-	// player can render the initial word immediately without racing Centrifugo.
 	rawBoard := rec.Game.BoardSnapshot()
 	boardSlice := make([][]string, len(rawBoard))
 	for i, row := range rawBoard {

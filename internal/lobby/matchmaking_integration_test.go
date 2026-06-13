@@ -46,7 +46,7 @@ func newSystem(t testing.TB) (*lobby.Lobby, *matchmaking.Queue, context.CancelFu
 
 // ratedPlayer is a shorthand that sets both ID and Exp.
 func ratedPlayer(id string, exp int) *game.Player {
-	return &game.Player{ID: id, Exp: exp}
+	return &game.Player{ID: id, Exp: exp, Type: game.PlayerTypeHuman}
 }
 
 // ─── lobby × matchmaking integration tests ───────────────────────────────────

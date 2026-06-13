@@ -13,6 +13,10 @@ type CreateGameRes interface {
 	createGameRes()
 }
 
+type CreateGameWithBotRes interface {
+	createGameWithBotRes()
+}
+
 type GetPlayerStateUIDRes interface {
 	getPlayerStateUIDRes()
 }

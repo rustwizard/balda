@@ -77,7 +77,7 @@ func (s *Balda) CreateGame(ctx context.Context, uid int64) (*lobby.GameRecord, e
 	if err != nil {
 		return nil, fmt.Errorf("create game: %w", err)
 	}
-	return s.lby.Create(&game.Player{ID: p.PlayerID.String(), Exp: p.Exp})
+	return s.lby.Create(&game.Player{ID: p.PlayerID.String(), Exp: p.Exp, Type: game.PlayerTypeHuman})
 }
 
 // JoinGame adds the user identified by uid to the waiting game with the given gameID.
@@ -86,7 +86,23 @@ func (s *Balda) JoinGame(ctx context.Context, uid int64, gameID string) (*lobby.
 	if err != nil {
 		return nil, fmt.Errorf("join game: %w", err)
 	}
-	return s.lby.Join(ctx, gameID, &game.Player{ID: p.PlayerID.String(), Exp: p.Exp}, &game.NoopNotifier{})
+	return s.lby.Join(ctx, gameID, &game.Player{ID: p.PlayerID.String(), Exp: p.Exp, Type: game.PlayerTypeHuman}, &game.NoopNotifier{})
+}
+
+// CreateGameWithBot creates and immediately starts a game between the user and a bot.
+func (s *Balda) CreateGameWithBot(ctx context.Context, uid int64) (*lobby.GameRecord, error) {
+	p, err := s.s.GetPlayerByUID(ctx, uid)
+	if err != nil {
+		return nil, fmt.Errorf("create game with bot: %w", err)
+	}
+	human := &game.Player{ID: p.PlayerID.String(), Exp: p.Exp, Type: game.PlayerTypeHuman}
+	botPlayer := &game.Player{
+		ID:   uuid.New().String(),
+		Exp:  0,
+		Type: game.PlayerTypeBot,
+	}
+	// Use a background context so the bot game outlives the HTTP request.
+	return s.lby.StartGame(context.Background(), []*game.Player{human, botPlayer}, &game.NoopNotifier{})
 }
 
 func (s *Balda) playerIDByUID(ctx context.Context, uid int64) (string, error) {

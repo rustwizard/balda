@@ -31,7 +31,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-
 func startRedis(ctx context.Context, t *testing.T) (addr string, cleanup func()) {
 	t.Helper()
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -202,6 +201,7 @@ func TestAuthHandler(t *testing.T) {
 		u := ok.Player.Value
 		assert.NotEqual(t, uuid.UUID{}, u.UID.Value)
 		assert.NotEmpty(t, u.Sid.Value)
+		assert.NotEmpty(t, u.Key.Value, "expected api key to be returned")
 	})
 
 	t.Run("session reuse on second login", func(t *testing.T) {
@@ -297,6 +297,97 @@ func TestAuthHandler(t *testing.T) {
 	})
 }
 
+// TestAuthFlow verifies the full browser-facing auth flow over HTTP:
+// signup returns an API key, /auth is public (no API key required),
+// /auth returns the same API key, and that key can access protected endpoints.
+func TestAuthFlow(t *testing.T) {
+	srv, email, password, apiKey, cleanup := setupServer(t)
+	defer cleanup()
+	_ = email
+	_ = password
+	_ = apiKey
+
+	const flowEmail = "flow.user@example.org"
+	const flowPassword = "flowpass"
+
+	// Sign up via HTTP — no API key required.
+	signupBody, err := json.Marshal(map[string]string{
+		"firstname": "Flow",
+		"lastname":  "User",
+		"email":     flowEmail,
+		"password":  flowPassword,
+	})
+	require.NoError(t, err)
+	signupReq, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/signup", bytes.NewReader(signupBody))
+	require.NoError(t, err)
+	signupReq.Header.Set("Content-Type", "application/json")
+	signupResp, err := http.DefaultClient.Do(signupReq)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, signupResp.StatusCode)
+	var signupOut struct {
+		User struct {
+			UID string `json:"uid"`
+			Sid string `json:"sid"`
+			Key string `json:"key"`
+		} `json:"user"`
+	}
+	require.NoError(t, json.NewDecoder(signupResp.Body).Decode(&signupOut))
+	signupResp.Body.Close()
+	require.NotEmpty(t, signupOut.User.UID)
+	require.NotEmpty(t, signupOut.User.Sid)
+	require.NotEmpty(t, signupOut.User.Key, "signup should return an api key")
+
+	// Authenticate via HTTP — no API key required (public endpoint).
+	authBody, err := json.Marshal(map[string]string{
+		"email":    flowEmail,
+		"password": flowPassword,
+	})
+	require.NoError(t, err)
+	authReq, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(authBody))
+	require.NoError(t, err)
+	authReq.Header.Set("Content-Type", "application/json")
+	authResp, err := http.DefaultClient.Do(authReq)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, authResp.StatusCode)
+	var authOut struct {
+		Player struct {
+			UID string `json:"uid"`
+			Sid string `json:"sid"`
+			Key string `json:"key"`
+		} `json:"player"`
+	}
+	require.NoError(t, json.NewDecoder(authResp.Body).Decode(&authOut))
+	authResp.Body.Close()
+	require.NotEmpty(t, authOut.Player.Sid)
+	require.NotEmpty(t, authOut.Player.Key, "auth should return an api key")
+	assert.Equal(t, signupOut.User.UID, authOut.Player.UID)
+	assert.Equal(t, signupOut.User.Key, authOut.Player.Key, "auth should return the same api key as signup")
+
+	// The returned API key must work for a protected endpoint.
+	listReq, err := http.NewRequest(http.MethodGet, srv.URL+"/balda/api/v1/games", http.NoBody)
+	require.NoError(t, err)
+	listReq.Header.Set("X-API-Key", authOut.Player.Key)
+	listReq.Header.Set("X-API-Session", authOut.Player.Sid)
+	listResp, err := http.DefaultClient.Do(listReq)
+	require.NoError(t, err)
+	defer listResp.Body.Close()
+	assert.Equal(t, http.StatusOK, listResp.StatusCode, "returned api key should access protected endpoints")
+
+	// Auth with wrong password must still reject.
+	badAuthBody, err := json.Marshal(map[string]string{
+		"email":    flowEmail,
+		"password": "wrongpassword",
+	})
+	require.NoError(t, err)
+	badAuthReq, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(badAuthBody))
+	require.NoError(t, err)
+	badAuthReq.Header.Set("Content-Type", "application/json")
+	badAuthResp, err := http.DefaultClient.Do(badAuthReq)
+	require.NoError(t, err)
+	defer badAuthResp.Body.Close()
+	assert.Equal(t, http.StatusUnauthorized, badAuthResp.StatusCode)
+}
+
 func TestGetUsersStateUIDHandler(t *testing.T) {
 	h, cleanup := setupHandlers(t)
 	defer cleanup()
@@ -373,8 +464,8 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 
 	// Start a game in the lobby so both players are in an active game.
 	players := []*game.Player{
-		{ID: uid1.String(), Exp: 100},
-		{ID: uid2.String(), Exp: 200},
+		{ID: uid1.String(), Exp: 100, Type: game.PlayerTypeHuman},
+		{ID: uid2.String(), Exp: 200, Type: game.PlayerTypeHuman},
 	}
 	_, err = lby.StartGame(ctx, players, &game.NoopNotifier{})
 	require.NoError(t, err)
@@ -607,32 +698,34 @@ func postSignup(t *testing.T, srv *httptest.Server, email, password string) stri
 	return out.User.Sid
 }
 
-func postAuth(t *testing.T, srv *httptest.Server, email, password string) *http.Response {
-	t.Helper()
-	body, err := json.Marshal(map[string]string{"email": email, "password": password})
-	require.NoError(t, err)
-
-	req, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth",
-		bytes.NewReader(body))
-	require.NoError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	return resp
-}
-
 func TestSecurityHandlers(t *testing.T) {
 	srv, email, password, apiKey, cleanup := setupServer(t)
 	defer cleanup()
 
+	// Authenticate to get a valid session for the protected endpoint.
+	authBody, _ := json.Marshal(map[string]string{"email": email, "password": password})
+	authReq, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth",
+		bytes.NewReader(authBody))
+	require.NoError(t, err)
+	authReq.Header.Set("Content-Type", "application/json")
+	authResp, err := http.DefaultClient.Do(authReq)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, authResp.StatusCode)
+	var authOut struct {
+		Player struct {
+			Sid string `json:"sid"`
+		} `json:"player"`
+	}
+	require.NoError(t, json.NewDecoder(authResp.Body).Decode(&authOut))
+	require.NotEmpty(t, authOut.Player.Sid)
+	authResp.Body.Close()
+	sid := authOut.Player.Sid
+
 	t.Run("HandleAPIKeyHeader: valid key returns 200", func(t *testing.T) {
-		body, _ := json.Marshal(map[string]string{"email": email, "password": password})
-		req, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth",
-			bytes.NewReader(body))
+		req, err := http.NewRequest(http.MethodGet, srv.URL+"/balda/api/v1/games", http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-API-Key", apiKey)
+		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -641,12 +734,10 @@ func TestSecurityHandlers(t *testing.T) {
 	})
 
 	t.Run("HandleAPIKeyHeader: invalid key returns 401", func(t *testing.T) {
-		body, _ := json.Marshal(map[string]string{"email": email, "password": password})
-		req, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth",
-			bytes.NewReader(body))
+		req, err := http.NewRequest(http.MethodGet, srv.URL+"/balda/api/v1/games", http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-API-Key", "wrong-token")
+		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -655,12 +746,11 @@ func TestSecurityHandlers(t *testing.T) {
 	})
 
 	t.Run("HandleAPIKeyQueryParam: valid key returns 200", func(t *testing.T) {
-		body, _ := json.Marshal(map[string]string{"email": email, "password": password})
-		req, err := http.NewRequest(http.MethodPost,
-			srv.URL+"/balda/api/v1/auth?api_key="+apiKey,
-			bytes.NewReader(body))
+		req, err := http.NewRequest(http.MethodGet,
+			srv.URL+"/balda/api/v1/games?api_key="+apiKey,
+			http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -669,12 +759,11 @@ func TestSecurityHandlers(t *testing.T) {
 	})
 
 	t.Run("HandleAPIKeyQueryParam: invalid key returns 401", func(t *testing.T) {
-		body, _ := json.Marshal(map[string]string{"email": email, "password": password})
-		req, err := http.NewRequest(http.MethodPost,
-			srv.URL+"/balda/api/v1/auth?api_key=bad-key",
-			bytes.NewReader(body))
+		req, err := http.NewRequest(http.MethodGet,
+			srv.URL+"/balda/api/v1/games?api_key=bad-key",
+			http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -683,7 +772,12 @@ func TestSecurityHandlers(t *testing.T) {
 	})
 
 	t.Run("no key returns 401", func(t *testing.T) {
-		resp := postAuth(t, srv, email, password)
+		req, err := http.NewRequest(http.MethodGet, srv.URL+"/balda/api/v1/games", http.NoBody)
+		require.NoError(t, err)
+		req.Header.Set("X-API-Session", sid)
+
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})

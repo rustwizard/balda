@@ -4,6 +4,7 @@ package game
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
 	"strings"
@@ -22,6 +23,7 @@ var (
 	ErrWordNotInDictionary = errors.New("game: word not found in dictionary")
 	ErrWordIsInitialWord   = errors.New("game: word is the initial board word")
 	ErrNotOpponent         = errors.New("game: only the opponent can respond to an end proposal")
+	ErrUnknownPlayerType   = errors.New("game: player type must be set")
 )
 
 const (
@@ -63,6 +65,7 @@ type Player struct {
 	ConsecutiveTimeouts int
 	ConsecutiveSkips    int
 	Kicked              bool
+	Type                PlayerType
 }
 
 type Game struct {
@@ -142,21 +145,7 @@ func GapsBetweenLetters(word []Letter) bool {
 }
 
 func NewGame(players []*Player, n Notifier, opts ...Option) (*Game, error) {
-	board, err := NewLettersTable(Dict.RandomFiveLetterWord())
-	if err != nil {
-		return nil, err
-	}
-	g := &Game{
-		players:  players,
-		eventCh:  make(chan TurnEvent, 4), // buffered: timer + auto-kick can queue simultaneously
-		done:     make(chan struct{}),
-		board:    board,
-		notifier: n,
-	}
-	for _, opt := range opts {
-		opt(g)
-	}
-	return g, nil
+	return NewGameWithWord(players, Dict.RandomFiveLetterWord(), n, opts...)
 }
 
 func (g *Game) Run(ctx context.Context) {
@@ -418,6 +407,12 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 
 // NewGameWithWord creates a Game with a specific initial board word instead of a random one.
 func NewGameWithWord(players []*Player, initWord string, n Notifier, opts ...Option) (*Game, error) {
+	for i, p := range players {
+		if p.Type == PlayerTypeUnknown {
+			return nil, fmt.Errorf("game: player %d: %w", i, ErrUnknownPlayerType)
+		}
+	}
+
 	board, err := NewLettersTable(initWord)
 	if err != nil {
 		return nil, err
@@ -449,6 +444,28 @@ func (g *Game) BoardIsFull() bool {
 	g.mu.Lock()
 	defer g.mu.Unlock()
 	return g.board.IsFull()
+}
+
+// InitialWord returns the starting word placed in the center row.
+func (g *Game) InitialWord() string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.board.InitialWord()
+}
+
+// UsedWords returns all words that may not be played again: the initial board
+// word plus every word submitted by any player. Useful for move generation
+// (e.g. bots).
+func (g *Game) UsedWords() []string {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	out := make([]string, 0, len(g.players)*4+1)
+	out = append(out, g.board.InitialWord())
+	for _, p := range g.players {
+		out = append(out, p.Words...)
+	}
+	return out
 }
 
 // FillCell places a letter directly on the board without validation.

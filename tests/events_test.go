@@ -181,7 +181,7 @@ func TestJoinGame_PublishesEvGameStarted(t *testing.T) {
 
 	// signup player 1 and player 2
 	p1Sid, p1CfToken, p1LobbyToken, p1APIKey := signupPlayer(t, srv, "player1@test.com")
-	p2Sid, _, _, _ := signupPlayer(t, srv, "player2@test.com")
+	p2Sid := signupPlayerSid(t, srv, "player2@test.com")
 
 	// player 1 creates a game
 	w := httptest.NewRecorder()
@@ -231,6 +231,12 @@ func TestJoinGame_PublishesEvGameStarted(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("timeout waiting for EvGameStarted on game channel")
 	}
+}
+
+func signupPlayerSid(t *testing.T, srv http.Handler, email string) string {
+	//nolint:dogsled // we only need the session id here
+	sid, _, _, _ := signupPlayer(t, srv, email)
+	return sid
 }
 
 func signupPlayer(t *testing.T, srv http.Handler, email string) (sid, cfToken, lobbyToken, apiKey string) {

@@ -13,6 +13,7 @@ import (
 	"github.com/rustwizard/balda/api/openapi"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
+	"github.com/rustwizard/balda/internal/game/bot"
 	"github.com/rustwizard/balda/internal/gamecoord"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
@@ -123,14 +124,39 @@ var serverCmd = &cobra.Command{
 
 		var pendingResults sync.WaitGroup
 
+		// The notifier argument is intentionally ignored: the factory builds its own
+		// CompositeNotifier combining gamecoord.Coordinator and, for bot players,
+		// bot.Notifier.
 		lby := lobby.New(func(_ context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
 			coord := gamecoord.New(gameID, players, cf)
-			coord.SetOnGameOver(makeOnGameOverCallback(s, &pendingResults))
-			g, err := game.NewGame(players, coord)
+			// Bot games are intentionally not persisted: the bot is not a real
+			// player_state row, so there is no valid player_id for game_results.
+			// game_over is still published to Centrifugo so the frontend can finish
+			// the game UI normally.
+			if !hasBotPlayer(players) {
+				coord.SetOnGameOver(makeOnGameOverCallback(s, &pendingResults))
+			}
+
+			var notifiers []game.Notifier
+			notifiers = append(notifiers, coord)
+
+			var botNotifier *bot.Notifier
+			for _, p := range players {
+				if p.Type == game.PlayerTypeBot {
+					botNotifier = bot.NewNotifier(bot.NewEngine(bot.NewRandomValidStrategy(game.Dict)), p.ID)
+					notifiers = append(notifiers, botNotifier)
+					break
+				}
+			}
+
+			g, err := game.NewGame(players, game.NewCompositeNotifier(notifiers...))
 			if err != nil {
 				return nil, err
 			}
 			coord.SetGame(g)
+			if botNotifier != nil {
+				botNotifier.SetGame(g)
+			}
 			return g, nil
 		})
 		mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
@@ -232,6 +258,16 @@ func init() {
 	serverCmd.Flags().AddFlagSet(cfg.Flags("server"))
 	serverCmd.Flags().AddFlagSet(cfg.Session.Flags("redis"))
 	serverCmd.Flags().AddFlagSet(cfg.Presence.Flags("presence"))
+}
+
+// hasBotPlayer reports whether any player in the list is a bot.
+func hasBotPlayer(players []*game.Player) bool {
+	for _, p := range players {
+		if p.Type == game.PlayerTypeBot {
+			return true
+		}
+	}
+	return false
 }
 
 // gameResultSaver matches *storage.Storage so the callback can be unit-tested.

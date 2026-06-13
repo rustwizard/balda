@@ -177,7 +177,7 @@ func buildGameState(rec *lobby.GameRecord, currentTurnUID string) centrifugo.EvG
 		Board:          rec.Game.BoardSnapshot(),
 		CurrentTurnUID: currentTurnUID,
 		Players:        players,
-		Status:         "in_progress",
+		Status:         centrifugo.GameStatusInProgress,
 		MoveNumber:     rec.Game.MoveNumber(),
 	}
 }

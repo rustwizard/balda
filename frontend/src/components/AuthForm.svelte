@@ -32,7 +32,7 @@
 
       const player = 'player' in res ? res.player : res.user;
       gameState.setAuth({
-        apiKey,
+        apiKey: player.key,
         sessionId: player.sid,
         playerUid: player.uid,
         nickname: player.firstname,

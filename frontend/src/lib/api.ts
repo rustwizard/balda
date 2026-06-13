@@ -69,6 +69,10 @@ export function createGame(apiKey: string, sessionId: string): Promise<CreateGam
   return apiFetch('/games', { method: 'POST' }, apiKey, sessionId);
 }
 
+export function createGameWithBot(apiKey: string, sessionId: string): Promise<JoinGameResponse> {
+  return apiFetch('/games/with-bot', { method: 'POST' }, apiKey, sessionId);
+}
+
 export function joinGame(gameId: string, apiKey: string, sessionId: string): Promise<JoinGameResponse> {
   return apiFetch(`/games/${gameId}/join`, { method: 'POST' }, apiKey, sessionId);
 }

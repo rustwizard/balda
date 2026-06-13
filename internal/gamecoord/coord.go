@@ -259,7 +259,7 @@ func (c *Coordinator) publishGameState() {
 		Board:          board,
 		CurrentTurnUID: currentTurn,
 		Players:        players,
-		Status:         "in_progress",
+		Status:         centrifugo.GameStatusInProgress,
 		MoveNumber:     moveNum,
 	}
 

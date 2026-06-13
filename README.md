@@ -16,6 +16,11 @@ Balda is a classic Russian word game. Two players share a 5×5 grid. The game st
 
 The player with the most words when the game ends wins.
 
+## Game Modes
+
+- **PvP** — create a game and wait for an opponent to join, or join an existing waiting game.
+- **Play vs Bot** — `POST /games/with-bot` starts an immediate game against a server-side bot. The bot uses a trie-backed DFS strategy to find valid Russian words and plays with a short thinking delay.
+
 ## Tech Stack
 
 | Layer | Technology |

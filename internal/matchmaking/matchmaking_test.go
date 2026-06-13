@@ -16,7 +16,7 @@ import (
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 func player(id string, exp int) *game.Player {
-	return &game.Player{ID: id, Exp: exp}
+	return &game.Player{ID: id, Exp: exp, Type: game.PlayerTypeHuman}
 }
 
 // noopCallback is a MatchCallback that always succeeds without side effects.

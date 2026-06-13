@@ -131,7 +131,7 @@ func (m *mockNotifier) timeoutCount() int {
 func makePlayers(ids ...string) []*game.Player {
 	players := make([]*game.Player, len(ids))
 	for i, id := range ids {
-		players[i] = &game.Player{ID: id, Exp: i * 100}
+		players[i] = &game.Player{ID: id, Exp: i * 100, Type: game.PlayerTypeHuman}
 	}
 	return players
 }

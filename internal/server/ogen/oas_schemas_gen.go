@@ -298,6 +298,18 @@ func (s *CreateGameResponse) SetGameToken(val OptString) {
 
 func (*CreateGameResponse) createGameRes() {}
 
+type CreateGameWithBotConflict ErrorResponse
+
+func (*CreateGameWithBotConflict) createGameWithBotRes() {}
+
+type CreateGameWithBotInternalServerError ErrorResponse
+
+func (*CreateGameWithBotInternalServerError) createGameWithBotRes() {}
+
+type CreateGameWithBotUnauthorized ErrorResponse
+
+func (*CreateGameWithBotUnauthorized) createGameWithBotRes() {}
+
 // Ref: #/components/schemas/ErrorResponse
 type ErrorResponse struct {
 	// The HTTP response code.
@@ -523,7 +535,8 @@ func (s *JoinGameResponse) SetCurrentTurnUID(val OptString) {
 	s.CurrentTurnUID = val
 }
 
-func (*JoinGameResponse) joinGameRes() {}
+func (*JoinGameResponse) createGameWithBotRes() {}
+func (*JoinGameResponse) joinGameRes()          {}
 
 type JoinGameUnauthorized ErrorResponse
 

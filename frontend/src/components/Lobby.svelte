@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createGame, joinGame, listGames } from '../lib/api';
+  import { createGame, createGameWithBot, joinGame, listGames } from '../lib/api';
   import { centrifugo } from '../lib/centrifugo';
   import { gameState } from '../stores/game.svelte';
 
@@ -53,6 +53,36 @@
     }
   }
 
+  async function createWithBot() {
+    loading = true;
+    error = '';
+    try {
+      const res = await createGameWithBot(gameState.apiKey, gameState.sessionId);
+      if (res.game_token) {
+        centrifugo.subscribe(`game:${res.game.id}`, res.game_token);
+      }
+      gameState.startGame(res.game);
+      if (res.board && res.current_turn_uid) {
+        const players = res.game.players?.length
+          ? res.game.players.map((p) => ({ uid: p.uid, score: 0, words_count: 0, words: [] }))
+          : res.game.player_ids.map((uid) => ({ uid, score: 0, words_count: 0, words: [] }));
+        gameState.applyGameState({
+          type: 'game_state',
+          game_id: res.game.id,
+          board: res.board,
+          current_turn_uid: res.current_turn_uid,
+          players,
+          status: 'in_progress',
+          move_number: 0,
+        });
+      }
+    } catch (err: any) {
+      error = err.message;
+    } finally {
+      loading = false;
+    }
+  }
+
   // Load initial game list and subscribe to lobby channel once
   $effect(() => {
     listGames(gameState.apiKey, gameState.sessionId)
@@ -81,6 +111,14 @@
     class="mb-4 w-full rounded-xl bg-blue-600 px-4 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
   >
     Создать игру
+  </button>
+
+  <button
+    onclick={createWithBot}
+    disabled={loading}
+    class="mb-4 w-full rounded-xl bg-purple-600 px-4 py-3 font-bold text-white transition hover:bg-purple-700 disabled:opacity-50"
+  >
+    🤖 Играть с ботом
   </button>
 
   {#if error}
