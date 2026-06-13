@@ -119,6 +119,19 @@ func TestMoveGameHandler(t *testing.T) {
 		assert.Equal(t, http.StatusConflict, errResp.Status.Value)
 	})
 
+	t.Run("non-participant returns 403", func(t *testing.T) {
+		gid := newGame(t)
+		outsiderCtx, _ := signupCtx(t, h, "move.outsider@example.org")
+		res, err := h.MoveGame(outsiderCtx, &baldaapi.MoveRequest{
+			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "а"},
+			WordPath:  []baldaapi.BoardCell{{Row: 1, Col: 2}, {Row: 2, Col: 2}},
+		}, baldaapi.MoveGameParams{ID: gid})
+		require.NoError(t, err)
+		errResp, ok := res.(*baldaapi.MoveGameForbidden)
+		require.True(t, ok, "expected *MoveGameForbidden, got %T", res)
+		assert.Equal(t, http.StatusForbidden, errResp.Status.Value)
+	})
+
 	t.Run("invalid word returns 400", func(t *testing.T) {
 		gid := newGame(t)
 		// щ(1,2)→?(2,2)→?(2,3): 3 cells, щ not adjacent to any existing letter → ErrWrongLetterPlace → 400

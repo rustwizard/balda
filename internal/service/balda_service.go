@@ -13,6 +13,10 @@ import (
 	"github.com/rustwizard/balda/internal/storage"
 )
 
+// ErrNotParticipant is returned by game actions when the caller is authenticated
+// but is not a participant of the target game. Handlers map it to 403 Forbidden.
+var ErrNotParticipant = errors.New("service: player is not a participant of this game")
+
 type Balda struct {
 	lby *lobby.Lobby
 	mm  *matchmaking.Queue
@@ -161,7 +165,7 @@ func (s *Balda) SubmitMove(ctx context.Context, uid int64, gameID string, newLet
 	}
 
 	if !s.isPlayerInGame(rec, playerID) {
-		return nil, "", fmt.Errorf("player is not in this game")
+		return nil, "", ErrNotParticipant
 	}
 
 	// Resolve characters for the word path from the current board state.
@@ -192,7 +196,7 @@ func (s *Balda) ProposeEnd(ctx context.Context, uid int64, gameID string) error 
 		return err
 	}
 	if !s.isPlayerInGame(rec, playerID) {
-		return fmt.Errorf("player is not in this game")
+		return ErrNotParticipant
 	}
 	return rec.Game.ProposeEnd(playerID)
 }
@@ -208,7 +212,7 @@ func (s *Balda) AcceptEnd(ctx context.Context, uid int64, gameID string) error {
 		return err
 	}
 	if !s.isPlayerInGame(rec, playerID) {
-		return fmt.Errorf("player is not in this game")
+		return ErrNotParticipant
 	}
 	return rec.Game.AcceptEnd(playerID)
 }
@@ -224,7 +228,7 @@ func (s *Balda) RejectEnd(ctx context.Context, uid int64, gameID string) error {
 		return err
 	}
 	if !s.isPlayerInGame(rec, playerID) {
-		return fmt.Errorf("player is not in this game")
+		return ErrNotParticipant
 	}
 	return rec.Game.RejectEnd(playerID)
 }
@@ -242,7 +246,7 @@ func (s *Balda) SkipTurn(ctx context.Context, uid int64, gameID string) (*lobby.
 	}
 
 	if !s.isPlayerInGame(rec, playerID) {
-		return nil, "", fmt.Errorf("player is not in this game")
+		return nil, "", ErrNotParticipant
 	}
 
 	if err := rec.Game.Skip(playerID); err != nil {

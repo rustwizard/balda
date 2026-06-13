@@ -286,6 +286,8 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           description: Game not found
           content:
@@ -326,6 +328,8 @@ paths:
           description: Proposal sent successfully; waiting for opponent's response
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           description: Game not found
           content:
@@ -363,6 +367,8 @@ paths:
           description: Proposal accepted; game is now over
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           description: Game not found
           content:
@@ -400,6 +406,8 @@ paths:
           description: Proposal rejected; game continues
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           description: Game not found
           content:
@@ -436,6 +444,8 @@ paths:
           description: Turn skipped successfully
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           description: Game not found
           content:
@@ -494,6 +504,16 @@ components:
             status: 401
             message: "Session required"
             type: "Unauthorized"
+    Forbidden:
+      description: Authenticated but not allowed to act on this resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: 403
+            message: "not a participant of this game"
+            type: "Forbidden"
     InternalServerError:
       description: Unexpected internal server error.
       content:

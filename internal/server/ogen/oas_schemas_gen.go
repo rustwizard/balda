@@ -11,6 +11,10 @@ type AcceptEndGameConflict ErrorResponse
 
 func (*AcceptEndGameConflict) acceptEndGameRes() {}
 
+type AcceptEndGameForbidden ErrorResponse
+
+func (*AcceptEndGameForbidden) acceptEndGameRes() {}
+
 // AcceptEndGameNoContent is response for AcceptEndGame operation.
 type AcceptEndGameNoContent struct{}
 
@@ -640,6 +644,10 @@ func (*MoveGameBadRequest) moveGameRes() {}
 type MoveGameConflict ErrorResponse
 
 func (*MoveGameConflict) moveGameRes() {}
+
+type MoveGameForbidden ErrorResponse
+
+func (*MoveGameForbidden) moveGameRes() {}
 
 type MoveGameInternalServerError ErrorResponse
 
@@ -1431,6 +1439,10 @@ type ProposeEndGameConflict ErrorResponse
 
 func (*ProposeEndGameConflict) proposeEndGameRes() {}
 
+type ProposeEndGameForbidden ErrorResponse
+
+func (*ProposeEndGameForbidden) proposeEndGameRes() {}
+
 // ProposeEndGameNoContent is response for ProposeEndGame operation.
 type ProposeEndGameNoContent struct{}
 
@@ -1517,6 +1529,10 @@ func (*RefreshResponse) refreshTokenRes() {}
 type RejectEndGameConflict ErrorResponse
 
 func (*RejectEndGameConflict) rejectEndGameRes() {}
+
+type RejectEndGameForbidden ErrorResponse
+
+func (*RejectEndGameForbidden) rejectEndGameRes() {}
 
 // RejectEndGameNoContent is response for RejectEndGame operation.
 type RejectEndGameNoContent struct{}
@@ -1675,6 +1691,10 @@ func (*SignupResponse) signupRes() {}
 type SkipGameConflict ErrorResponse
 
 func (*SkipGameConflict) skipGameRes() {}
+
+type SkipGameForbidden ErrorResponse
+
+func (*SkipGameForbidden) skipGameRes() {}
 
 // SkipGameNoContent is response for SkipGame operation.
 type SkipGameNoContent struct{}
