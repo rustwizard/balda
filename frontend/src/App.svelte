@@ -5,8 +5,15 @@
   import GameScreen from './components/GameScreen.svelte';
   import { gameState } from './stores/game.svelte';
   import { centrifugo } from './lib/centrifugo';
-  import { ping } from './lib/api';
+  import { ping, setOnAuthExpired } from './lib/api';
   import type { CentrifugoEvent } from './types';
+
+  // When the refresh token can no longer renew access, tear down and re-auth.
+  setOnAuthExpired(() => {
+    centrifugo.disconnect();
+    connected = false;
+    gameState.resetToAuth();
+  });
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const CENTRIFUGO_WS_URL = import.meta.env.VITE_CENTRIFUGO_WS_URL || `${protocol}//${window.location.host}/connection/websocket`;

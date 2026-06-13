@@ -82,6 +82,19 @@ export function createGameState() {
     lobbyToken = data.lobbyToken;
   }
 
+  function resetToAuth() {
+    phase = "auth";
+    playerUid = "";
+    nickname = "";
+    exp = 0;
+    centrifugoToken = "";
+    lobbyToken = "";
+    game = null;
+    resetBoard();
+    players = [];
+    lobbyGames = [];
+  }
+
   function setLobby() {
     phase = "lobby";
     game = null;
@@ -371,6 +384,7 @@ export function createGameState() {
     },
 
     setAuth,
+    resetToAuth,
     setLobby,
     setWaiting,
     startGame,
