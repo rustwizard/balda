@@ -24,7 +24,6 @@ type UserAuth struct {
 	Lastname  string
 	PlayerID  uuid.UUID
 	Exp       int64
-	APIKey    string
 	Role      string
 }
 
@@ -37,7 +36,6 @@ type UserForToken struct {
 // UserCreated holds the data returned after a successful signup.
 type UserCreated struct {
 	UID      int64
-	APIKey   string
 	PlayerID uuid.UUID
 	Role     string
 }
@@ -50,11 +48,11 @@ func (b *Balda) AuthUser(ctx context.Context, email, password string) (UserAuth,
 	var u UserAuth
 	var hash string
 	err := b.db.QueryRow(ctx, `
-		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0), u.api_key, u.role, u.hash_password
+		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0), u.role, u.hash_password
 		FROM users u
 		JOIN player_state ps ON ps.user_id = u.user_id
 		WHERE u.email = $1
-	`, email).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp, &u.APIKey, &u.Role, &hash)
+	`, email).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp, &u.Role, &hash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return UserAuth{}, ErrInvalidCredentials
 	}
@@ -65,26 +63,6 @@ func (b *Balda) AuthUser(ctx context.Context, email, password string) (UserAuth,
 		return UserAuth{}, ErrInvalidCredentials
 	}
 	return u, nil
-}
-
-// ValidateAPIKey reports whether the given string is a valid UUID that exists
-// as an api_key in the users table. Invalid UUID format returns false without
-// hitting the database.
-func (b *Balda) ValidateAPIKey(ctx context.Context, apiKey string) (bool, error) {
-	parsed, err := uuid.Parse(apiKey)
-	if err != nil {
-		return false, nil
-	}
-	ctx, cancel := context.WithTimeout(ctx, b.t)
-	defer cancel()
-
-	var exists bool
-	if err := b.db.QueryRow(ctx,
-		`SELECT EXISTS(SELECT 1 FROM users WHERE api_key = $1)`, parsed,
-	).Scan(&exists); err != nil {
-		return false, fmt.Errorf("validate api key: %w", err)
-	}
-	return exists, nil
 }
 
 // GetUserForToken returns the player UUID and role for an existing user, used
@@ -125,9 +103,9 @@ func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, pass
 	var created UserCreated
 	err = tx.QueryRow(ctx,
 		`INSERT INTO users(first_name, last_name, email, hash_password)
-		 VALUES($1, $2, $3, $4) RETURNING user_id, api_key, role`,
+		 VALUES($1, $2, $3, $4) RETURNING user_id, role`,
 		firstname, lastname, email, string(hash),
-	).Scan(&created.UID, &created.APIKey, &created.Role)
+	).Scan(&created.UID, &created.Role)
 	if err != nil {
 		return UserCreated{}, fmt.Errorf("create user: insert users: %w", err)
 	}

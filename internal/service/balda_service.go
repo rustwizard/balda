@@ -66,11 +66,6 @@ func (s *Balda) CreateUser(ctx context.Context, firstname, lastname, email, pass
 	return s.s.CreateUser(ctx, firstname, lastname, email, password, nickname)
 }
 
-// ValidateAPIKey reports whether the given api_key belongs to a registered user.
-func (s *Balda) ValidateAPIKey(ctx context.Context, apiKey string) (bool, error) {
-	return s.s.ValidateAPIKey(ctx, apiKey)
-}
-
 // GetPlayerState returns the profile fields for the given player UUID.
 func (s *Balda) GetPlayerState(ctx context.Context, playerID uuid.UUID) (storage.PlayerState, error) {
 	return s.s.GetPlayerState(ctx, playerID)
