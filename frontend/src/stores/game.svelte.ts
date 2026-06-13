@@ -26,8 +26,6 @@ export interface PlayerInfo {
 
 export function createGameState() {
   // Auth & session
-  let apiKey = $state<string>("");
-  let sessionId = $state<string>("");
   let playerUid = $state<string>("");
   let nickname = $state<string>("");
   let exp = $state<number>(0);
@@ -71,16 +69,12 @@ export function createGameState() {
   }
 
   function setAuth(data: {
-    apiKey: string;
-    sessionId: string;
     playerUid: string;
     nickname: string;
     exp: number;
     centrifugoToken: string;
     lobbyToken: string;
   }) {
-    apiKey = data.apiKey;
-    sessionId = data.sessionId;
     playerUid = data.playerUid;
     nickname = data.nickname;
     exp = data.exp;
@@ -300,12 +294,6 @@ export function createGameState() {
   }
 
   return {
-    get apiKey() {
-      return apiKey;
-    },
-    get sessionId() {
-      return sessionId;
-    },
     get playerUid() {
       return playerUid;
     },

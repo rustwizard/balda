@@ -43,7 +43,7 @@
   async function handleProposeEnd() {
     if (!gameState.game) return;
     try {
-      await api.proposeEnd(gameState.game.id, gameState.apiKey, gameState.sessionId);
+      await api.proposeEnd(gameState.game.id);
     } catch (err: any) {
       gameState.showNotif(err?.message || 'Не удалось предложить ничью');
     }
@@ -52,7 +52,7 @@
   async function handleAcceptEnd() {
     if (!gameState.game) return;
     try {
-      await api.acceptEnd(gameState.game.id, gameState.apiKey, gameState.sessionId);
+      await api.acceptEnd(gameState.game.id);
     } catch (err: any) {
       gameState.showNotif(err?.message || 'Не удалось принять предложение');
     }
@@ -61,7 +61,7 @@
   async function handleRejectEnd() {
     if (!gameState.game) return;
     try {
-      await api.rejectEnd(gameState.game.id, gameState.apiKey, gameState.sessionId);
+      await api.rejectEnd(gameState.game.id);
     } catch (err: any) {
       gameState.showNotif(err?.message || 'Не удалось отклонить предложение');
     }
@@ -71,7 +71,7 @@
     if (!gameState.isMyTurn || gameState.moveLoading || !gameState.game) return;
     gameState.setMoveLoading(true);
     try {
-      await api.skipTurn(gameState.game.id, gameState.apiKey, gameState.sessionId);
+      await api.skipTurn(gameState.game.id);
       gameState.clearSelection();
       gameState.undoNewLetter();
     } catch (err: any) {
@@ -103,7 +103,7 @@
 
     gameState.setMoveLoading(true);
     try {
-      const resp = await api.submitMove(gameState.game.id, gameState.apiKey, gameState.sessionId, payload);
+      const resp = await api.submitMove(gameState.game.id, payload);
       gameState.applyMoveResponse(resp);
     } catch (err: any) {
       gameState.showNotif(err?.message || 'Не удалось отправить слово');
