@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -16,19 +15,10 @@ func TestCreateGameHandler(t *testing.T) {
 	h, cleanup := setupHandlers(t)
 	defer cleanup()
 
-	ctx := context.Background()
+	playerCtx, pid := signupCtx(t, h, "game.creator@example.org")
 
-	signupRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
-		Firstname: "Game",
-		Lastname:  "Creator",
-		Email:     "game.creator@example.org",
-		Password:  "pass",
-	})
-	require.NoError(t, err)
-	player := signupRes.(*baldaapi.SignupResponse).User.Value
-
-	t.Run("unknown session returns 401", func(t *testing.T) {
-		res, err := h.CreateGame(ctx, baldaapi.CreateGameParams{XAPISession: "unknown-sid"})
+	t.Run("missing claims returns 401", func(t *testing.T) {
+		res, err := h.CreateGame(context.Background())
 		require.NoError(t, err)
 
 		errResp, ok := res.(*baldaapi.ErrorResponse)
@@ -37,7 +27,7 @@ func TestCreateGameHandler(t *testing.T) {
 	})
 
 	t.Run("valid session creates a waiting game", func(t *testing.T) {
-		res, err := h.CreateGame(ctx, baldaapi.CreateGameParams{XAPISession: player.Sid.Value})
+		res, err := h.CreateGame(playerCtx)
 		require.NoError(t, err)
 
 		resp, ok := res.(*baldaapi.CreateGameResponse)
@@ -51,12 +41,12 @@ func TestCreateGameHandler(t *testing.T) {
 		assert.True(t, g.StartedAt.IsSet())
 		assert.Positive(t, g.StartedAt.Value)
 		require.Len(t, g.Players, 1)
-		assert.Equal(t, player.UID.Value, g.Players[0].UID.Value)
+		assert.Equal(t, pid, g.Players[0].UID.Value)
 	})
 
 	t.Run("player already in a game returns conflict", func(t *testing.T) {
 		// The player already has a game from the previous sub-test.
-		res, err := h.CreateGame(ctx, baldaapi.CreateGameParams{XAPISession: player.Sid.Value})
+		res, err := h.CreateGame(playerCtx)
 		require.NoError(t, err)
 
 		errResp, ok := res.(*baldaapi.ErrorResponse)
@@ -66,34 +56,14 @@ func TestCreateGameHandler(t *testing.T) {
 }
 
 func TestCreateGameHTTP(t *testing.T) {
-	srv, email, password, apiKey, cleanup := setupServer(t)
+	srv, _, _, token, cleanup := setupServer(t)
 	defer cleanup()
 
 	gamesURL := srv.URL + "/balda/api/v1/games"
 
-	authResp, err := http.DefaultClient.Do(func() *http.Request {
-		body, _ := json.Marshal(map[string]string{"email": email, "password": password})
-		req, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Key", apiKey)
-		return req
-	}())
-	require.NoError(t, err)
-	defer authResp.Body.Close()
-
-	var authBody struct {
-		Player struct {
-			Sid string `json:"sid"`
-		} `json:"player"`
-	}
-	require.NoError(t, json.NewDecoder(authResp.Body).Decode(&authBody))
-	sid := authBody.Player.Sid
-	require.NotEmpty(t, sid)
-
-	t.Run("missing api key returns 401", func(t *testing.T) {
+	t.Run("missing token returns 401", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -101,11 +71,10 @@ func TestCreateGameHTTP(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
-	t.Run("unknown session returns 401", func(t *testing.T) {
+	t.Run("invalid token returns 401", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", apiKey)
-		req.Header.Set("X-API-Session", "unknown-sid")
+		req.Header.Set("Authorization", "Bearer bad-token")
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -116,8 +85,7 @@ func TestCreateGameHTTP(t *testing.T) {
 	t.Run("valid request creates game and returns 200", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", apiKey)
-		req.Header.Set("X-API-Session", sid)
+		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

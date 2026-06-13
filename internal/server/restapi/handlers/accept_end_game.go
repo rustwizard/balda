@@ -9,24 +9,15 @@ import (
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
-	"github.com/rustwizard/balda/internal/session"
 )
 
 // AcceptEndGame implements baldaapi.Handler.
 func (h *Handlers) AcceptEndGame(ctx context.Context, params baldaapi.AcceptEndGameParams) (baldaapi.AcceptEndGameRes, error) {
-	uid, err := h.sess.GetUID(params.XAPISession)
-	if err != nil {
-		if errors.Is(err, session.ErrNotFound) {
-			return &baldaapi.AcceptEndGameUnauthorized{
-				Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-				Message: baldaapi.NewOptString("session not found"),
-				Type:    baldaapi.NewOptString("Unauthorized"),
-			}, nil
-		}
-		slog.Error("accept_end_game: get uid", slog.String("sid", params.XAPISession), slog.Any("error", err))
+	uid, ok := uidFromContext(ctx)
+	if !ok {
 		return &baldaapi.AcceptEndGameUnauthorized{
 			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-			Message: baldaapi.NewOptString("session unavailable"),
+			Message: baldaapi.NewOptString("unauthorized"),
 			Type:    baldaapi.NewOptString("Unauthorized"),
 		}, nil
 	}

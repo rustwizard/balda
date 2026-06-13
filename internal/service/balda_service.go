@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rustwizard/balda/internal/game"
@@ -69,6 +70,31 @@ func (s *Balda) ValidateAPIKey(ctx context.Context, apiKey string) (bool, error)
 // GetPlayerState returns the profile fields for the given player UUID.
 func (s *Balda) GetPlayerState(ctx context.Context, playerID uuid.UUID) (storage.PlayerState, error) {
 	return s.s.GetPlayerState(ctx, playerID)
+}
+
+// GetUserForToken returns the player UUID and role needed to mint an access token.
+func (s *Balda) GetUserForToken(ctx context.Context, uid int64) (storage.UserForToken, error) {
+	return s.s.GetUserForToken(ctx, uid)
+}
+
+// SaveRefreshToken persists the HMAC hash of a refresh token for the user.
+func (s *Balda) SaveRefreshToken(ctx context.Context, uid int64, tokenHash string, expiresAt time.Time, userAgent, ipAddr string) error {
+	return s.s.SaveRefreshToken(ctx, uid, tokenHash, expiresAt, userAgent, ipAddr)
+}
+
+// GetRefreshToken fetches a refresh token row by its hash.
+func (s *Balda) GetRefreshToken(ctx context.Context, tokenHash string) (storage.RefreshToken, error) {
+	return s.s.GetRefreshToken(ctx, tokenHash)
+}
+
+// RevokeRefreshToken marks a single refresh token as revoked.
+func (s *Balda) RevokeRefreshToken(ctx context.Context, tokenHash string) error {
+	return s.s.RevokeRefreshToken(ctx, tokenHash)
+}
+
+// RevokeAllUserTokens marks all of a user's refresh tokens as revoked.
+func (s *Balda) RevokeAllUserTokens(ctx context.Context, uid int64) error {
+	return s.s.RevokeAllUserTokens(ctx, uid)
 }
 
 // CreateGame creates a new game in waiting status for the given user.

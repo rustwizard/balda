@@ -25,6 +25,13 @@ type UserAuth struct {
 	PlayerID  uuid.UUID
 	Exp       int64
 	APIKey    string
+	Role      string
+}
+
+// UserForToken holds the fields needed to mint an access token for an existing user.
+type UserForToken struct {
+	PlayerID uuid.UUID
+	Role     string
 }
 
 // UserCreated holds the data returned after a successful signup.
@@ -32,6 +39,7 @@ type UserCreated struct {
 	UID      int64
 	APIKey   string
 	PlayerID uuid.UUID
+	Role     string
 }
 
 // AuthUser verifies email/password and returns the user's identity.
@@ -42,11 +50,11 @@ func (b *Balda) AuthUser(ctx context.Context, email, password string) (UserAuth,
 	var u UserAuth
 	var hash string
 	err := b.db.QueryRow(ctx, `
-		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0), u.api_key, u.hash_password
+		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0), u.api_key, u.role, u.hash_password
 		FROM users u
 		JOIN player_state ps ON ps.user_id = u.user_id
 		WHERE u.email = $1
-	`, email).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp, &u.APIKey, &hash)
+	`, email).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp, &u.APIKey, &u.Role, &hash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return UserAuth{}, ErrInvalidCredentials
 	}
@@ -79,6 +87,25 @@ func (b *Balda) ValidateAPIKey(ctx context.Context, apiKey string) (bool, error)
 	return exists, nil
 }
 
+// GetUserForToken returns the player UUID and role for an existing user, used
+// when minting a fresh access token during refresh.
+func (b *Balda) GetUserForToken(ctx context.Context, uid int64) (UserForToken, error) {
+	ctx, cancel := context.WithTimeout(ctx, b.t)
+	defer cancel()
+
+	var u UserForToken
+	err := b.db.QueryRow(ctx, `
+		SELECT ps.player_id, u.role
+		FROM users u
+		JOIN player_state ps ON ps.user_id = u.user_id
+		WHERE u.user_id = $1
+	`, uid).Scan(&u.PlayerID, &u.Role)
+	if err != nil {
+		return UserForToken{}, fmt.Errorf("get user for token: %w", err)
+	}
+	return u, nil
+}
+
 // CreateUser inserts a new user and their player_state in a single transaction.
 func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, password, nickname string) (UserCreated, error) {
 	ctx, cancel := context.WithTimeout(ctx, b.t)
@@ -98,9 +125,9 @@ func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, pass
 	var created UserCreated
 	err = tx.QueryRow(ctx,
 		`INSERT INTO users(first_name, last_name, email, hash_password)
-		 VALUES($1, $2, $3, $4) RETURNING user_id, api_key`,
+		 VALUES($1, $2, $3, $4) RETURNING user_id, api_key, role`,
 		firstname, lastname, email, string(hash),
-	).Scan(&created.UID, &created.APIKey)
+	).Scan(&created.UID, &created.APIKey, &created.Role)
 	if err != nil {
 		return UserCreated{}, fmt.Errorf("create user: insert users: %w", err)
 	}

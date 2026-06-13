@@ -22,6 +22,7 @@ services:
     environment:
       SERVER_ADDR: 0.0.0.0
       SERVER_PORT: 9666
+      AUTH_JWT_SECRET: balda-dev-jwt-secret-change-me-32b
       PG_HOST: pg
       PG_USER: balda
       PG_DATABASE: balda

@@ -11,24 +11,15 @@ import (
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
-	"github.com/rustwizard/balda/internal/session"
 )
 
 // MoveGame implements baldaapi.Handler.
 func (h *Handlers) MoveGame(ctx context.Context, req *baldaapi.MoveRequest, params baldaapi.MoveGameParams) (baldaapi.MoveGameRes, error) {
-	uid, err := h.sess.GetUID(params.XAPISession)
-	if err != nil {
-		if errors.Is(err, session.ErrNotFound) {
-			return &baldaapi.MoveGameUnauthorized{
-				Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-				Message: baldaapi.NewOptString("session not found"),
-				Type:    baldaapi.NewOptString("Unauthorized"),
-			}, nil
-		}
-		slog.Error("move_game: get uid", slog.String("sid", params.XAPISession), slog.Any("error", err))
+	uid, ok := uidFromContext(ctx)
+	if !ok {
 		return &baldaapi.MoveGameUnauthorized{
 			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-			Message: baldaapi.NewOptString("session unavailable"),
+			Message: baldaapi.NewOptString("unauthorized"),
 			Type:    baldaapi.NewOptString("Unauthorized"),
 		}, nil
 	}

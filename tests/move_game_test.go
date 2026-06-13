@@ -70,37 +70,26 @@ func TestMoveGameHandler(t *testing.T) {
 	h, lby, cleanup := setupFull(t)
 	defer cleanup()
 
-	ctx := context.Background()
-
-	creatorRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
-		Firstname: "Creator", Lastname: "User", Email: "move.creator@example.org", Password: "pass",
-	})
-	require.NoError(t, err)
-	creator := creatorRes.(*baldaapi.SignupResponse).User.Value
-
-	joinerRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
-		Firstname: "Joiner", Lastname: "User", Email: "move.joiner@example.org", Password: "pass",
-	})
-	require.NoError(t, err)
-	joiner := joinerRes.(*baldaapi.SignupResponse).User.Value
+	creatorCtx, _ := signupCtx(t, h, "move.creator@example.org")
+	joinerCtx, joinerPID := signupCtx(t, h, "move.joiner@example.org")
 
 	// helper to create a fresh isolated game for each sub-test
 	newGame := func(t *testing.T) uuid.UUID {
 		t.Helper()
-		createRes, err := h.CreateGame(ctx, baldaapi.CreateGameParams{XAPISession: creator.Sid.Value})
+		createRes, err := h.CreateGame(creatorCtx)
 		require.NoError(t, err)
 		gid := createRes.(*baldaapi.CreateGameResponse).Game.Value.ID.Value
-		_, err = h.JoinGame(ctx, baldaapi.JoinGameParams{XAPISession: joiner.Sid.Value, ID: gid})
+		_, err = h.JoinGame(joinerCtx, baldaapi.JoinGameParams{ID: gid})
 		require.NoError(t, err)
 		t.Cleanup(func() { _ = lby.Remove(gid.String()) })
 		return gid
 	}
 
-	t.Run("unknown session returns 401", func(t *testing.T) {
-		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
+	t.Run("missing claims returns 401", func(t *testing.T) {
+		res, err := h.MoveGame(context.Background(), &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "а"},
 			WordPath:  []baldaapi.BoardCell{{Row: 1, Col: 2}, {Row: 2, Col: 2}},
-		}, baldaapi.MoveGameParams{XAPISession: "bad-sid", ID: uuid.New()})
+		}, baldaapi.MoveGameParams{ID: uuid.New()})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameUnauthorized)
 		require.True(t, ok, "expected *MoveGameUnauthorized, got %T", res)
@@ -108,10 +97,10 @@ func TestMoveGameHandler(t *testing.T) {
 	})
 
 	t.Run("unknown game id returns 404", func(t *testing.T) {
-		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
+		res, err := h.MoveGame(creatorCtx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "а"},
 			WordPath:  []baldaapi.BoardCell{{Row: 1, Col: 2}, {Row: 2, Col: 2}},
-		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: uuid.New()})
+		}, baldaapi.MoveGameParams{ID: uuid.New()})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameNotFound)
 		require.True(t, ok, "expected *MoveGameNotFound, got %T", res)
@@ -120,10 +109,10 @@ func TestMoveGameHandler(t *testing.T) {
 
 	t.Run("not player's turn returns 409", func(t *testing.T) {
 		gid := newGame(t)
-		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
+		res, err := h.MoveGame(joinerCtx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "а"},
 			WordPath:  []baldaapi.BoardCell{{Row: 1, Col: 2}, {Row: 2, Col: 2}},
-		}, baldaapi.MoveGameParams{XAPISession: joiner.Sid.Value, ID: gid})
+		}, baldaapi.MoveGameParams{ID: gid})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameConflict)
 		require.True(t, ok, "expected *MoveGameConflict, got %T", res)
@@ -133,10 +122,10 @@ func TestMoveGameHandler(t *testing.T) {
 	t.Run("invalid word returns 400", func(t *testing.T) {
 		gid := newGame(t)
 		// щ(1,2)→?(2,2)→?(2,3): 3 cells, щ not adjacent to any existing letter → ErrWrongLetterPlace → 400
-		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
+		res, err := h.MoveGame(creatorCtx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "щ"},
 			WordPath:  []baldaapi.BoardCell{{Row: 1, Col: 2}, {Row: 2, Col: 2}, {Row: 2, Col: 3}},
-		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gid})
+		}, baldaapi.MoveGameParams{ID: gid})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameBadRequest)
 		require.True(t, ok, "expected *MoveGameBadRequest, got %T", res)
@@ -146,10 +135,10 @@ func TestMoveGameHandler(t *testing.T) {
 	t.Run("new letter not in word path returns 400", func(t *testing.T) {
 		gid := newGame(t)
 		// new letter at (1,2) not present in word_path → ErrNewLetterNotInWord → 400
-		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
+		res, err := h.MoveGame(creatorCtx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{Row: 1, Col: 2, Char: "а"},
 			WordPath:  []baldaapi.BoardCell{{Row: 2, Col: 1}, {Row: 2, Col: 2}, {Row: 2, Col: 3}},
-		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gid})
+		}, baldaapi.MoveGameParams{ID: gid})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.MoveGameBadRequest)
 		require.True(t, ok, "expected *MoveGameBadRequest, got %T", res)
@@ -171,17 +160,17 @@ func TestMoveGameHandler(t *testing.T) {
 			apiPath[i] = baldaapi.BoardCell{Row: int(l.RowID), Col: int(l.ColID)}
 		}
 
-		res, err := h.MoveGame(ctx, &baldaapi.MoveRequest{
+		res, err := h.MoveGame(creatorCtx, &baldaapi.MoveRequest{
 			NewLetter: baldaapi.MoveRequestNewLetter{
 				Row: int(newLetter.RowID), Col: int(newLetter.ColID), Char: newLetter.Char,
 			},
 			WordPath: apiPath,
-		}, baldaapi.MoveGameParams{XAPISession: creator.Sid.Value, ID: gid})
+		}, baldaapi.MoveGameParams{ID: gid})
 		require.NoError(t, err)
 
 		okResp, ok := res.(*baldaapi.MoveResponse)
 		require.True(t, ok, "expected *MoveResponse, got %T", res)
-		assert.Equal(t, joiner.UID.Value, okResp.CurrentTurnUID.Value, "turn should advance to joiner")
+		assert.Equal(t, joinerPID, okResp.CurrentTurnUID.Value, "turn should advance to joiner")
 		assert.NotEmpty(t, okResp.Board)
 	})
 }
@@ -190,29 +179,18 @@ func TestSkipGameHandler(t *testing.T) {
 	h, cleanup := setupHandlers(t)
 	defer cleanup()
 
-	ctx := context.Background()
+	creatorCtx, _ := signupCtx(t, h, "skip.creator@example.org")
+	joinerCtx, _ := signupCtx(t, h, "skip.joiner@example.org")
 
-	creatorRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
-		Firstname: "Creator", Lastname: "User", Email: "skip.creator@example.org", Password: "pass",
-	})
-	require.NoError(t, err)
-	creator := creatorRes.(*baldaapi.SignupResponse).User.Value
-
-	joinerRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
-		Firstname: "Joiner", Lastname: "User", Email: "skip.joiner@example.org", Password: "pass",
-	})
-	require.NoError(t, err)
-	joiner := joinerRes.(*baldaapi.SignupResponse).User.Value
-
-	createRes, err := h.CreateGame(ctx, baldaapi.CreateGameParams{XAPISession: creator.Sid.Value})
+	createRes, err := h.CreateGame(creatorCtx)
 	require.NoError(t, err)
 	gameID := createRes.(*baldaapi.CreateGameResponse).Game.Value.ID.Value
 
-	_, err = h.JoinGame(ctx, baldaapi.JoinGameParams{XAPISession: joiner.Sid.Value, ID: gameID})
+	_, err = h.JoinGame(joinerCtx, baldaapi.JoinGameParams{ID: gameID})
 	require.NoError(t, err)
 
-	t.Run("unknown session returns 401", func(t *testing.T) {
-		res, err := h.SkipGame(ctx, baldaapi.SkipGameParams{XAPISession: "bad-sid", ID: gameID})
+	t.Run("missing claims returns 401", func(t *testing.T) {
+		res, err := h.SkipGame(context.Background(), baldaapi.SkipGameParams{ID: gameID})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.SkipGameUnauthorized)
 		require.True(t, ok, "expected *SkipGameUnauthorized, got %T", res)
@@ -220,7 +198,7 @@ func TestSkipGameHandler(t *testing.T) {
 	})
 
 	t.Run("wrong turn returns 409", func(t *testing.T) {
-		res, err := h.SkipGame(ctx, baldaapi.SkipGameParams{XAPISession: joiner.Sid.Value, ID: gameID})
+		res, err := h.SkipGame(joinerCtx, baldaapi.SkipGameParams{ID: gameID})
 		require.NoError(t, err)
 		errResp, ok := res.(*baldaapi.SkipGameConflict)
 		require.True(t, ok, "expected *SkipGameConflict, got %T", res)
@@ -228,7 +206,7 @@ func TestSkipGameHandler(t *testing.T) {
 	})
 
 	t.Run("valid skip returns 204 and advances turn", func(t *testing.T) {
-		res, err := h.SkipGame(ctx, baldaapi.SkipGameParams{XAPISession: creator.Sid.Value, ID: gameID})
+		res, err := h.SkipGame(creatorCtx, baldaapi.SkipGameParams{ID: gameID})
 		require.NoError(t, err)
 		_, ok := res.(*baldaapi.SkipGameNoContent)
 		require.True(t, ok, "expected *SkipGameNoContent, got %T", res)
@@ -236,31 +214,14 @@ func TestSkipGameHandler(t *testing.T) {
 }
 
 func TestMoveGameHTTP(t *testing.T) {
-	srv, email, password, apiKey, cleanup := setupServer(t)
+	srv, _, _, creatorToken, cleanup := setupServer(t)
 	defer cleanup()
 
-	// Auth creator
-	authBody, _ := json.Marshal(map[string]string{"email": email, "password": password})
-	authReq, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(authBody))
-	authReq.Header.Set("Content-Type", "application/json")
-	authReq.Header.Set("X-API-Key", apiKey)
-	resp, err := http.DefaultClient.Do(authReq)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	var authData struct {
-		Player struct {
-			Sid string `json:"sid"`
-		} `json:"player"`
-	}
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&authData))
-	creatorSid := authData.Player.Sid
-
-	joinerSid := postSignup(t, srv, "http.movejoiner@example.org", "pass")
+	joinerToken := postSignup(t, srv, "http.movejoiner@example.org", "pass")
 
 	// Create game
 	createReq, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/games", http.NoBody)
-	createReq.Header.Set("X-API-Key", apiKey)
-	createReq.Header.Set("X-API-Session", creatorSid)
+	createReq.Header.Set("Authorization", "Bearer "+creatorToken)
 	createResp, err := http.DefaultClient.Do(createReq)
 	require.NoError(t, err)
 	defer createResp.Body.Close()
@@ -275,8 +236,7 @@ func TestMoveGameHTTP(t *testing.T) {
 
 	// Join game
 	joinReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/balda/api/v1/games/%s/join", srv.URL, gameID), http.NoBody)
-	joinReq.Header.Set("X-API-Key", apiKey)
-	joinReq.Header.Set("X-API-Session", joinerSid)
+	joinReq.Header.Set("Authorization", "Bearer "+joinerToken)
 	joinResp, err := http.DefaultClient.Do(joinReq)
 	require.NoError(t, err)
 	defer joinResp.Body.Close()
@@ -284,29 +244,27 @@ func TestMoveGameHTTP(t *testing.T) {
 
 	moveURL := fmt.Sprintf("%s/balda/api/v1/games/%s/move", srv.URL, gameID)
 
-	t.Run("missing api key returns 401", func(t *testing.T) {
+	t.Run("missing token returns 401", func(t *testing.T) {
 		body, _ := json.Marshal(map[string]any{
 			"new_letter": map[string]any{"row": 1, "col": 2, "char": "а"},
 			"word_path":  []map[string]any{{"row": 1, "col": 2}, {"row": 2, "col": 2}},
 		})
 		req, _ := http.NewRequest(http.MethodPost, moveURL, bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Session", creatorSid)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
-	t.Run("unknown session returns 401", func(t *testing.T) {
+	t.Run("invalid token returns 401", func(t *testing.T) {
 		body, _ := json.Marshal(map[string]any{
 			"new_letter": map[string]any{"row": 1, "col": 2, "char": "а"},
 			"word_path":  []map[string]any{{"row": 1, "col": 2}, {"row": 2, "col": 2}},
 		})
 		req, _ := http.NewRequest(http.MethodPost, moveURL, bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Key", apiKey)
-		req.Header.Set("X-API-Session", "bad-sid")
+		req.Header.Set("Authorization", "Bearer bad-token")
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -320,8 +278,7 @@ func TestMoveGameHTTP(t *testing.T) {
 		})
 		req, _ := http.NewRequest(http.MethodPost, moveURL, bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Key", apiKey)
-		req.Header.Set("X-API-Session", creatorSid)
+		req.Header.Set("Authorization", "Bearer "+creatorToken)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -336,29 +293,13 @@ func TestMoveGameHTTP(t *testing.T) {
 }
 
 func TestSkipGameHTTP(t *testing.T) {
-	srv, email, password, apiKey, cleanup := setupServer(t)
+	srv, _, _, creatorToken, cleanup := setupServer(t)
 	defer cleanup()
 
-	authBody, _ := json.Marshal(map[string]string{"email": email, "password": password})
-	authReq, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(authBody))
-	authReq.Header.Set("Content-Type", "application/json")
-	authReq.Header.Set("X-API-Key", apiKey)
-	resp, err := http.DefaultClient.Do(authReq)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	var authData struct {
-		Player struct {
-			Sid string `json:"sid"`
-		} `json:"player"`
-	}
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&authData))
-	creatorSid := authData.Player.Sid
-
-	joinerSid := postSignup(t, srv, "http.skipjoiner@example.org", "pass")
+	joinerToken := postSignup(t, srv, "http.skipjoiner@example.org", "pass")
 
 	createReq, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/games", http.NoBody)
-	createReq.Header.Set("X-API-Key", apiKey)
-	createReq.Header.Set("X-API-Session", creatorSid)
+	createReq.Header.Set("Authorization", "Bearer "+creatorToken)
 	createResp, err := http.DefaultClient.Do(createReq)
 	require.NoError(t, err)
 	defer createResp.Body.Close()
@@ -372,8 +313,7 @@ func TestSkipGameHTTP(t *testing.T) {
 	gameID := createBody.Game.ID
 
 	joinReq, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/balda/api/v1/games/%s/join", srv.URL, gameID), http.NoBody)
-	joinReq.Header.Set("X-API-Key", apiKey)
-	joinReq.Header.Set("X-API-Session", joinerSid)
+	joinReq.Header.Set("Authorization", "Bearer "+joinerToken)
 	joinResp, err := http.DefaultClient.Do(joinReq)
 	require.NoError(t, err)
 	defer joinResp.Body.Close()
@@ -383,8 +323,7 @@ func TestSkipGameHTTP(t *testing.T) {
 
 	t.Run("valid skip returns 204", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodPost, skipURL, http.NoBody)
-		req.Header.Set("X-API-Key", apiKey)
-		req.Header.Set("X-API-Session", creatorSid)
+		req.Header.Set("Authorization", "Bearer "+creatorToken)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()
@@ -394,8 +333,7 @@ func TestSkipGameHTTP(t *testing.T) {
 	t.Run("wrong turn returns 409", func(t *testing.T) {
 		// After creator skipped, it's joiner's turn. Creator tries to skip again.
 		req, _ := http.NewRequest(http.MethodPost, skipURL, http.NoBody)
-		req.Header.Set("X-API-Key", apiKey)
-		req.Header.Set("X-API-Session", creatorSid)
+		req.Header.Set("Authorization", "Bearer "+creatorToken)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()

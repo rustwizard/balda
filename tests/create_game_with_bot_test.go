@@ -14,19 +14,10 @@ func TestCreateGameWithBotHandler(t *testing.T) {
 	h, cleanup := setupHandlers(t)
 	defer cleanup()
 
-	ctx := context.Background()
+	playerCtx, pid := signupCtx(t, h, "bot.player@example.org")
 
-	signupRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
-		Firstname: "Bot",
-		Lastname:  "Player",
-		Email:     "bot.player@example.org",
-		Password:  "pass",
-	})
-	require.NoError(t, err)
-	player := signupRes.(*baldaapi.SignupResponse).User.Value
-
-	t.Run("unknown session returns 401", func(t *testing.T) {
-		res, err := h.CreateGameWithBot(ctx, baldaapi.CreateGameWithBotParams{XAPISession: "unknown-sid"})
+	t.Run("missing claims returns 401", func(t *testing.T) {
+		res, err := h.CreateGameWithBot(context.Background())
 		require.NoError(t, err)
 
 		errResp, ok := res.(*baldaapi.CreateGameWithBotUnauthorized)
@@ -35,7 +26,7 @@ func TestCreateGameWithBotHandler(t *testing.T) {
 	})
 
 	t.Run("valid session creates and starts a game with bot", func(t *testing.T) {
-		res, err := h.CreateGameWithBot(ctx, baldaapi.CreateGameWithBotParams{XAPISession: player.Sid.Value})
+		res, err := h.CreateGameWithBot(playerCtx)
 		require.NoError(t, err)
 
 		resp, ok := res.(*baldaapi.JoinGameResponse)
@@ -46,16 +37,16 @@ func TestCreateGameWithBotHandler(t *testing.T) {
 		assert.True(t, g.ID.IsSet())
 		assert.Equal(t, baldaapi.GameStatusInProgress, g.Status.Value)
 		require.Len(t, g.Players, 2)
-		assert.Equal(t, player.UID.Value, g.Players[0].UID.Value)
+		assert.Equal(t, pid, g.Players[0].UID.Value)
 		assert.True(t, resp.GameToken.IsSet())
 		assert.NotEmpty(t, resp.GameToken.Value)
 		assert.NotNil(t, resp.Board)
 		assert.True(t, resp.CurrentTurnUID.IsSet())
-		assert.Equal(t, player.UID.Value.String(), resp.CurrentTurnUID.Value)
+		assert.Equal(t, pid.String(), resp.CurrentTurnUID.Value)
 	})
 
 	t.Run("player already in a game returns conflict", func(t *testing.T) {
-		res, err := h.CreateGameWithBot(ctx, baldaapi.CreateGameWithBotParams{XAPISession: player.Sid.Value})
+		res, err := h.CreateGameWithBot(playerCtx)
 		require.NoError(t, err)
 
 		errResp, ok := res.(*baldaapi.CreateGameWithBotConflict)

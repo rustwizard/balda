@@ -75,12 +75,17 @@ type CentrifugoConfig struct {
 	TokenHMACSecret string
 }
 
+type AuthConfig struct {
+	JWTSecret string
+}
+
 type Config struct {
 	ServerAddr string
 	ServerPort int
 	Pg         PgConfig
 	Session    session.Config
 	Presence   presence.Config
+	Auth       AuthConfig
 	Centrifugo CentrifugoConfig
 }
 
@@ -115,7 +120,6 @@ var serverCmd = &cobra.Command{
 			Password: cfg.Session.Password,
 			DB:       cfg.Session.DBNum,
 		})
-		sess := session.NewService(cfg.Session, rdb)
 		pres := presence.NewService(cfg.Presence, rdb)
 
 		cf := centrifugo.NewClient(cfg.Centrifugo.APIURL, cfg.Centrifugo.APIKey)
@@ -166,9 +170,12 @@ var serverCmd = &cobra.Command{
 
 		svc := service.New(lby, mm, s)
 
-		h := handlers.New(svc, sess, pres, cf, cfg.Centrifugo.TokenHMACSecret)
+		h := handlers.New(svc, pres, cfg.Auth.JWTSecret, cf, cfg.Centrifugo.TokenHMACSecret)
 
-		srv, err := baldaapi.NewServer(h, h, baldaapi.WithPathPrefix("/balda/api/v1"))
+		srv, err := baldaapi.NewServer(h, h,
+			baldaapi.WithPathPrefix("/balda/api/v1"),
+			baldaapi.WithErrorHandler(handlers.ErrorHandler),
+		)
 		if err != nil {
 			return fmt.Errorf("create ogen server: %w", err)
 		}
@@ -248,6 +255,7 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	f.StringVar(&c.Pg.Password, "pg.password", "", "postgres password")
 	f.IntVar(&c.Pg.MaxPoolSize, "pg.max_pool_size", 10, "postgres max pool size")
 	f.StringVar(&c.Pg.SSL, "pg.ssl", "disable", "postgres ssl")
+	f.StringVar(&c.Auth.JWTSecret, "auth.jwt_secret", "", "HMAC secret for signing JWT access tokens")
 	f.StringVar(&c.Centrifugo.APIURL, "centrifugo.api_url", "http://127.0.0.1:8000/api", "centrifugo api url")
 	f.StringVar(&c.Centrifugo.APIKey, "centrifugo.api_key", "", "centrifugo api key")
 	f.StringVar(&c.Centrifugo.TokenHMACSecret, "centrifugo.token_hmac_secret_key", "", "centrifugo token hmac secret")

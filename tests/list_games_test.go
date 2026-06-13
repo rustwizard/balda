@@ -1,7 +1,6 @@
 package tests
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -21,7 +20,7 @@ func TestListGamesHandler(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("empty lobby returns empty list", func(t *testing.T) {
-		res, err := h.ListGames(ctx, baldaapi.ListGamesParams{})
+		res, err := h.ListGames(ctx)
 		require.NoError(t, err)
 
 		resp, ok := res.(*baldaapi.ListGamesResponse)
@@ -36,7 +35,7 @@ func TestListGamesHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("active game appears in list", func(t *testing.T) {
-		res, err := h.ListGames(ctx, baldaapi.ListGamesParams{})
+		res, err := h.ListGames(ctx)
 		require.NoError(t, err)
 
 		resp, ok := res.(*baldaapi.ListGamesResponse)
@@ -62,7 +61,7 @@ func TestListGamesHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("two active games both appear", func(t *testing.T) {
-		res, err := h.ListGames(ctx, baldaapi.ListGamesParams{})
+		res, err := h.ListGames(ctx)
 		require.NoError(t, err)
 
 		resp := res.(*baldaapi.ListGamesResponse)
@@ -72,7 +71,7 @@ func TestListGamesHandler(t *testing.T) {
 	require.NoError(t, lby.Remove(rec.ID))
 
 	t.Run("removed game disappears from list", func(t *testing.T) {
-		res, err := h.ListGames(ctx, baldaapi.ListGamesParams{})
+		res, err := h.ListGames(ctx)
 		require.NoError(t, err)
 
 		resp := res.(*baldaapi.ListGamesResponse)
@@ -82,35 +81,14 @@ func TestListGamesHandler(t *testing.T) {
 }
 
 func TestListGamesHTTP(t *testing.T) {
-	srv, email, password, apiKey, cleanup := setupServer(t)
+	srv, _, _, token, cleanup := setupServer(t)
 	defer cleanup()
 
 	gamesURL := srv.URL + "/balda/api/v1/games"
 
-	// Auth once to get a valid session SID.
-	authResp, err := http.DefaultClient.Do(func() *http.Request {
-		body, _ := json.Marshal(map[string]string{"email": email, "password": password})
-		req, _ := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(body))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-API-Key", apiKey)
-		return req
-	}())
-	require.NoError(t, err)
-	defer authResp.Body.Close()
-
-	var authBody struct {
-		Player struct {
-			Sid string `json:"sid"`
-		} `json:"player"`
-	}
-	require.NoError(t, json.NewDecoder(authResp.Body).Decode(&authBody))
-	sid := authBody.Player.Sid
-	require.NotEmpty(t, sid)
-
-	t.Run("missing api key returns 401", func(t *testing.T) {
+	t.Run("missing token returns 401", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -118,11 +96,10 @@ func TestListGamesHTTP(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
-	t.Run("valid api key returns 200 with games array", func(t *testing.T) {
+	t.Run("valid token returns 200 with games array", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodGet, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", apiKey)
-		req.Header.Set("X-API-Session", sid)
+		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

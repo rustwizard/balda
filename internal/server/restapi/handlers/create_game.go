@@ -12,18 +12,13 @@ import (
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
-	"github.com/rustwizard/balda/internal/session"
 )
 
 // CreateGame implements baldaapi.Handler.
-func (h *Handlers) CreateGame(ctx context.Context, params baldaapi.CreateGameParams) (baldaapi.CreateGameRes, error) {
-	uid, err := h.sess.GetUID(params.XAPISession)
-	if err != nil {
-		if errors.Is(err, session.ErrNotFound) {
-			return unauthorized("session not found"), nil
-		}
-		slog.Error("create_game: get uid", slog.String("sid", params.XAPISession), slog.Any("error", err))
-		return unauthorized("session unavailable"), nil
+func (h *Handlers) CreateGame(ctx context.Context) (baldaapi.CreateGameRes, error) {
+	uid, ok := uidFromContext(ctx)
+	if !ok {
+		return unauthorized("unauthorized"), nil
 	}
 
 	rec, err := h.svc.CreateGame(ctx, uid)
