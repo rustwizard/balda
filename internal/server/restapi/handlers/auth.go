@@ -10,11 +10,11 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/session"
+	"github.com/rustwizard/balda/internal/storage"
 )
 
 // Auth implements baldaapi.Handler.
@@ -23,7 +23,7 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 
 	u, err := h.svc.AuthUser(ctx, req.Email, req.Password)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, storage.ErrInvalidCredentials) {
 			return &baldaapi.ErrorResponse{
 				Message: baldaapi.NewOptString("invalid email or password"),
 				Status:  baldaapi.NewOptInt(http.StatusUnauthorized),

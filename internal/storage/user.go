@@ -2,10 +2,20 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"golang.org/x/crypto/bcrypt"
 )
+
+// bcryptCost is the work factor for password hashing.
+const bcryptCost = 12
+
+// ErrInvalidCredentials is returned by AuthUser when the email is unknown or the
+// password does not match. Callers should map it to 401, distinct from DB errors (500).
+var ErrInvalidCredentials = errors.New("storage: invalid credentials")
 
 // UserAuth holds the data returned by a successful credential check.
 type UserAuth struct {
@@ -30,14 +40,21 @@ func (b *Balda) AuthUser(ctx context.Context, email, password string) (UserAuth,
 	defer cancel()
 
 	var u UserAuth
+	var hash string
 	err := b.db.QueryRow(ctx, `
-		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0), u.api_key
+		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0), u.api_key, u.hash_password
 		FROM users u
 		JOIN player_state ps ON ps.user_id = u.user_id
-		WHERE u.email = $1 AND u.hash_password = crypt($2, u.hash_password)
-	`, email, password).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp, &u.APIKey)
+		WHERE u.email = $1
+	`, email).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp, &u.APIKey, &hash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return UserAuth{}, ErrInvalidCredentials
+	}
 	if err != nil {
 		return UserAuth{}, fmt.Errorf("auth user: %w", err)
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)); err != nil {
+		return UserAuth{}, ErrInvalidCredentials
 	}
 	return u, nil
 }
@@ -73,11 +90,16 @@ func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, pass
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+	if err != nil {
+		return UserCreated{}, fmt.Errorf("create user: hash password: %w", err)
+	}
+
 	var created UserCreated
 	err = tx.QueryRow(ctx,
 		`INSERT INTO users(first_name, last_name, email, hash_password)
-		 VALUES($1, $2, $3, crypt($4, gen_salt('bf', 8))) RETURNING user_id, api_key`,
-		firstname, lastname, email, password,
+		 VALUES($1, $2, $3, $4) RETURNING user_id, api_key`,
+		firstname, lastname, email, string(hash),
 	).Scan(&created.UID, &created.APIKey)
 	if err != nil {
 		return UserCreated{}, fmt.Errorf("create user: insert users: %w", err)
