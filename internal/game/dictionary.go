@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/rustwizard/balda/internal/rnd"
@@ -47,6 +48,13 @@ func NewDictionary() (*Dictionary, error) {
 
 		i := 0
 		for k, v := range words {
+			// Balda uses common nouns only — skip proper nouns (leading-uppercase
+			// keys like "Диана", "Аллах"). Their lowercase common-noun homographs
+			// (парка, земля, север) are separate keys and remain.
+			if r, _ := utf8.DecodeRuneInString(k); unicode.IsUpper(r) {
+				continue
+			}
+
 			def := v.(map[string]interface{})
 			normK := normalizeWord(k)
 			dict.Definition[normK] = def["definition"].(string)
