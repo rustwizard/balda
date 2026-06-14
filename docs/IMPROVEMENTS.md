@@ -114,15 +114,16 @@ _Все критические задачи решены._
 
 ## 🟡 Средний приоритет (надёжность, дизайн, безопасность)
 
-### 14. Дублирование и рассинхрон публикаций game_state
-**Файлы:** `internal/server/restapi/handlers/move_game.go`, `internal/gamecoord/coord.go`
+### 14. ✅ Дублирование и рассинхрон публикаций game_state
+**Файлы:** `internal/server/restapi/handlers/move_game.go`, `internal/server/restapi/handlers/skip_game.go`
 
-И хендлер `MoveGame`, и `gamecoord` (на `NotifyTurnStart`) публикуют `game_state` на каждый ход.
-Хендлер при этом сам «угадывает» следующего игрока (`nextPlayerID`), дублируя логику FSM, что
-может рассинхронизироваться с реальным состоянием игры (особенно при скипах/таймаутах).
+И `MoveGame`, и `SkipGame` публиковали `game_state` с «угаданным» `nextPlayerID`, дублируя то,
+что `gamecoord` публикует на `NotifyTurnStart`, и рискуя рассинхроном с FSM.
 
-**Предложение:** оставить единственный источник истины публикаций (gamecoord), хендлер вернёт
-синхронный ответ без второй публикации.
+**Сделано:** обе хендлер-публикации `game_state` удалены — единственный источник истины теперь
+`gamecoord` (`turn_change` + `game_state` на старте хода). `MoveGame` по-прежнему возвращает
+синхронный HTTP-ответ с доской и `current_turn_uid` как оптимистичным хинтом для мовера (не
+бродкаст); `SkipGame` просто отдаёт 204. Удалён осиротевший `buildGameState`.
 
 ---
 

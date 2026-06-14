@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
@@ -98,16 +97,11 @@ func (h *Handlers) MoveGame(ctx context.Context, req *baldaapi.MoveRequest, para
 		}, nil
 	}
 
-	// The game's FSM processes the turn advance asynchronously.
-	// Compute the next player deterministically so the response matches the
-	// eventual server state even if the FSM hasn't advanced yet.
+	// The game's FSM processes the turn advance asynchronously and gamecoord
+	// publishes the authoritative game_state on NotifyTurnStart (single source
+	// of truth). Here we only compute the next player as an optimistic hint for
+	// the mover's synchronous response — no second publish.
 	nextTurnUID := nextPlayerID(moverID, scores)
-
-	// Publish updated game state to the game channel.
-	gameState := buildGameState(rec, nextTurnUID)
-	if err := h.cf.Publish(ctx, centrifugo.ChannelGame(rec.ID), gameState); err != nil {
-		slog.Error("move_game: publish game state", slog.Any("error", err))
-	}
 
 	nextUID, err := uuid.Parse(nextTurnUID)
 	if err != nil {
@@ -160,22 +154,3 @@ func nextPlayerID(moverID string, players []game.PlayerState) string {
 	return ""
 }
 
-func buildGameState(rec *lobby.GameRecord, currentTurnUID string) centrifugo.EvGameState {
-	scores := rec.Game.PlayerScores()
-	players := make([]centrifugo.PlayerState, 0, len(scores))
-	for _, s := range scores {
-		players = append(players, centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words})
-	}
-	if currentTurnUID == "" {
-		currentTurnUID = rec.Game.CurrentPlayerID()
-	}
-	return centrifugo.EvGameState{
-		Type:           "game_state",
-		GameID:         rec.ID,
-		Board:          rec.Game.BoardSnapshot(),
-		CurrentTurnUID: currentTurnUID,
-		Players:        players,
-		Status:         centrifugo.GameStatusInProgress,
-		MoveNumber:     rec.Game.MoveNumber(),
-	}
-}
