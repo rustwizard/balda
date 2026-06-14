@@ -68,8 +68,13 @@ func (c *Coordinator) NotifyTurnStart(playerID string) {
 	} else {
 		reason = "move"
 	}
-	go c.publishTurnChange(playerID, reason)
-	go c.publishGameState()
+	// Publish both in one goroutine so turn_change always precedes game_state
+	// for this turn (clients rely on that order), while still keeping the
+	// network I/O off the FSM goroutine and g.mu.
+	go func() {
+		c.publishTurnChange(playerID, reason)
+		c.publishGameState()
+	}()
 }
 
 // NotifyTimeout is called when the current player's timer expires.
