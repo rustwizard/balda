@@ -114,14 +114,14 @@ func (s *Server) handleAcceptEndGameRequest(args [1]string, argsEscaped bool, w 
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityAPIKeyHeader(ctx, AcceptEndGameOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, AcceptEndGameOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
-					Security:         "APIKeyHeader",
+					Security:         "BearerAuth",
 					Err:              err,
 				}
-				defer recordError("Security:APIKeyHeader", err)
+				defer recordError("Security:BearerAuth", err)
 				s.cfg.ErrorHandler(ctx, w, r, err)
 				return
 			}
@@ -130,29 +130,11 @@ func (s *Server) handleAcceptEndGameRequest(args [1]string, argsEscaped bool, w 
 				ctx = sctx
 			}
 		}
-		{
-			sctx, ok, err := s.securityAPIKeyQueryParam(ctx, AcceptEndGameOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "APIKeyQueryParam",
-					Err:              err,
-				}
-				defer recordError("Security:APIKeyQueryParam", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 1
-				ctx = sctx
-			}
-		}
 
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -195,10 +177,6 @@ func (s *Server) handleAcceptEndGameRequest(args [1]string, argsEscaped bool, w 
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
-				{
-					Name: "X-API-Session",
-					In:   "header",
-				}: params.XAPISession,
 				{
 					Name: "id",
 					In:   "path",
@@ -466,14 +444,14 @@ func (s *Server) handleCreateGameRequest(args [0]string, argsEscaped bool, w htt
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityAPIKeyHeader(ctx, CreateGameOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, CreateGameOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
-					Security:         "APIKeyHeader",
+					Security:         "BearerAuth",
 					Err:              err,
 				}
-				defer recordError("Security:APIKeyHeader", err)
+				defer recordError("Security:BearerAuth", err)
 				s.cfg.ErrorHandler(ctx, w, r, err)
 				return
 			}
@@ -482,29 +460,11 @@ func (s *Server) handleCreateGameRequest(args [0]string, argsEscaped bool, w htt
 				ctx = sctx
 			}
 		}
-		{
-			sctx, ok, err := s.securityAPIKeyQueryParam(ctx, CreateGameOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "APIKeyQueryParam",
-					Err:              err,
-				}
-				defer recordError("Security:APIKeyQueryParam", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 1
-				ctx = sctx
-			}
-		}
 
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -524,16 +484,6 @@ func (s *Server) handleCreateGameRequest(args [0]string, argsEscaped bool, w htt
 			return
 		}
 	}
-	params, err := decodeCreateGameParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
 
 	var rawBody []byte
 
@@ -546,18 +496,13 @@ func (s *Server) handleCreateGameRequest(args [0]string, argsEscaped bool, w htt
 			OperationID:      "createGame",
 			Body:             nil,
 			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "X-API-Session",
-					In:   "header",
-				}: params.XAPISession,
-			},
-			Raw: r,
+			Params:           middleware.Parameters{},
+			Raw:              r,
 		}
 
 		type (
 			Request  = struct{}
-			Params   = CreateGameParams
+			Params   = struct{}
 			Response = CreateGameRes
 		)
 		response, err = middleware.HookMiddleware[
@@ -567,14 +512,14 @@ func (s *Server) handleCreateGameRequest(args [0]string, argsEscaped bool, w htt
 		](
 			m,
 			mreq,
-			unpackCreateGameParams,
+			nil,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateGame(ctx, params)
+				response, err = s.h.CreateGame(ctx)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.CreateGame(ctx, params)
+		response, err = s.h.CreateGame(ctx)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -672,14 +617,14 @@ func (s *Server) handleCreateGameWithBotRequest(args [0]string, argsEscaped bool
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityAPIKeyHeader(ctx, CreateGameWithBotOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, CreateGameWithBotOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
-					Security:         "APIKeyHeader",
+					Security:         "BearerAuth",
 					Err:              err,
 				}
-				defer recordError("Security:APIKeyHeader", err)
+				defer recordError("Security:BearerAuth", err)
 				s.cfg.ErrorHandler(ctx, w, r, err)
 				return
 			}
@@ -688,29 +633,11 @@ func (s *Server) handleCreateGameWithBotRequest(args [0]string, argsEscaped bool
 				ctx = sctx
 			}
 		}
-		{
-			sctx, ok, err := s.securityAPIKeyQueryParam(ctx, CreateGameWithBotOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "APIKeyQueryParam",
-					Err:              err,
-				}
-				defer recordError("Security:APIKeyQueryParam", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 1
-				ctx = sctx
-			}
-		}
 
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -730,16 +657,6 @@ func (s *Server) handleCreateGameWithBotRequest(args [0]string, argsEscaped bool
 			return
 		}
 	}
-	params, err := decodeCreateGameWithBotParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
 
 	var rawBody []byte
 
@@ -752,18 +669,13 @@ func (s *Server) handleCreateGameWithBotRequest(args [0]string, argsEscaped bool
 			OperationID:      "createGameWithBot",
 			Body:             nil,
 			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "X-API-Session",
-					In:   "header",
-				}: params.XAPISession,
-			},
-			Raw: r,
+			Params:           middleware.Parameters{},
+			Raw:              r,
 		}
 
 		type (
 			Request  = struct{}
-			Params   = CreateGameWithBotParams
+			Params   = struct{}
 			Response = CreateGameWithBotRes
 		)
 		response, err = middleware.HookMiddleware[
@@ -773,14 +685,14 @@ func (s *Server) handleCreateGameWithBotRequest(args [0]string, argsEscaped bool
 		](
 			m,
 			mreq,
-			unpackCreateGameWithBotParams,
+			nil,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.CreateGameWithBot(ctx, params)
+				response, err = s.h.CreateGameWithBot(ctx)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.CreateGameWithBot(ctx, params)
+		response, err = s.h.CreateGameWithBot(ctx)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -1023,14 +935,14 @@ func (s *Server) handleJoinGameRequest(args [1]string, argsEscaped bool, w http.
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityAPIKeyHeader(ctx, JoinGameOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, JoinGameOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
-					Security:         "APIKeyHeader",
+					Security:         "BearerAuth",
 					Err:              err,
 				}
-				defer recordError("Security:APIKeyHeader", err)
+				defer recordError("Security:BearerAuth", err)
 				s.cfg.ErrorHandler(ctx, w, r, err)
 				return
 			}
@@ -1039,29 +951,11 @@ func (s *Server) handleJoinGameRequest(args [1]string, argsEscaped bool, w http.
 				ctx = sctx
 			}
 		}
-		{
-			sctx, ok, err := s.securityAPIKeyQueryParam(ctx, JoinGameOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "APIKeyQueryParam",
-					Err:              err,
-				}
-				defer recordError("Security:APIKeyQueryParam", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 1
-				ctx = sctx
-			}
-		}
 
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -1104,10 +998,6 @@ func (s *Server) handleJoinGameRequest(args [1]string, argsEscaped bool, w http.
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
-				{
-					Name: "X-API-Session",
-					In:   "header",
-				}: params.XAPISession,
 				{
 					Name: "id",
 					In:   "path",
@@ -1232,14 +1122,14 @@ func (s *Server) handleListGamesRequest(args [0]string, argsEscaped bool, w http
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityAPIKeyHeader(ctx, ListGamesOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, ListGamesOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
-					Security:         "APIKeyHeader",
+					Security:         "BearerAuth",
 					Err:              err,
 				}
-				defer recordError("Security:APIKeyHeader", err)
+				defer recordError("Security:BearerAuth", err)
 				s.cfg.ErrorHandler(ctx, w, r, err)
 				return
 			}
@@ -1248,29 +1138,11 @@ func (s *Server) handleListGamesRequest(args [0]string, argsEscaped bool, w http
 				ctx = sctx
 			}
 		}
-		{
-			sctx, ok, err := s.securityAPIKeyQueryParam(ctx, ListGamesOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "APIKeyQueryParam",
-					Err:              err,
-				}
-				defer recordError("Security:APIKeyQueryParam", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 1
-				ctx = sctx
-			}
-		}
 
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -1290,16 +1162,6 @@ func (s *Server) handleListGamesRequest(args [0]string, argsEscaped bool, w http
 			return
 		}
 	}
-	params, err := decodeListGamesParams(args, argsEscaped, r)
-	if err != nil {
-		err = &ogenerrors.DecodeParamsError{
-			OperationContext: opErrContext,
-			Err:              err,
-		}
-		defer recordError("DecodeParams", err)
-		s.cfg.ErrorHandler(ctx, w, r, err)
-		return
-	}
 
 	var rawBody []byte
 
@@ -1312,18 +1174,13 @@ func (s *Server) handleListGamesRequest(args [0]string, argsEscaped bool, w http
 			OperationID:      "listGames",
 			Body:             nil,
 			RawBody:          rawBody,
-			Params: middleware.Parameters{
-				{
-					Name: "X-API-Session",
-					In:   "header",
-				}: params.XAPISession,
-			},
-			Raw: r,
+			Params:           middleware.Parameters{},
+			Raw:              r,
 		}
 
 		type (
 			Request  = struct{}
-			Params   = ListGamesParams
+			Params   = struct{}
 			Response = ListGamesRes
 		)
 		response, err = middleware.HookMiddleware[
@@ -1333,14 +1190,14 @@ func (s *Server) handleListGamesRequest(args [0]string, argsEscaped bool, w http
 		](
 			m,
 			mreq,
-			unpackListGamesParams,
+			nil,
 			func(ctx context.Context, request Request, params Params) (response Response, err error) {
-				response, err = s.h.ListGames(ctx, params)
+				response, err = s.h.ListGames(ctx)
 				return response, err
 			},
 		)
 	} else {
-		response, err = s.h.ListGames(ctx, params)
+		response, err = s.h.ListGames(ctx)
 	}
 	if err != nil {
 		defer recordError("Internal", err)
@@ -1349,6 +1206,193 @@ func (s *Server) handleListGamesRequest(args [0]string, argsEscaped bool, w http
 	}
 
 	if err := encodeListGamesResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleLogoutRequest handles logout operation.
+//
+// Revoke the current refresh token.
+//
+// POST /auth/logout
+func (s *Server) handleLogoutRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("logout"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/auth/logout"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), LogoutOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: LogoutOperation,
+			ID:   "logout",
+		}
+	)
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			sctx, ok, err := s.securityBearerAuth(ctx, LogoutOperation, r)
+			if err != nil {
+				err = &ogenerrors.SecurityError{
+					OperationContext: opErrContext,
+					Security:         "BearerAuth",
+					Err:              err,
+				}
+				defer recordError("Security:BearerAuth", err)
+				s.cfg.ErrorHandler(ctx, w, r, err)
+				return
+			}
+			if ok {
+				satisfied[0] |= 1 << 0
+				ctx = sctx
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			err = &ogenerrors.SecurityError{
+				OperationContext: opErrContext,
+				Err:              ogenerrors.ErrSecurityRequirementIsNotSatisfied,
+			}
+			defer recordError("Security", err)
+			s.cfg.ErrorHandler(ctx, w, r, err)
+			return
+		}
+	}
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeLogoutRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response LogoutRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    LogoutOperation,
+			OperationSummary: "Revoke the current refresh token",
+			OperationID:      "logout",
+			Body:             request,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = OptLogoutRequest
+			Params   = struct{}
+			Response = LogoutRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.Logout(ctx, request)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.Logout(ctx, request)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeLogoutResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -1438,14 +1482,14 @@ func (s *Server) handleMoveGameRequest(args [1]string, argsEscaped bool, w http.
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityAPIKeyHeader(ctx, MoveGameOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, MoveGameOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
-					Security:         "APIKeyHeader",
+					Security:         "BearerAuth",
 					Err:              err,
 				}
-				defer recordError("Security:APIKeyHeader", err)
+				defer recordError("Security:BearerAuth", err)
 				s.cfg.ErrorHandler(ctx, w, r, err)
 				return
 			}
@@ -1454,29 +1498,11 @@ func (s *Server) handleMoveGameRequest(args [1]string, argsEscaped bool, w http.
 				ctx = sctx
 			}
 		}
-		{
-			sctx, ok, err := s.securityAPIKeyQueryParam(ctx, MoveGameOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "APIKeyQueryParam",
-					Err:              err,
-				}
-				defer recordError("Security:APIKeyQueryParam", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 1
-				ctx = sctx
-			}
-		}
 
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -1534,10 +1560,6 @@ func (s *Server) handleMoveGameRequest(args [1]string, argsEscaped bool, w http.
 			Body:             request,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
-				{
-					Name: "X-API-Session",
-					In:   "header",
-				}: params.XAPISession,
 				{
 					Name: "id",
 					In:   "path",
@@ -1664,14 +1686,14 @@ func (s *Server) handlePingRequest(args [0]string, argsEscaped bool, w http.Resp
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityAPIKeyHeader(ctx, PingOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, PingOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
-					Security:         "APIKeyHeader",
+					Security:         "BearerAuth",
 					Err:              err,
 				}
-				defer recordError("Security:APIKeyHeader", err)
+				defer recordError("Security:BearerAuth", err)
 				s.cfg.ErrorHandler(ctx, w, r, err)
 				return
 			}
@@ -1680,29 +1702,11 @@ func (s *Server) handlePingRequest(args [0]string, argsEscaped bool, w http.Resp
 				ctx = sctx
 			}
 		}
-		{
-			sctx, ok, err := s.securityAPIKeyQueryParam(ctx, PingOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "APIKeyQueryParam",
-					Err:              err,
-				}
-				defer recordError("Security:APIKeyQueryParam", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 1
-				ctx = sctx
-			}
-		}
 
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -1749,10 +1753,6 @@ func (s *Server) handlePingRequest(args [0]string, argsEscaped bool, w http.Resp
 					Name: "X-Request-ID",
 					In:   "header",
 				}: params.XRequestID,
-				{
-					Name: "X-API-Session",
-					In:   "header",
-				}: params.XAPISession,
 			},
 			Raw: r,
 		}
@@ -1875,14 +1875,14 @@ func (s *Server) handleProposeEndGameRequest(args [1]string, argsEscaped bool, w
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityAPIKeyHeader(ctx, ProposeEndGameOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, ProposeEndGameOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
-					Security:         "APIKeyHeader",
+					Security:         "BearerAuth",
 					Err:              err,
 				}
-				defer recordError("Security:APIKeyHeader", err)
+				defer recordError("Security:BearerAuth", err)
 				s.cfg.ErrorHandler(ctx, w, r, err)
 				return
 			}
@@ -1891,29 +1891,11 @@ func (s *Server) handleProposeEndGameRequest(args [1]string, argsEscaped bool, w
 				ctx = sctx
 			}
 		}
-		{
-			sctx, ok, err := s.securityAPIKeyQueryParam(ctx, ProposeEndGameOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "APIKeyQueryParam",
-					Err:              err,
-				}
-				defer recordError("Security:APIKeyQueryParam", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 1
-				ctx = sctx
-			}
-		}
 
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -1957,10 +1939,6 @@ func (s *Server) handleProposeEndGameRequest(args [1]string, argsEscaped bool, w
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
 				{
-					Name: "X-API-Session",
-					In:   "header",
-				}: params.XAPISession,
-				{
 					Name: "id",
 					In:   "path",
 				}: params.ID,
@@ -1996,6 +1974,149 @@ func (s *Server) handleProposeEndGameRequest(args [1]string, argsEscaped bool, w
 	}
 
 	if err := encodeProposeEndGameResponse(response, w, span); err != nil {
+		defer recordError("EncodeResponse", err)
+		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
+			s.cfg.ErrorHandler(ctx, w, r, err)
+		}
+		return
+	}
+}
+
+// handleRefreshTokenRequest handles refreshToken operation.
+//
+// Exchange a refresh token for a new access/refresh pair.
+//
+// POST /auth/refresh
+func (s *Server) handleRefreshTokenRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
+	statusWriter := &codeRecorder{ResponseWriter: w}
+	w = statusWriter
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("refreshToken"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.HTTPRouteKey.String("/auth/refresh"),
+	}
+	// Add attributes from config.
+	otelAttrs = append(otelAttrs, s.cfg.Attributes...)
+
+	// Start a span for this request.
+	ctx, span := s.cfg.Tracer.Start(r.Context(), RefreshTokenOperation,
+		trace.WithAttributes(otelAttrs...),
+		serverSpanKind,
+	)
+	defer span.End()
+
+	// Add Labeler to context.
+	labeler := &Labeler{attrs: otelAttrs}
+	ctx = contextWithLabeler(ctx, labeler)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		elapsedDuration := time.Since(startTime)
+
+		attrSet := labeler.AttributeSet()
+		attrs := attrSet.ToSlice()
+		code := statusWriter.status
+		if code != 0 {
+			codeAttr := semconv.HTTPResponseStatusCode(code)
+			attrs = append(attrs, codeAttr)
+			span.SetAttributes(codeAttr)
+		}
+		attrOpt := metric.WithAttributes(attrs...)
+
+		// Increment request counter.
+		s.requests.Add(ctx, 1, attrOpt)
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		s.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), attrOpt)
+	}()
+
+	var (
+		recordError = func(stage string, err error) {
+			span.RecordError(err)
+
+			// https://opentelemetry.io/docs/specs/semconv/http/http-spans/#status
+			// Span Status MUST be left unset if HTTP status code was in the 1xx, 2xx or 3xx ranges,
+			// unless there was another error (e.g., network error receiving the response body; or 3xx codes with
+			// max redirects exceeded), in which case status MUST be set to Error.
+			code := statusWriter.status
+			if code < 100 || code >= 500 {
+				span.SetStatus(codes.Error, stage)
+			}
+
+			attrSet := labeler.AttributeSet()
+			attrs := attrSet.ToSlice()
+			if code != 0 {
+				attrs = append(attrs, semconv.HTTPResponseStatusCode(code))
+			}
+
+			s.errors.Add(ctx, 1, metric.WithAttributes(attrs...))
+		}
+		err          error
+		opErrContext = ogenerrors.OperationContext{
+			Name: RefreshTokenOperation,
+			ID:   "refreshToken",
+		}
+	)
+
+	var rawBody []byte
+	request, rawBody, close, err := s.decodeRefreshTokenRequest(r)
+	if err != nil {
+		err = &ogenerrors.DecodeRequestError{
+			OperationContext: opErrContext,
+			Err:              err,
+		}
+		defer recordError("DecodeRequest", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+	defer func() {
+		if err := close(); err != nil {
+			recordError("CloseRequest", err)
+		}
+	}()
+
+	var response RefreshTokenRes
+	if m := s.cfg.Middleware; m != nil {
+		mreq := middleware.Request{
+			Context:          ctx,
+			OperationName:    RefreshTokenOperation,
+			OperationSummary: "Exchange a refresh token for a new access/refresh pair",
+			OperationID:      "refreshToken",
+			Body:             request,
+			RawBody:          rawBody,
+			Params:           middleware.Parameters{},
+			Raw:              r,
+		}
+
+		type (
+			Request  = *RefreshRequest
+			Params   = struct{}
+			Response = RefreshTokenRes
+		)
+		response, err = middleware.HookMiddleware[
+			Request,
+			Params,
+			Response,
+		](
+			m,
+			mreq,
+			nil,
+			func(ctx context.Context, request Request, params Params) (response Response, err error) {
+				response, err = s.h.RefreshToken(ctx, request)
+				return response, err
+			},
+		)
+	} else {
+		response, err = s.h.RefreshToken(ctx, request)
+	}
+	if err != nil {
+		defer recordError("Internal", err)
+		s.cfg.ErrorHandler(ctx, w, r, err)
+		return
+	}
+
+	if err := encodeRefreshTokenResponse(response, w, span); err != nil {
 		defer recordError("EncodeResponse", err)
 		if !errors.Is(err, ht.ErrInternalServerErrorResponse) {
 			s.cfg.ErrorHandler(ctx, w, r, err)
@@ -2085,14 +2206,14 @@ func (s *Server) handleRejectEndGameRequest(args [1]string, argsEscaped bool, w 
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityAPIKeyHeader(ctx, RejectEndGameOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, RejectEndGameOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
-					Security:         "APIKeyHeader",
+					Security:         "BearerAuth",
 					Err:              err,
 				}
-				defer recordError("Security:APIKeyHeader", err)
+				defer recordError("Security:BearerAuth", err)
 				s.cfg.ErrorHandler(ctx, w, r, err)
 				return
 			}
@@ -2101,29 +2222,11 @@ func (s *Server) handleRejectEndGameRequest(args [1]string, argsEscaped bool, w 
 				ctx = sctx
 			}
 		}
-		{
-			sctx, ok, err := s.securityAPIKeyQueryParam(ctx, RejectEndGameOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "APIKeyQueryParam",
-					Err:              err,
-				}
-				defer recordError("Security:APIKeyQueryParam", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 1
-				ctx = sctx
-			}
-		}
 
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -2166,10 +2269,6 @@ func (s *Server) handleRejectEndGameRequest(args [1]string, argsEscaped bool, w 
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
-				{
-					Name: "X-API-Session",
-					In:   "header",
-				}: params.XAPISession,
 				{
 					Name: "id",
 					In:   "path",
@@ -2437,14 +2536,14 @@ func (s *Server) handleSkipGameRequest(args [1]string, argsEscaped bool, w http.
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			sctx, ok, err := s.securityAPIKeyHeader(ctx, SkipGameOperation, r)
+			sctx, ok, err := s.securityBearerAuth(ctx, SkipGameOperation, r)
 			if err != nil {
 				err = &ogenerrors.SecurityError{
 					OperationContext: opErrContext,
-					Security:         "APIKeyHeader",
+					Security:         "BearerAuth",
 					Err:              err,
 				}
-				defer recordError("Security:APIKeyHeader", err)
+				defer recordError("Security:BearerAuth", err)
 				s.cfg.ErrorHandler(ctx, w, r, err)
 				return
 			}
@@ -2453,29 +2552,11 @@ func (s *Server) handleSkipGameRequest(args [1]string, argsEscaped bool, w http.
 				ctx = sctx
 			}
 		}
-		{
-			sctx, ok, err := s.securityAPIKeyQueryParam(ctx, SkipGameOperation, r)
-			if err != nil {
-				err = &ogenerrors.SecurityError{
-					OperationContext: opErrContext,
-					Security:         "APIKeyQueryParam",
-					Err:              err,
-				}
-				defer recordError("Security:APIKeyQueryParam", err)
-				s.cfg.ErrorHandler(ctx, w, r, err)
-				return
-			}
-			if ok {
-				satisfied[0] |= 1 << 1
-				ctx = sctx
-			}
-		}
 
 		if ok := func() bool {
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -2518,10 +2599,6 @@ func (s *Server) handleSkipGameRequest(args [1]string, argsEscaped bool, w http.
 			Body:             nil,
 			RawBody:          rawBody,
 			Params: middleware.Parameters{
-				{
-					Name: "X-API-Session",
-					In:   "header",
-				}: params.XAPISession,
 				{
 					Name: "id",
 					In:   "path",

@@ -46,14 +46,14 @@ type Invoker interface {
 	// Create a new game.
 	//
 	// POST /games
-	CreateGame(ctx context.Context, params CreateGameParams) (CreateGameRes, error)
+	CreateGame(ctx context.Context) (CreateGameRes, error)
 	// CreateGameWithBot invokes createGameWithBot operation.
 	//
 	// Creates a new game where the authenticated player plays against a server-side bot.
 	// The game starts immediately and the first move belongs to the human player.
 	//
 	// POST /games/with-bot
-	CreateGameWithBot(ctx context.Context, params CreateGameWithBotParams) (CreateGameWithBotRes, error)
+	CreateGameWithBot(ctx context.Context) (CreateGameWithBotRes, error)
 	// GetPlayerStateUID invokes getPlayerStateUID operation.
 	//
 	// Get user state.
@@ -74,7 +74,13 @@ type Invoker interface {
 	// Returns a snapshot of all currently active games.
 	//
 	// GET /games
-	ListGames(ctx context.Context, params ListGamesParams) (ListGamesRes, error)
+	ListGames(ctx context.Context) (ListGamesRes, error)
+	// Logout invokes logout operation.
+	//
+	// Revoke the current refresh token.
+	//
+	// POST /auth/logout
+	Logout(ctx context.Context, request OptLogoutRequest) (LogoutRes, error)
 	// MoveGame invokes moveGame operation.
 	//
 	// Places a new letter on the board and submits a word. If the word is valid,
@@ -98,6 +104,12 @@ type Invoker interface {
 	//
 	// POST /games/{id}/propose-end
 	ProposeEndGame(ctx context.Context, params ProposeEndGameParams) (ProposeEndGameRes, error)
+	// RefreshToken invokes refreshToken operation.
+	//
+	// Exchange a refresh token for a new access/refresh pair.
+	//
+	// POST /auth/refresh
+	RefreshToken(ctx context.Context, request *RefreshRequest) (RefreshTokenRes, error)
 	// RejectEndGame invokes rejectEndGame operation.
 	//
 	// The opponent rejects the end-game proposal. The game resumes with the
@@ -237,43 +249,18 @@ func (c *Client) sendAcceptEndGame(ctx context.Context, params AcceptEndGamePara
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.XAPISession))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:APIKeyHeader"
-			switch err := c.securityAPIKeyHeader(ctx, AcceptEndGameOperation, r); {
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, AcceptEndGameOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
-				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
-			}
-		}
-		{
-			stage = "Security:APIKeyQueryParam"
-			switch err := c.securityAPIKeyQueryParam(ctx, AcceptEndGameOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 1
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
 			}
 		}
 
@@ -281,7 +268,6 @@ func (c *Client) sendAcceptEndGame(ctx context.Context, params AcceptEndGamePara
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -395,12 +381,12 @@ func (c *Client) sendAuth(ctx context.Context, request *AuthRequest) (res AuthRe
 // Create a new game.
 //
 // POST /games
-func (c *Client) CreateGame(ctx context.Context, params CreateGameParams) (CreateGameRes, error) {
-	res, err := c.sendCreateGame(ctx, params)
+func (c *Client) CreateGame(ctx context.Context) (CreateGameRes, error) {
+	res, err := c.sendCreateGame(ctx)
 	return res, err
 }
 
-func (c *Client) sendCreateGame(ctx context.Context, params CreateGameParams) (res CreateGameRes, err error) {
+func (c *Client) sendCreateGame(ctx context.Context) (res CreateGameRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createGame"),
 		semconv.HTTPRequestMethodKey.String("POST"),
@@ -447,43 +433,18 @@ func (c *Client) sendCreateGame(ctx context.Context, params CreateGameParams) (r
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.XAPISession))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:APIKeyHeader"
-			switch err := c.securityAPIKeyHeader(ctx, CreateGameOperation, r); {
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateGameOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
-				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
-			}
-		}
-		{
-			stage = "Security:APIKeyQueryParam"
-			switch err := c.securityAPIKeyQueryParam(ctx, CreateGameOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 1
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
 			}
 		}
 
@@ -491,7 +452,6 @@ func (c *Client) sendCreateGame(ctx context.Context, params CreateGameParams) (r
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -529,12 +489,12 @@ func (c *Client) sendCreateGame(ctx context.Context, params CreateGameParams) (r
 // The game starts immediately and the first move belongs to the human player.
 //
 // POST /games/with-bot
-func (c *Client) CreateGameWithBot(ctx context.Context, params CreateGameWithBotParams) (CreateGameWithBotRes, error) {
-	res, err := c.sendCreateGameWithBot(ctx, params)
+func (c *Client) CreateGameWithBot(ctx context.Context) (CreateGameWithBotRes, error) {
+	res, err := c.sendCreateGameWithBot(ctx)
 	return res, err
 }
 
-func (c *Client) sendCreateGameWithBot(ctx context.Context, params CreateGameWithBotParams) (res CreateGameWithBotRes, err error) {
+func (c *Client) sendCreateGameWithBot(ctx context.Context) (res CreateGameWithBotRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("createGameWithBot"),
 		semconv.HTTPRequestMethodKey.String("POST"),
@@ -581,43 +541,18 @@ func (c *Client) sendCreateGameWithBot(ctx context.Context, params CreateGameWit
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.XAPISession))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:APIKeyHeader"
-			switch err := c.securityAPIKeyHeader(ctx, CreateGameWithBotOperation, r); {
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, CreateGameWithBotOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
-				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
-			}
-		}
-		{
-			stage = "Security:APIKeyQueryParam"
-			switch err := c.securityAPIKeyQueryParam(ctx, CreateGameWithBotOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 1
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
 			}
 		}
 
@@ -625,7 +560,6 @@ func (c *Client) sendCreateGameWithBot(ctx context.Context, params CreateGameWit
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -828,43 +762,18 @@ func (c *Client) sendJoinGame(ctx context.Context, params JoinGameParams) (res J
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.XAPISession))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:APIKeyHeader"
-			switch err := c.securityAPIKeyHeader(ctx, JoinGameOperation, r); {
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, JoinGameOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
-				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
-			}
-		}
-		{
-			stage = "Security:APIKeyQueryParam"
-			switch err := c.securityAPIKeyQueryParam(ctx, JoinGameOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 1
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
 			}
 		}
 
@@ -872,7 +781,6 @@ func (c *Client) sendJoinGame(ctx context.Context, params JoinGameParams) (res J
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -909,12 +817,12 @@ func (c *Client) sendJoinGame(ctx context.Context, params JoinGameParams) (res J
 // Returns a snapshot of all currently active games.
 //
 // GET /games
-func (c *Client) ListGames(ctx context.Context, params ListGamesParams) (ListGamesRes, error) {
-	res, err := c.sendListGames(ctx, params)
+func (c *Client) ListGames(ctx context.Context) (ListGamesRes, error) {
+	res, err := c.sendListGames(ctx)
 	return res, err
 }
 
-func (c *Client) sendListGames(ctx context.Context, params ListGamesParams) (res ListGamesRes, err error) {
+func (c *Client) sendListGames(ctx context.Context) (res ListGamesRes, err error) {
 	otelAttrs := []attribute.KeyValue{
 		otelogen.OperationID("listGames"),
 		semconv.HTTPRequestMethodKey.String("GET"),
@@ -961,43 +869,18 @@ func (c *Client) sendListGames(ctx context.Context, params ListGamesParams) (res
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.XAPISession))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:APIKeyHeader"
-			switch err := c.securityAPIKeyHeader(ctx, ListGamesOperation, r); {
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ListGamesOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
-				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
-			}
-		}
-		{
-			stage = "Security:APIKeyQueryParam"
-			switch err := c.securityAPIKeyQueryParam(ctx, ListGamesOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 1
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
 			}
 		}
 
@@ -1005,7 +888,6 @@ func (c *Client) sendListGames(ctx context.Context, params ListGamesParams) (res
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -1030,6 +912,116 @@ func (c *Client) sendListGames(ctx context.Context, params ListGamesParams) (res
 
 	stage = "DecodeResponse"
 	result, err := decodeListGamesResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// Logout invokes logout operation.
+//
+// Revoke the current refresh token.
+//
+// POST /auth/logout
+func (c *Client) Logout(ctx context.Context, request OptLogoutRequest) (LogoutRes, error) {
+	res, err := c.sendLogout(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendLogout(ctx context.Context, request OptLogoutRequest) (res LogoutRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("logout"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/auth/logout"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, LogoutOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/auth/logout"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeLogoutRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	{
+		type bitset = [1]uint8
+		var satisfied bitset
+		{
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, LogoutOperation, r); {
+			case err == nil: // if NO error
+				satisfied[0] |= 1 << 0
+			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
+				// Skip this security.
+			default:
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
+			}
+		}
+
+		if ok := func() bool {
+		nextRequirement:
+			for _, requirement := range []bitset{
+				{0b00000001},
+			} {
+				for i, mask := range requirement {
+					if satisfied[i]&mask != mask {
+						continue nextRequirement
+					}
+				}
+				return true
+			}
+			return false
+		}(); !ok {
+			return res, ogenerrors.ErrSecurityRequirementIsNotSatisfied
+		}
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeLogoutResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -1117,43 +1109,18 @@ func (c *Client) sendMoveGame(ctx context.Context, request *MoveRequest, params 
 		return res, errors.Wrap(err, "encode request")
 	}
 
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.XAPISession))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:APIKeyHeader"
-			switch err := c.securityAPIKeyHeader(ctx, MoveGameOperation, r); {
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, MoveGameOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
-				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
-			}
-		}
-		{
-			stage = "Security:APIKeyQueryParam"
-			switch err := c.securityAPIKeyQueryParam(ctx, MoveGameOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 1
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
 			}
 		}
 
@@ -1161,7 +1128,6 @@ func (c *Client) sendMoveGame(ctx context.Context, request *MoveRequest, params 
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -1265,41 +1231,19 @@ func (c *Client) sendPing(ctx context.Context, params PingParams) (res PingRes, 
 			return res, errors.Wrap(err, "encode header")
 		}
 	}
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.XAPISession))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
 
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:APIKeyHeader"
-			switch err := c.securityAPIKeyHeader(ctx, PingOperation, r); {
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, PingOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
-				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
-			}
-		}
-		{
-			stage = "Security:APIKeyQueryParam"
-			switch err := c.securityAPIKeyQueryParam(ctx, PingOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 1
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
 			}
 		}
 
@@ -1307,7 +1251,6 @@ func (c *Client) sendPing(ctx context.Context, params PingParams) (res PingRes, 
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -1417,43 +1360,18 @@ func (c *Client) sendProposeEndGame(ctx context.Context, params ProposeEndGamePa
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.XAPISession))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:APIKeyHeader"
-			switch err := c.securityAPIKeyHeader(ctx, ProposeEndGameOperation, r); {
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, ProposeEndGameOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
-				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
-			}
-		}
-		{
-			stage = "Security:APIKeyQueryParam"
-			switch err := c.securityAPIKeyQueryParam(ctx, ProposeEndGameOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 1
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
 			}
 		}
 
@@ -1461,7 +1379,6 @@ func (c *Client) sendProposeEndGame(ctx context.Context, params ProposeEndGamePa
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -1486,6 +1403,83 @@ func (c *Client) sendProposeEndGame(ctx context.Context, params ProposeEndGamePa
 
 	stage = "DecodeResponse"
 	result, err := decodeProposeEndGameResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// RefreshToken invokes refreshToken operation.
+//
+// Exchange a refresh token for a new access/refresh pair.
+//
+// POST /auth/refresh
+func (c *Client) RefreshToken(ctx context.Context, request *RefreshRequest) (RefreshTokenRes, error) {
+	res, err := c.sendRefreshToken(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendRefreshToken(ctx context.Context, request *RefreshRequest) (res RefreshTokenRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("refreshToken"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/auth/refresh"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, RefreshTokenOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/auth/refresh"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeRefreshTokenRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer body.Close()
+
+	stage = "DecodeResponse"
+	result, err := decodeRefreshTokenResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
@@ -1570,43 +1564,18 @@ func (c *Client) sendRejectEndGame(ctx context.Context, params RejectEndGamePara
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.XAPISession))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:APIKeyHeader"
-			switch err := c.securityAPIKeyHeader(ctx, RejectEndGameOperation, r); {
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, RejectEndGameOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
-				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
-			}
-		}
-		{
-			stage = "Security:APIKeyQueryParam"
-			switch err := c.securityAPIKeyQueryParam(ctx, RejectEndGameOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 1
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
 			}
 		}
 
@@ -1614,7 +1583,6 @@ func (c *Client) sendRejectEndGame(ctx context.Context, params RejectEndGamePara
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {
@@ -1799,43 +1767,18 @@ func (c *Client) sendSkipGame(ctx context.Context, params SkipGameParams) (res S
 		return res, errors.Wrap(err, "create request")
 	}
 
-	stage = "EncodeHeaderParams"
-	h := uri.NewHeaderEncoder(r.Header)
-	{
-		cfg := uri.HeaderParameterEncodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.EncodeParam(cfg, func(e uri.Encoder) error {
-			return e.EncodeValue(conv.StringToString(params.XAPISession))
-		}); err != nil {
-			return res, errors.Wrap(err, "encode header")
-		}
-	}
-
 	{
 		type bitset = [1]uint8
 		var satisfied bitset
 		{
-			stage = "Security:APIKeyHeader"
-			switch err := c.securityAPIKeyHeader(ctx, SkipGameOperation, r); {
+			stage = "Security:BearerAuth"
+			switch err := c.securityBearerAuth(ctx, SkipGameOperation, r); {
 			case err == nil: // if NO error
 				satisfied[0] |= 1 << 0
 			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
 				// Skip this security.
 			default:
-				return res, errors.Wrap(err, "security \"APIKeyHeader\"")
-			}
-		}
-		{
-			stage = "Security:APIKeyQueryParam"
-			switch err := c.securityAPIKeyQueryParam(ctx, SkipGameOperation, r); {
-			case err == nil: // if NO error
-				satisfied[0] |= 1 << 1
-			case errors.Is(err, ogenerrors.ErrSkipClientSecurity):
-				// Skip this security.
-			default:
-				return res, errors.Wrap(err, "security \"APIKeyQueryParam\"")
+				return res, errors.Wrap(err, "security \"BearerAuth\"")
 			}
 		}
 
@@ -1843,7 +1786,6 @@ func (c *Client) sendSkipGame(ctx context.Context, params SkipGameParams) (res S
 		nextRequirement:
 			for _, requirement := range []bitset{
 				{0b00000001},
-				{0b00000010},
 			} {
 				for i, mask := range requirement {
 					if satisfied[i]&mask != mask {

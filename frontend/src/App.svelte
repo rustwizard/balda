@@ -5,11 +5,16 @@
   import GameScreen from './components/GameScreen.svelte';
   import { gameState } from './stores/game.svelte';
   import { centrifugo } from './lib/centrifugo';
-  import { ping } from './lib/api';
+  import { ping, setOnAuthExpired } from './lib/api';
   import type { CentrifugoEvent } from './types';
 
-  // API key for demo - normally from env or config
-  const DEMO_API_KEY = import.meta.env.VITE_API_KEY || 'abcdefuvwxyz';
+  // When the refresh token can no longer renew access, tear down and re-auth.
+  setOnAuthExpired(() => {
+    centrifugo.disconnect();
+    connected = false;
+    gameState.resetToAuth();
+  });
+
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const CENTRIFUGO_WS_URL = import.meta.env.VITE_CENTRIFUGO_WS_URL || `${protocol}//${window.location.host}/connection/websocket`;
 
@@ -19,7 +24,7 @@
   $effect(() => {
     if (gameState.phase === 'auth') return;
     const interval = setInterval(() => {
-      ping(gameState.apiKey, gameState.sessionId, ++pingCounter).catch((err) => {
+      ping(++pingCounter).catch((err) => {
         console.error('ping failed', err);
       });
     }, 5000);
@@ -28,7 +33,7 @@
     // ping when the user returns so the session does not expire.
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
-        ping(gameState.apiKey, gameState.sessionId, ++pingCounter).catch((err) => {
+        ping(++pingCounter).catch((err) => {
           console.error('ping failed', err);
         });
       }
@@ -96,7 +101,7 @@
 
 <main class="flex min-h-screen flex-col items-center justify-center p-4">
   {#if gameState.phase === 'auth'}
-    <AuthForm apiKey={DEMO_API_KEY} />
+    <AuthForm />
   {:else if gameState.phase === 'lobby'}
     <Lobby />
   {:else if gameState.phase === 'waiting'}

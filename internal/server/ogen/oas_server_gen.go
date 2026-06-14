@@ -26,14 +26,14 @@ type Handler interface {
 	// Create a new game.
 	//
 	// POST /games
-	CreateGame(ctx context.Context, params CreateGameParams) (CreateGameRes, error)
+	CreateGame(ctx context.Context) (CreateGameRes, error)
 	// CreateGameWithBot implements createGameWithBot operation.
 	//
 	// Creates a new game where the authenticated player plays against a server-side bot.
 	// The game starts immediately and the first move belongs to the human player.
 	//
 	// POST /games/with-bot
-	CreateGameWithBot(ctx context.Context, params CreateGameWithBotParams) (CreateGameWithBotRes, error)
+	CreateGameWithBot(ctx context.Context) (CreateGameWithBotRes, error)
 	// GetPlayerStateUID implements getPlayerStateUID operation.
 	//
 	// Get user state.
@@ -54,7 +54,13 @@ type Handler interface {
 	// Returns a snapshot of all currently active games.
 	//
 	// GET /games
-	ListGames(ctx context.Context, params ListGamesParams) (ListGamesRes, error)
+	ListGames(ctx context.Context) (ListGamesRes, error)
+	// Logout implements logout operation.
+	//
+	// Revoke the current refresh token.
+	//
+	// POST /auth/logout
+	Logout(ctx context.Context, req OptLogoutRequest) (LogoutRes, error)
 	// MoveGame implements moveGame operation.
 	//
 	// Places a new letter on the board and submits a word. If the word is valid,
@@ -78,6 +84,12 @@ type Handler interface {
 	//
 	// POST /games/{id}/propose-end
 	ProposeEndGame(ctx context.Context, params ProposeEndGameParams) (ProposeEndGameRes, error)
+	// RefreshToken implements refreshToken operation.
+	//
+	// Exchange a refresh token for a new access/refresh pair.
+	//
+	// POST /auth/refresh
+	RefreshToken(ctx context.Context, req *RefreshRequest) (RefreshTokenRes, error)
 	// RejectEndGame implements rejectEndGame operation.
 	//
 	// The opponent rejects the end-game proposal. The game resumes with the

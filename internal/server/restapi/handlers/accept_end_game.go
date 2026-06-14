@@ -9,24 +9,16 @@ import (
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
-	"github.com/rustwizard/balda/internal/session"
+	"github.com/rustwizard/balda/internal/service"
 )
 
 // AcceptEndGame implements baldaapi.Handler.
 func (h *Handlers) AcceptEndGame(ctx context.Context, params baldaapi.AcceptEndGameParams) (baldaapi.AcceptEndGameRes, error) {
-	uid, err := h.sess.GetUID(params.XAPISession)
-	if err != nil {
-		if errors.Is(err, session.ErrNotFound) {
-			return &baldaapi.AcceptEndGameUnauthorized{
-				Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-				Message: baldaapi.NewOptString("session not found"),
-				Type:    baldaapi.NewOptString("Unauthorized"),
-			}, nil
-		}
-		slog.Error("accept_end_game: get uid", slog.String("sid", params.XAPISession), slog.Any("error", err))
+	uid, ok := uidFromContext(ctx)
+	if !ok {
 		return &baldaapi.AcceptEndGameUnauthorized{
 			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-			Message: baldaapi.NewOptString("session unavailable"),
+			Message: baldaapi.NewOptString("unauthorized"),
 			Type:    baldaapi.NewOptString("Unauthorized"),
 		}, nil
 	}
@@ -38,6 +30,12 @@ func (h *Handlers) AcceptEndGame(ctx context.Context, params baldaapi.AcceptEndG
 				Status:  baldaapi.NewOptInt(http.StatusNotFound),
 				Message: baldaapi.NewOptString("game not found"),
 				Type:    baldaapi.NewOptString("NotFound"),
+			}, nil
+		case errors.Is(err, service.ErrNotParticipant):
+			return &baldaapi.AcceptEndGameForbidden{
+				Status:  baldaapi.NewOptInt(http.StatusForbidden),
+				Message: baldaapi.NewOptString("not a participant of this game"),
+				Type:    baldaapi.NewOptString("Forbidden"),
 			}, nil
 		case errors.Is(err, game.ErrWrongState), errors.Is(err, game.ErrNotOpponent):
 			return &baldaapi.AcceptEndGameConflict{

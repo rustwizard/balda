@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rustwizard/balda/internal/game"
@@ -11,6 +12,10 @@ import (
 	"github.com/rustwizard/balda/internal/matchmaking"
 	"github.com/rustwizard/balda/internal/storage"
 )
+
+// ErrNotParticipant is returned by game actions when the caller is authenticated
+// but is not a participant of the target game. Handlers map it to 403 Forbidden.
+var ErrNotParticipant = errors.New("service: player is not a participant of this game")
 
 type Balda struct {
 	lby *lobby.Lobby
@@ -61,14 +66,34 @@ func (s *Balda) CreateUser(ctx context.Context, firstname, lastname, email, pass
 	return s.s.CreateUser(ctx, firstname, lastname, email, password, nickname)
 }
 
-// ValidateAPIKey reports whether the given api_key belongs to a registered user.
-func (s *Balda) ValidateAPIKey(ctx context.Context, apiKey string) (bool, error) {
-	return s.s.ValidateAPIKey(ctx, apiKey)
-}
-
 // GetPlayerState returns the profile fields for the given player UUID.
 func (s *Balda) GetPlayerState(ctx context.Context, playerID uuid.UUID) (storage.PlayerState, error) {
 	return s.s.GetPlayerState(ctx, playerID)
+}
+
+// GetUserForToken returns the player UUID and role needed to mint an access token.
+func (s *Balda) GetUserForToken(ctx context.Context, uid int64) (storage.UserForToken, error) {
+	return s.s.GetUserForToken(ctx, uid)
+}
+
+// SaveRefreshToken persists the HMAC hash of a refresh token for the user.
+func (s *Balda) SaveRefreshToken(ctx context.Context, uid int64, tokenHash string, expiresAt time.Time, userAgent, ipAddr string) error {
+	return s.s.SaveRefreshToken(ctx, uid, tokenHash, expiresAt, userAgent, ipAddr)
+}
+
+// GetRefreshToken fetches a refresh token row by its hash.
+func (s *Balda) GetRefreshToken(ctx context.Context, tokenHash string) (storage.RefreshToken, error) {
+	return s.s.GetRefreshToken(ctx, tokenHash)
+}
+
+// RevokeRefreshToken marks a single refresh token as revoked.
+func (s *Balda) RevokeRefreshToken(ctx context.Context, tokenHash string) error {
+	return s.s.RevokeRefreshToken(ctx, tokenHash)
+}
+
+// RevokeAllUserTokens marks all of a user's refresh tokens as revoked.
+func (s *Balda) RevokeAllUserTokens(ctx context.Context, uid int64) error {
+	return s.s.RevokeAllUserTokens(ctx, uid)
 }
 
 // CreateGame creates a new game in waiting status for the given user.
@@ -135,7 +160,7 @@ func (s *Balda) SubmitMove(ctx context.Context, uid int64, gameID string, newLet
 	}
 
 	if !s.isPlayerInGame(rec, playerID) {
-		return nil, "", fmt.Errorf("player is not in this game")
+		return nil, "", ErrNotParticipant
 	}
 
 	// Resolve characters for the word path from the current board state.
@@ -166,7 +191,7 @@ func (s *Balda) ProposeEnd(ctx context.Context, uid int64, gameID string) error 
 		return err
 	}
 	if !s.isPlayerInGame(rec, playerID) {
-		return fmt.Errorf("player is not in this game")
+		return ErrNotParticipant
 	}
 	return rec.Game.ProposeEnd(playerID)
 }
@@ -182,7 +207,7 @@ func (s *Balda) AcceptEnd(ctx context.Context, uid int64, gameID string) error {
 		return err
 	}
 	if !s.isPlayerInGame(rec, playerID) {
-		return fmt.Errorf("player is not in this game")
+		return ErrNotParticipant
 	}
 	return rec.Game.AcceptEnd(playerID)
 }
@@ -198,7 +223,7 @@ func (s *Balda) RejectEnd(ctx context.Context, uid int64, gameID string) error {
 		return err
 	}
 	if !s.isPlayerInGame(rec, playerID) {
-		return fmt.Errorf("player is not in this game")
+		return ErrNotParticipant
 	}
 	return rec.Game.RejectEnd(playerID)
 }
@@ -216,7 +241,7 @@ func (s *Balda) SkipTurn(ctx context.Context, uid int64, gameID string) (*lobby.
 	}
 
 	if !s.isPlayerInGame(rec, playerID) {
-		return nil, "", fmt.Errorf("player is not in this game")
+		return nil, "", ErrNotParticipant
 	}
 
 	if err := rec.Game.Skip(playerID); err != nil {

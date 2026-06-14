@@ -120,7 +120,7 @@ export MIGRATION_CONN_STRING="postgres://balda:password@localhost:5432/balda"
 ./bin/balda server \
   --server.addr 0.0.0.0 \
   --server.port 9666 \
-  --server.x_api_token ваш-api-токен \
+  --auth.jwt_secret ваш-секрет-для-jwt-32-байта \
   --pg.host localhost --pg.port 5432 \
   --pg.user balda --pg.database balda --pg.password password \
   --redis.addr localhost:6379
@@ -152,15 +152,20 @@ make test
 
 Базовый путь: `/balda/api/v1`
 
-Аутентификация использует заголовок `X-API-Key` (или параметр запроса `api_key`). Эндпоинты, требующие сессии, также ожидают `X-API-Session`.
+Аутентификация использует JWT Bearer-токены: `/signup` и `/auth` возвращают
+короткоживущий `access_token` (1ч) и непрозрачный `refresh_token` (30д). Access-токен
+передаётся как `Authorization: Bearer <access_token>` на каждый защищённый эндпоинт.
+По истечении — обмен refresh-токена на новую пару через `/auth/refresh` (с ротацией).
 
 Swagger UI доступен по адресу `/balda/api/v1/docs` при запущенном сервере.
 
 | Метод | Путь | Описание |
 |-------|------|----------|
-| POST | `/signup` | Регистрация нового аккаунта |
-| POST | `/auth` | Аутентификация и получение сессии |
-| POST | `/session/ping` | Keepalive — обновляет TTL сессии |
+| POST | `/signup` | Регистрация нового аккаунта; возвращает пару токенов |
+| POST | `/auth` | Аутентификация; возвращает пару токенов |
+| POST | `/auth/refresh` | Обмен refresh-токена на новую пару access/refresh |
+| POST | `/auth/logout` | Отозвать текущий refresh-токен (нужен Bearer) |
+| POST | `/session/ping` | Keepalive — обновляет игровое присутствие (нужен Bearer) |
 | GET | `/player/state/{uid}` | Получить профиль и состояние игрока |
 | GET | `/games` | Список всех активных игр |
 | POST | `/games` | Создать новую игру в ожидании |
@@ -179,7 +184,11 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 
 // Ответ
 {
-  "user": { "uid": "…", "firstname": "Иван", "lastname": "Петров", "sid": "…", "key": "…" },
+  "user": { "uid": "…", "firstname": "Иван", "lastname": "Петров", "exp": 0 },
+  "access_token": "…",
+  "refresh_token": "…",
+  "token_type": "Bearer",
+  "expires_in": 3600,
   "centrifugo_token": "…",
   "lobby_token": "…"
 }
@@ -193,10 +202,24 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 
 // Ответ
 {
-  "player": { "uid": "…", "firstname": "Иван", "lastname": "Петров", "sid": "…", "key": "…" },
+  "player": { "uid": "…", "firstname": "Иван", "lastname": "Петров", "exp": 0 },
+  "access_token": "…",
+  "refresh_token": "…",
+  "token_type": "Bearer",
+  "expires_in": 3600,
   "centrifugo_token": "…",
   "lobby_token": "…"
 }
+```
+
+### POST /auth/refresh
+
+```json
+// Запрос
+{ "refresh_token": "…" }
+
+// Ответ
+{ "access_token": "…", "refresh_token": "…", "token_type": "Bearer", "expires_in": 3600 }
 ```
 
 ### POST /games
@@ -437,11 +460,21 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | first_name | text | |
 | last_name | text | |
 | email | text | уникальный |
-| hash_password | text | bcrypt через pgcrypto |
-| api_key | uuid | |
+| hash_password | text | bcrypt (Go, cost 12) |
+| role | text | `player` \| `admin`, по умолчанию `player` |
 | confirmed | boolean | по умолчанию false |
 | created_at | timestamp | |
 | updated_at | timestamp | |
+
+**refresh_tokens**
+
+| Столбец | Тип | Примечания |
+|---------|-----|------------|
+| token_id | uuid | PK |
+| user_id | bigint | FK → users |
+| token_hash | text | HMAC-SHA256 непрозрачного токена, уникальный |
+| expires_at | timestamptz | |
+| revoked | boolean | ротация/отзыв токенов |
 
 **player_state**
 
@@ -484,7 +517,7 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 |------|-------------|----------|
 | `--server.addr` | `127.0.0.1` | Адрес привязки |
 | `--server.port` | `9666` | HTTP-порт |
-| `--server.x_api_token` | | API-ключ для запросов |
+| `--auth.jwt_secret` | | HMAC-секрет для подписи JWT access-токенов |
 | `--pg.host` | `127.0.0.1` | Хост PostgreSQL |
 | `--pg.port` | `5432` | Порт PostgreSQL |
 | `--pg.user` | | Пользователь PostgreSQL |

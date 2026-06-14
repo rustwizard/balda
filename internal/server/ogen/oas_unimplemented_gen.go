@@ -37,7 +37,7 @@ func (UnimplementedHandler) Auth(ctx context.Context, req *AuthRequest) (r AuthR
 // Create a new game.
 //
 // POST /games
-func (UnimplementedHandler) CreateGame(ctx context.Context, params CreateGameParams) (r CreateGameRes, _ error) {
+func (UnimplementedHandler) CreateGame(ctx context.Context) (r CreateGameRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -47,7 +47,7 @@ func (UnimplementedHandler) CreateGame(ctx context.Context, params CreateGamePar
 // The game starts immediately and the first move belongs to the human player.
 //
 // POST /games/with-bot
-func (UnimplementedHandler) CreateGameWithBot(ctx context.Context, params CreateGameWithBotParams) (r CreateGameWithBotRes, _ error) {
+func (UnimplementedHandler) CreateGameWithBot(ctx context.Context) (r CreateGameWithBotRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -77,7 +77,16 @@ func (UnimplementedHandler) JoinGame(ctx context.Context, params JoinGameParams)
 // Returns a snapshot of all currently active games.
 //
 // GET /games
-func (UnimplementedHandler) ListGames(ctx context.Context, params ListGamesParams) (r ListGamesRes, _ error) {
+func (UnimplementedHandler) ListGames(ctx context.Context) (r ListGamesRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// Logout implements logout operation.
+//
+// Revoke the current refresh token.
+//
+// POST /auth/logout
+func (UnimplementedHandler) Logout(ctx context.Context, req OptLogoutRequest) (r LogoutRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 
@@ -110,6 +119,15 @@ func (UnimplementedHandler) Ping(ctx context.Context, params PingParams) (r Ping
 //
 // POST /games/{id}/propose-end
 func (UnimplementedHandler) ProposeEndGame(ctx context.Context, params ProposeEndGameParams) (r ProposeEndGameRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// RefreshToken implements refreshToken operation.
+//
+// Exchange a refresh token for a new access/refresh pair.
+//
+// POST /auth/refresh
+func (UnimplementedHandler) RefreshToken(ctx context.Context, req *RefreshRequest) (r RefreshTokenRes, _ error) {
 	return r, ht.ErrNotImplemented
 }
 

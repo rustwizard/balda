@@ -7,9 +7,8 @@ info:
     ### Headers
     | Header | Description |
     |--------|-------------|
-    | **X-API-Key** | API key is a special token that the client needs to provide when making API calls. |
-    | **X-API-User** | User's ID |
-    | **X-API-Session** | Session ID |
+    | **Authorization** | `Bearer <access_token>` — JWT access token obtained from /auth or /signup. |
+    | **X-Request-ID** | Monotonically increasing client sequence number (for /session/ping). |
   version: 1.0.0
 
 servers:
@@ -68,6 +67,52 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      summary: Exchange a refresh token for a new access/refresh pair
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshResponse"
+        "401":
+          description: Refresh token expired, revoked, or unknown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the current refresh token
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogoutRequest"
+      responses:
+        "204":
+          description: Logged out; refresh token revoked.
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
   /session/ping:
     post:
       operationId: ping
@@ -78,11 +123,9 @@ paths:
         Returns 204 with X-Server-Time header instead of a JSON body
         to minimize bandwidth on frequent pings (every ping_delay ms).
       security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
+        - BearerAuth: []
       parameters:
         - $ref: '#/components/parameters/RequestIdHeader'
-        - $ref: '#/components/parameters/ApiSessionHeader'
       responses:
         '204':
           description: Session alive.
@@ -101,10 +144,7 @@ paths:
       tags:
         - Games
       security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
-      parameters:
-        - $ref: '#/components/parameters/ApiSessionHeader'
+        - BearerAuth: []
       responses:
         "200":
           description: Game created successfully
@@ -121,10 +161,7 @@ paths:
       tags:
         - Games
       security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
-      parameters:
-        - $ref: '#/components/parameters/ApiSessionHeader'
+        - BearerAuth: []
       responses:
         "200":
           description: List of active games
@@ -145,10 +182,7 @@ paths:
       tags:
         - Games
       security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
-      parameters:
-        - $ref: '#/components/parameters/ApiSessionHeader'
+        - BearerAuth: []
       responses:
         "200":
           description: Game against bot created and started successfully
@@ -179,10 +213,8 @@ paths:
       tags:
         - Games
       security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
+        - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ApiSessionHeader'
         - name: id
           in: path
           required: true
@@ -224,10 +256,8 @@ paths:
       tags:
         - Games
       security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
+        - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ApiSessionHeader'
         - name: id
           in: path
           required: true
@@ -256,6 +286,8 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           description: Game not found
           content:
@@ -282,10 +314,8 @@ paths:
       tags:
         - Games
       security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
+        - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ApiSessionHeader'
         - name: id
           in: path
           required: true
@@ -298,6 +328,8 @@ paths:
           description: Proposal sent successfully; waiting for opponent's response
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           description: Game not found
           content:
@@ -321,10 +353,8 @@ paths:
       tags:
         - Games
       security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
+        - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ApiSessionHeader'
         - name: id
           in: path
           required: true
@@ -337,6 +367,8 @@ paths:
           description: Proposal accepted; game is now over
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           description: Game not found
           content:
@@ -360,10 +392,8 @@ paths:
       tags:
         - Games
       security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
+        - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ApiSessionHeader'
         - name: id
           in: path
           required: true
@@ -376,6 +406,8 @@ paths:
           description: Proposal rejected; game continues
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           description: Game not found
           content:
@@ -398,10 +430,8 @@ paths:
       tags:
         - Games
       security:
-        - APIKeyHeader: []
-        - APIKeyQueryParam: []
+        - BearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/ApiSessionHeader'
         - name: id
           in: path
           required: true
@@ -414,6 +444,8 @@ paths:
           description: Turn skipped successfully
         "401":
           $ref: '#/components/responses/Unauthorized'
+        "403":
+          $ref: '#/components/responses/Forbidden'
         "404":
           description: Game not found
           content:
@@ -456,14 +488,10 @@ paths:
 
 components:
   securitySchemes:
-    APIKeyHeader:
-      type: apiKey
-      in: header
-      name: X-API-Key
-    APIKeyQueryParam:
-      type: apiKey
-      in: query
-      name: api_key
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 
   responses:
     Unauthorized:
@@ -476,6 +504,16 @@ components:
             status: 401
             message: "Session required"
             type: "Unauthorized"
+    Forbidden:
+      description: Authenticated but not allowed to act on this resource.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            status: 403
+            message: "not a participant of this game"
+            type: "Forbidden"
     InternalServerError:
       description: Unexpected internal server error.
       content:
@@ -545,6 +583,20 @@ components:
       properties:
         user:
           $ref: "#/components/schemas/Player"
+        access_token:
+          description: Short-lived JWT access token (Authorization:&nbsp;Bearer)
+          type: string
+        refresh_token:
+          description: Opaque long-lived token used to obtain a new access token
+          type: string
+        token_type:
+          description: Always "Bearer"
+          type: string
+          example: Bearer
+        expires_in:
+          description: Access token lifetime in seconds
+          type: integer
+          example: 3600
         centrifugo_token:
           description: JWT for connecting to the Centrifugo WebSocket
           type: string
@@ -566,14 +618,6 @@ components:
         lastname:
           description: Player's last name
           example: Smith
-          type: string
-        sid:
-          description: Player's session ID
-          example: 6c160004-35c8-45b1-a4da-0ab67076afde
-          type: string
-        key:
-          description: Player's API Key that the client needs to provide when making API calls.
-          example: some_api_key
           type: string
         exp:
           description: Player's total EXP
@@ -600,6 +644,20 @@ components:
       properties:
         player:
           $ref: "#/components/schemas/Player"
+        access_token:
+          description: Short-lived JWT access token (Authorization:&nbsp;Bearer)
+          type: string
+        refresh_token:
+          description: Opaque long-lived token used to obtain a new access token
+          type: string
+        token_type:
+          description: Always "Bearer"
+          type: string
+          example: Bearer
+        expires_in:
+          description: Access token lifetime in seconds
+          type: integer
+          example: 3600
         centrifugo_token:
           description: JWT for connecting to the Centrifugo WebSocket
           type: string
@@ -609,6 +667,40 @@ components:
         active_game:
           description: Present when the player is currently in an active game. Use this to reconnect after a disconnect.
           $ref: "#/components/schemas/ActiveGame"
+
+    RefreshRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          description: The opaque refresh token previously issued
+          type: string
+
+    RefreshResponse:
+      type: object
+      properties:
+        access_token:
+          description: New short-lived JWT access token
+          type: string
+        refresh_token:
+          description: New opaque refresh token (rotated; the old one is now invalid)
+          type: string
+        token_type:
+          description: Always "Bearer"
+          type: string
+          example: Bearer
+        expires_in:
+          description: Access token lifetime in seconds
+          type: integer
+          example: 3600
+
+    LogoutRequest:
+      type: object
+      properties:
+        refresh_token:
+          description: Optional. The refresh token to revoke for this device.
+          type: string
 
     ActiveGame:
       type: object
@@ -1016,9 +1108,3 @@ components:
         type: integer
         format: int64
         minimum: 1
-    ApiSessionHeader:
-      in: header
-      name: X-API-Session
-      required: true
-      schema:
-        type: string

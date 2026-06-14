@@ -1,13 +1,7 @@
 <script lang="ts">
-  import { auth, signup } from '../lib/api';
+  import { auth, signup, setTokens } from '../lib/api';
   import { gameState } from '../stores/game.svelte';
   import type { AuthResponse, SignupResponse } from '../types';
-
-  interface Props {
-    apiKey: string;
-  }
-
-  let { apiKey }: Props = $props();
 
   let isSignup = $state(false);
   let email = $state('');
@@ -27,13 +21,12 @@
       if (isSignup) {
         res = await signup({ firstname, lastname, email, password });
       } else {
-        res = await auth({ email, password }, apiKey);
+        res = await auth({ email, password });
       }
 
       const player = 'player' in res ? res.player : res.user;
+      setTokens(res.access_token || '', res.refresh_token || '');
       gameState.setAuth({
-        apiKey: player.key,
-        sessionId: player.sid,
         playerUid: player.uid,
         nickname: player.firstname,
         exp: player.exp ?? 0,

@@ -10,20 +10,18 @@ import (
 	"strconv"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
+	"github.com/rustwizard/balda/internal/auth"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
-	"github.com/rustwizard/balda/internal/session"
+	"github.com/rustwizard/balda/internal/storage"
 )
 
 // Auth implements baldaapi.Handler.
 func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaapi.AuthRes, error) {
-	slog.Info("auth handler called")
-
 	u, err := h.svc.AuthUser(ctx, req.Email, req.Password)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, storage.ErrInvalidCredentials) {
 			return &baldaapi.ErrorResponse{
 				Message: baldaapi.NewOptString("invalid email or password"),
 				Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
@@ -38,46 +36,9 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 		}, nil
 	}
 
-	player := baldaapi.Player{
-		UID:       baldaapi.NewOptUUID(u.PlayerID),
-		Firstname: baldaapi.NewOptString(u.Firstname),
-		Lastname:  baldaapi.NewOptString(u.Lastname),
-		Key:       baldaapi.NewOptString(u.APIKey),
-		Exp:       baldaapi.NewOptInt64(u.Exp),
-	}
-
-	sid, err := h.sess.Get(u.UID)
-	if errors.Is(err, session.ErrNotFound) {
-		sidStr, err := h.sess.Create(u.UID)
-		if err != nil {
-			slog.Error("auth: create sid", slog.Any("error", err))
-			return &baldaapi.ErrorResponse{
-				Message: baldaapi.NewOptString("internal error"),
-				Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
-				Type:    baldaapi.NewOptString("InternalServerError"),
-			}, nil
-		}
-		player.Sid = baldaapi.NewOptString(sidStr)
-		cfToken, lobbyToken, err := h.generateCentrifugoTokens(u.UID)
-		if err != nil {
-			return &baldaapi.ErrorResponse{
-				Message: baldaapi.NewOptString(""),
-				Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
-				Type:    baldaapi.NewOptString("Auth Error"),
-			}, nil
-		}
-		resp := &baldaapi.AuthResponse{
-			Player:          baldaapi.NewOptPlayer(player),
-			CentrifugoToken: baldaapi.NewOptString(cfToken),
-			LobbyToken:      baldaapi.NewOptString(lobbyToken),
-		}
-		if ag := h.buildActiveGame(u.UID, u.PlayerID.String()); ag != nil {
-			resp.ActiveGame = baldaapi.NewOptActiveGame(*ag)
-		}
-		return resp, nil
-	}
+	access, refresh, err := h.issueTokens(ctx, u.UID, u.PlayerID, u.Role, "", "")
 	if err != nil {
-		slog.Error("auth: get sid", slog.Any("error", err))
+		slog.Error("auth: issue tokens", slog.Any("error", err))
 		return &baldaapi.ErrorResponse{
 			Message: baldaapi.NewOptString("internal error"),
 			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
@@ -85,17 +46,26 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 		}, nil
 	}
 
-	player.Sid = baldaapi.NewOptString(sid.Sid)
 	cfToken, lobbyToken, err := h.generateCentrifugoTokens(u.UID)
 	if err != nil {
 		return &baldaapi.ErrorResponse{
-			Message: baldaapi.NewOptString(""),
+			Message: baldaapi.NewOptString("internal error"),
 			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
-			Type:    baldaapi.NewOptString("Auth Error"),
+			Type:    baldaapi.NewOptString("InternalServerError"),
 		}, nil
 	}
+
 	resp := &baldaapi.AuthResponse{
-		Player:          baldaapi.NewOptPlayer(player),
+		Player: baldaapi.NewOptPlayer(baldaapi.Player{
+			UID:       baldaapi.NewOptUUID(u.PlayerID),
+			Firstname: baldaapi.NewOptString(u.Firstname),
+			Lastname:  baldaapi.NewOptString(u.Lastname),
+			Exp:       baldaapi.NewOptInt64(u.Exp),
+		}),
+		AccessToken:     baldaapi.NewOptString(access),
+		RefreshToken:    baldaapi.NewOptString(refresh),
+		TokenType:       baldaapi.NewOptString("Bearer"),
+		ExpiresIn:       baldaapi.NewOptInt(int(auth.AccessTokenTTL.Seconds())),
 		CentrifugoToken: baldaapi.NewOptString(cfToken),
 		LobbyToken:      baldaapi.NewOptString(lobbyToken),
 	}

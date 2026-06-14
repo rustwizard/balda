@@ -29,6 +29,10 @@ type ListGamesRes interface {
 	listGamesRes()
 }
 
+type LogoutRes interface {
+	logoutRes()
+}
+
 type MoveGameRes interface {
 	moveGameRes()
 }
@@ -39,6 +43,10 @@ type PingRes interface {
 
 type ProposeEndGameRes interface {
 	proposeEndGameRes()
+}
+
+type RefreshTokenRes interface {
+	refreshTokenRes()
 }
 
 type RejectEndGameRes interface {

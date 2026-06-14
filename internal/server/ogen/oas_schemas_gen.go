@@ -7,59 +7,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type APIKeyHeader struct {
-	APIKey string
-	Roles  []string
-}
-
-// GetAPIKey returns the value of APIKey.
-func (s *APIKeyHeader) GetAPIKey() string {
-	return s.APIKey
-}
-
-// GetRoles returns the value of Roles.
-func (s *APIKeyHeader) GetRoles() []string {
-	return s.Roles
-}
-
-// SetAPIKey sets the value of APIKey.
-func (s *APIKeyHeader) SetAPIKey(val string) {
-	s.APIKey = val
-}
-
-// SetRoles sets the value of Roles.
-func (s *APIKeyHeader) SetRoles(val []string) {
-	s.Roles = val
-}
-
-type APIKeyQueryParam struct {
-	APIKey string
-	Roles  []string
-}
-
-// GetAPIKey returns the value of APIKey.
-func (s *APIKeyQueryParam) GetAPIKey() string {
-	return s.APIKey
-}
-
-// GetRoles returns the value of Roles.
-func (s *APIKeyQueryParam) GetRoles() []string {
-	return s.Roles
-}
-
-// SetAPIKey sets the value of APIKey.
-func (s *APIKeyQueryParam) SetAPIKey(val string) {
-	s.APIKey = val
-}
-
-// SetRoles sets the value of Roles.
-func (s *APIKeyQueryParam) SetRoles(val []string) {
-	s.Roles = val
-}
-
 type AcceptEndGameConflict ErrorResponse
 
 func (*AcceptEndGameConflict) acceptEndGameRes() {}
+
+type AcceptEndGameForbidden ErrorResponse
+
+func (*AcceptEndGameForbidden) acceptEndGameRes() {}
 
 // AcceptEndGameNoContent is response for AcceptEndGame operation.
 type AcceptEndGameNoContent struct{}
@@ -190,6 +144,14 @@ func (s *AuthRequest) SetPassword(val string) {
 // Ref: #/components/schemas/AuthResponse
 type AuthResponse struct {
 	Player OptPlayer `json:"player"`
+	// Short-lived JWT access token (Authorization:&nbsp;Bearer).
+	AccessToken OptString `json:"access_token"`
+	// Opaque long-lived token used to obtain a new access token.
+	RefreshToken OptString `json:"refresh_token"`
+	// Always "Bearer".
+	TokenType OptString `json:"token_type"`
+	// Access token lifetime in seconds.
+	ExpiresIn OptInt `json:"expires_in"`
 	// JWT for connecting to the Centrifugo WebSocket.
 	CentrifugoToken OptString `json:"centrifugo_token"`
 	// Centrifugo subscription JWT for the lobby channel.
@@ -201,6 +163,26 @@ type AuthResponse struct {
 // GetPlayer returns the value of Player.
 func (s *AuthResponse) GetPlayer() OptPlayer {
 	return s.Player
+}
+
+// GetAccessToken returns the value of AccessToken.
+func (s *AuthResponse) GetAccessToken() OptString {
+	return s.AccessToken
+}
+
+// GetRefreshToken returns the value of RefreshToken.
+func (s *AuthResponse) GetRefreshToken() OptString {
+	return s.RefreshToken
+}
+
+// GetTokenType returns the value of TokenType.
+func (s *AuthResponse) GetTokenType() OptString {
+	return s.TokenType
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *AuthResponse) GetExpiresIn() OptInt {
+	return s.ExpiresIn
 }
 
 // GetCentrifugoToken returns the value of CentrifugoToken.
@@ -223,6 +205,26 @@ func (s *AuthResponse) SetPlayer(val OptPlayer) {
 	s.Player = val
 }
 
+// SetAccessToken sets the value of AccessToken.
+func (s *AuthResponse) SetAccessToken(val OptString) {
+	s.AccessToken = val
+}
+
+// SetRefreshToken sets the value of RefreshToken.
+func (s *AuthResponse) SetRefreshToken(val OptString) {
+	s.RefreshToken = val
+}
+
+// SetTokenType sets the value of TokenType.
+func (s *AuthResponse) SetTokenType(val OptString) {
+	s.TokenType = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *AuthResponse) SetExpiresIn(val OptInt) {
+	s.ExpiresIn = val
+}
+
 // SetCentrifugoToken sets the value of CentrifugoToken.
 func (s *AuthResponse) SetCentrifugoToken(val OptString) {
 	s.CentrifugoToken = val
@@ -239,6 +241,31 @@ func (s *AuthResponse) SetActiveGame(val OptActiveGame) {
 }
 
 func (*AuthResponse) authRes() {}
+
+type BearerAuth struct {
+	Token string
+	Roles []string
+}
+
+// GetToken returns the value of Token.
+func (s *BearerAuth) GetToken() string {
+	return s.Token
+}
+
+// GetRoles returns the value of Roles.
+func (s *BearerAuth) GetRoles() []string {
+	return s.Roles
+}
+
+// SetToken sets the value of Token.
+func (s *BearerAuth) SetToken(val string) {
+	s.Token = val
+}
+
+// SetRoles sets the value of Roles.
+func (s *BearerAuth) SetRoles(val []string) {
+	s.Roles = val
+}
 
 // A cell position on the 5×5 board, used in word_path. The character at each cell is resolved
 // server-side from the current board state; clients do not need to send it. The new letter being
@@ -354,7 +381,9 @@ func (*ErrorResponse) authRes()              {}
 func (*ErrorResponse) createGameRes()        {}
 func (*ErrorResponse) getPlayerStateUIDRes() {}
 func (*ErrorResponse) listGamesRes()         {}
+func (*ErrorResponse) logoutRes()            {}
 func (*ErrorResponse) pingRes()              {}
+func (*ErrorResponse) refreshTokenRes()      {}
 func (*ErrorResponse) signupRes()            {}
 
 // Current state of the game.
@@ -587,6 +616,27 @@ func (s *LobbyPlayer) SetExp(val OptInt64) {
 	s.Exp = val
 }
 
+// LogoutNoContent is response for Logout operation.
+type LogoutNoContent struct{}
+
+func (*LogoutNoContent) logoutRes() {}
+
+// Ref: #/components/schemas/LogoutRequest
+type LogoutRequest struct {
+	// Optional. The refresh token to revoke for this device.
+	RefreshToken OptString `json:"refresh_token"`
+}
+
+// GetRefreshToken returns the value of RefreshToken.
+func (s *LogoutRequest) GetRefreshToken() OptString {
+	return s.RefreshToken
+}
+
+// SetRefreshToken sets the value of RefreshToken.
+func (s *LogoutRequest) SetRefreshToken(val OptString) {
+	s.RefreshToken = val
+}
+
 type MoveGameBadRequest ErrorResponse
 
 func (*MoveGameBadRequest) moveGameRes() {}
@@ -594,6 +644,10 @@ func (*MoveGameBadRequest) moveGameRes() {}
 type MoveGameConflict ErrorResponse
 
 func (*MoveGameConflict) moveGameRes() {}
+
+type MoveGameForbidden ErrorResponse
+
+func (*MoveGameForbidden) moveGameRes() {}
 
 type MoveGameInternalServerError ErrorResponse
 
@@ -963,6 +1017,52 @@ func (o OptInt64) Or(d int64) int64 {
 	return d
 }
 
+// NewOptLogoutRequest returns new OptLogoutRequest with value set to v.
+func NewOptLogoutRequest(v LogoutRequest) OptLogoutRequest {
+	return OptLogoutRequest{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptLogoutRequest is optional LogoutRequest.
+type OptLogoutRequest struct {
+	Value LogoutRequest
+	Set   bool
+}
+
+// IsSet returns true if OptLogoutRequest was set.
+func (o OptLogoutRequest) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptLogoutRequest) Reset() {
+	var v LogoutRequest
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptLogoutRequest) SetTo(v LogoutRequest) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptLogoutRequest) Get() (v LogoutRequest, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptLogoutRequest) Or(d LogoutRequest) LogoutRequest {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptPlayer returns new OptPlayer with value set to v.
 func NewOptPlayer(v Player) OptPlayer {
 	return OptPlayer{
@@ -1137,10 +1237,6 @@ type Player struct {
 	Firstname OptString `json:"firstname"`
 	// Player's last name.
 	Lastname OptString `json:"lastname"`
-	// Player's session ID.
-	Sid OptString `json:"sid"`
-	// Player's API Key that the client needs to provide when making API calls.
-	Key OptString `json:"key"`
 	// Player's total EXP.
 	Exp OptInt64 `json:"exp"`
 }
@@ -1158,16 +1254,6 @@ func (s *Player) GetFirstname() OptString {
 // GetLastname returns the value of Lastname.
 func (s *Player) GetLastname() OptString {
 	return s.Lastname
-}
-
-// GetSid returns the value of Sid.
-func (s *Player) GetSid() OptString {
-	return s.Sid
-}
-
-// GetKey returns the value of Key.
-func (s *Player) GetKey() OptString {
-	return s.Key
 }
 
 // GetExp returns the value of Exp.
@@ -1188,16 +1274,6 @@ func (s *Player) SetFirstname(val OptString) {
 // SetLastname sets the value of Lastname.
 func (s *Player) SetLastname(val OptString) {
 	s.Lastname = val
-}
-
-// SetSid sets the value of Sid.
-func (s *Player) SetSid(val OptString) {
-	s.Sid = val
-}
-
-// SetKey sets the value of Key.
-func (s *Player) SetKey(val OptString) {
-	s.Key = val
 }
 
 // SetExp sets the value of Exp.
@@ -1363,6 +1439,10 @@ type ProposeEndGameConflict ErrorResponse
 
 func (*ProposeEndGameConflict) proposeEndGameRes() {}
 
+type ProposeEndGameForbidden ErrorResponse
+
+func (*ProposeEndGameForbidden) proposeEndGameRes() {}
+
 // ProposeEndGameNoContent is response for ProposeEndGame operation.
 type ProposeEndGameNoContent struct{}
 
@@ -1376,9 +1456,83 @@ type ProposeEndGameUnauthorized ErrorResponse
 
 func (*ProposeEndGameUnauthorized) proposeEndGameRes() {}
 
+// Ref: #/components/schemas/RefreshRequest
+type RefreshRequest struct {
+	// The opaque refresh token previously issued.
+	RefreshToken string `json:"refresh_token"`
+}
+
+// GetRefreshToken returns the value of RefreshToken.
+func (s *RefreshRequest) GetRefreshToken() string {
+	return s.RefreshToken
+}
+
+// SetRefreshToken sets the value of RefreshToken.
+func (s *RefreshRequest) SetRefreshToken(val string) {
+	s.RefreshToken = val
+}
+
+// Ref: #/components/schemas/RefreshResponse
+type RefreshResponse struct {
+	// New short-lived JWT access token.
+	AccessToken OptString `json:"access_token"`
+	// New opaque refresh token (rotated; the old one is now invalid).
+	RefreshToken OptString `json:"refresh_token"`
+	// Always "Bearer".
+	TokenType OptString `json:"token_type"`
+	// Access token lifetime in seconds.
+	ExpiresIn OptInt `json:"expires_in"`
+}
+
+// GetAccessToken returns the value of AccessToken.
+func (s *RefreshResponse) GetAccessToken() OptString {
+	return s.AccessToken
+}
+
+// GetRefreshToken returns the value of RefreshToken.
+func (s *RefreshResponse) GetRefreshToken() OptString {
+	return s.RefreshToken
+}
+
+// GetTokenType returns the value of TokenType.
+func (s *RefreshResponse) GetTokenType() OptString {
+	return s.TokenType
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *RefreshResponse) GetExpiresIn() OptInt {
+	return s.ExpiresIn
+}
+
+// SetAccessToken sets the value of AccessToken.
+func (s *RefreshResponse) SetAccessToken(val OptString) {
+	s.AccessToken = val
+}
+
+// SetRefreshToken sets the value of RefreshToken.
+func (s *RefreshResponse) SetRefreshToken(val OptString) {
+	s.RefreshToken = val
+}
+
+// SetTokenType sets the value of TokenType.
+func (s *RefreshResponse) SetTokenType(val OptString) {
+	s.TokenType = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *RefreshResponse) SetExpiresIn(val OptInt) {
+	s.ExpiresIn = val
+}
+
+func (*RefreshResponse) refreshTokenRes() {}
+
 type RejectEndGameConflict ErrorResponse
 
 func (*RejectEndGameConflict) rejectEndGameRes() {}
+
+type RejectEndGameForbidden ErrorResponse
+
+func (*RejectEndGameForbidden) rejectEndGameRes() {}
 
 // RejectEndGameNoContent is response for RejectEndGame operation.
 type RejectEndGameNoContent struct{}
@@ -1448,6 +1602,14 @@ func (s *SignupRequest) SetPassword(val string) {
 // Ref: #/components/schemas/SignupResponse
 type SignupResponse struct {
 	User OptPlayer `json:"user"`
+	// Short-lived JWT access token (Authorization:&nbsp;Bearer).
+	AccessToken OptString `json:"access_token"`
+	// Opaque long-lived token used to obtain a new access token.
+	RefreshToken OptString `json:"refresh_token"`
+	// Always "Bearer".
+	TokenType OptString `json:"token_type"`
+	// Access token lifetime in seconds.
+	ExpiresIn OptInt `json:"expires_in"`
 	// JWT for connecting to the Centrifugo WebSocket.
 	CentrifugoToken OptString `json:"centrifugo_token"`
 	// Centrifugo subscription JWT for the lobby channel.
@@ -1457,6 +1619,26 @@ type SignupResponse struct {
 // GetUser returns the value of User.
 func (s *SignupResponse) GetUser() OptPlayer {
 	return s.User
+}
+
+// GetAccessToken returns the value of AccessToken.
+func (s *SignupResponse) GetAccessToken() OptString {
+	return s.AccessToken
+}
+
+// GetRefreshToken returns the value of RefreshToken.
+func (s *SignupResponse) GetRefreshToken() OptString {
+	return s.RefreshToken
+}
+
+// GetTokenType returns the value of TokenType.
+func (s *SignupResponse) GetTokenType() OptString {
+	return s.TokenType
+}
+
+// GetExpiresIn returns the value of ExpiresIn.
+func (s *SignupResponse) GetExpiresIn() OptInt {
+	return s.ExpiresIn
 }
 
 // GetCentrifugoToken returns the value of CentrifugoToken.
@@ -1474,6 +1656,26 @@ func (s *SignupResponse) SetUser(val OptPlayer) {
 	s.User = val
 }
 
+// SetAccessToken sets the value of AccessToken.
+func (s *SignupResponse) SetAccessToken(val OptString) {
+	s.AccessToken = val
+}
+
+// SetRefreshToken sets the value of RefreshToken.
+func (s *SignupResponse) SetRefreshToken(val OptString) {
+	s.RefreshToken = val
+}
+
+// SetTokenType sets the value of TokenType.
+func (s *SignupResponse) SetTokenType(val OptString) {
+	s.TokenType = val
+}
+
+// SetExpiresIn sets the value of ExpiresIn.
+func (s *SignupResponse) SetExpiresIn(val OptInt) {
+	s.ExpiresIn = val
+}
+
 // SetCentrifugoToken sets the value of CentrifugoToken.
 func (s *SignupResponse) SetCentrifugoToken(val OptString) {
 	s.CentrifugoToken = val
@@ -1489,6 +1691,10 @@ func (*SignupResponse) signupRes() {}
 type SkipGameConflict ErrorResponse
 
 func (*SkipGameConflict) skipGameRes() {}
+
+type SkipGameForbidden ErrorResponse
+
+func (*SkipGameForbidden) skipGameRes() {}
 
 // SkipGameNoContent is response for SkipGame operation.
 type SkipGameNoContent struct{}

@@ -127,7 +127,7 @@ export MIGRATION_CONN_STRING="postgres://balda:password@localhost:5432/balda"
 ./bin/balda server \
   --server.addr 0.0.0.0 \
   --server.port 9666 \
-  --server.x_api_token your-api-token \
+  --auth.jwt_secret your-32-byte-jwt-secret \
   --pg.host localhost --pg.port 5432 \
   --pg.user balda --pg.database balda --pg.password password \
   --redis.addr localhost:6379
@@ -159,15 +159,20 @@ Integration tests in `tests/` spin up ephemeral PostgreSQL and Redis containers 
 
 Base path: `/balda/api/v1`
 
-Authentication uses an `X-API-Key` header (or `api_key` query parameter). Session-sensitive endpoints also require `X-API-Session`.
+Authentication uses JWT Bearer tokens: `/signup` and `/auth` return a short-lived
+`access_token` (1h) plus an opaque `refresh_token` (30d). Send the access token as
+`Authorization: Bearer <access_token>` on every protected endpoint. When it expires,
+exchange the refresh token at `/auth/refresh` for a new pair (rotation).
 
 Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/signup` | Register a new user account |
-| POST | `/auth` | Authenticate and get a session |
-| POST | `/session/ping` | Keepalive — refreshes session TTL |
+| POST | `/signup` | Register a new user account; returns a token pair |
+| POST | `/auth` | Authenticate; returns a token pair |
+| POST | `/auth/refresh` | Exchange a refresh token for a new access/refresh pair |
+| POST | `/auth/logout` | Revoke the current refresh token (Bearer required) |
+| POST | `/session/ping` | Keepalive — refreshes game presence (Bearer required) |
 | GET | `/player/state/{uid}` | Get player profile and state |
 | GET | `/games` | List all currently active games |
 | POST | `/games` | Create a new waiting game |
@@ -186,7 +191,11 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 
 // Response
 {
-  "user": { "uid": "…", "firstname": "Ivan", "lastname": "Petrov", "sid": "…", "key": "…" },
+  "user": { "uid": "…", "firstname": "Ivan", "lastname": "Petrov", "exp": 0 },
+  "access_token": "…",
+  "refresh_token": "…",
+  "token_type": "Bearer",
+  "expires_in": 3600,
   "centrifugo_token": "…",
   "lobby_token": "…"
 }
@@ -200,10 +209,24 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 
 // Response
 {
-  "player": { "uid": "…", "firstname": "Ivan", "lastname": "Petrov", "sid": "…", "key": "…" },
+  "player": { "uid": "…", "firstname": "Ivan", "lastname": "Petrov", "exp": 0 },
+  "access_token": "…",
+  "refresh_token": "…",
+  "token_type": "Bearer",
+  "expires_in": 3600,
   "centrifugo_token": "…",
   "lobby_token": "…"
 }
+```
+
+### POST /auth/refresh
+
+```json
+// Request
+{ "refresh_token": "…" }
+
+// Response
+{ "access_token": "…", "refresh_token": "…", "token_type": "Bearer", "expires_in": 3600 }
 ```
 
 ### POST /games
@@ -444,11 +467,21 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | first_name | text | |
 | last_name | text | |
 | email | text | unique |
-| hash_password | text | bcrypt via pgcrypto |
-| api_key | uuid | |
+| hash_password | text | bcrypt (Go, cost 12) |
+| role | text | `player` \| `admin`, default `player` |
 | confirmed | boolean | default false |
 | created_at | timestamp | |
 | updated_at | timestamp | |
+
+**refresh_tokens**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| token_id | uuid | PK |
+| user_id | bigint | FK → users |
+| token_hash | text | HMAC-SHA256 of the opaque token, unique |
+| expires_at | timestamptz | |
+| revoked | boolean | rotated/revoked tokens |
 
 **player_state**
 
@@ -491,7 +524,7 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 |------|---------|-------------|
 | `--server.addr` | `127.0.0.1` | Bind address |
 | `--server.port` | `9666` | HTTP port |
-| `--server.x_api_token` | | API key for requests |
+| `--auth.jwt_secret` | | HMAC secret for signing JWT access tokens |
 | `--pg.host` | `127.0.0.1` | PostgreSQL host |
 | `--pg.port` | `5432` | PostgreSQL port |
 | `--pg.user` | | PostgreSQL user |

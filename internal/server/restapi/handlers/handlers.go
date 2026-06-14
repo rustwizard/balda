@@ -2,29 +2,58 @@ package handlers
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/rustwizard/balda/internal/auth"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/presence"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/service"
-	"github.com/rustwizard/balda/internal/session"
 )
 
 // Handlers implements baldaapi.Handler and baldaapi.SecurityHandler.
 type Handlers struct {
 	svc                       *service.Balda
-	sess                      *session.Service
 	pres                      *presence.Service
+	jwtSecret                 string
 	cf                        *centrifugo.Client
 	centrifugoTokenHMACSecret string
 }
 
-func New(svc *service.Balda, sess *session.Service, pres *presence.Service, cf *centrifugo.Client, centrifugoTokenHMACSecret string) *Handlers {
-	return &Handlers{svc: svc, sess: sess, pres: pres, cf: cf, centrifugoTokenHMACSecret: centrifugoTokenHMACSecret}
+func New(svc *service.Balda, pres *presence.Service, jwtSecret string, cf *centrifugo.Client, centrifugoTokenHMACSecret string) *Handlers {
+	return &Handlers{svc: svc, pres: pres, jwtSecret: jwtSecret, cf: cf, centrifugoTokenHMACSecret: centrifugoTokenHMACSecret}
+}
+
+// uidFromContext returns the authenticated user's id from the JWT claims placed
+// by HandleBearerAuth. ok is false only if the security middleware was bypassed.
+func uidFromContext(ctx context.Context) (uid int64, ok bool) {
+	c, ok := auth.FromContext(ctx)
+	if !ok {
+		return 0, false
+	}
+	return c.UID, true
+}
+
+// issueTokens mints an access token and a rotated refresh token for the user,
+// persisting the HMAC hash of the refresh token. Returns the raw tokens.
+func (h *Handlers) issueTokens(ctx context.Context, uid int64, pid uuid.UUID, role, userAgent, ipAddr string) (access, refresh string, err error) {
+	access, err = auth.GenerateAccessToken(uid, pid, role, h.jwtSecret)
+	if err != nil {
+		return "", "", fmt.Errorf("issue tokens: access: %w", err)
+	}
+	refresh, err = auth.GenerateRefreshToken()
+	if err != nil {
+		return "", "", fmt.Errorf("issue tokens: refresh: %w", err)
+	}
+	hash := auth.HashRefreshToken(h.jwtSecret, refresh)
+	if err := h.svc.SaveRefreshToken(ctx, uid, hash, time.Now().Add(auth.RefreshTokenTTL), userAgent, ipAddr); err != nil {
+		return "", "", fmt.Errorf("issue tokens: save: %w", err)
+	}
+	return access, refresh, nil
 }
 
 // generateCentrifugoTokens returns a connection token and a lobby subscription token for the given user.
@@ -71,30 +100,13 @@ func (h *Handlers) publishLobbyUpdate(ctx context.Context) {
 	}
 }
 
-// HandleAPIKeyHeader implements baldaapi.SecurityHandler.
-func (h *Handlers) HandleAPIKeyHeader(ctx context.Context, _ baldaapi.OperationName, t baldaapi.APIKeyHeader) (context.Context, error) {
-	ok, err := h.svc.ValidateAPIKey(ctx, t.APIKey)
+// HandleBearerAuth implements baldaapi.SecurityHandler. It verifies the JWT
+// access token and injects the resulting claims into the request context.
+// A returned error is rendered by ogen as 401 Unauthorized.
+func (h *Handlers) HandleBearerAuth(ctx context.Context, _ baldaapi.OperationName, t baldaapi.BearerAuth) (context.Context, error) {
+	claims, err := auth.ParseAccessToken(t.Token, h.jwtSecret)
 	if err != nil {
-		slog.Error("api key header: db error", slog.Any("error", err))
-		return nil, errors.New("api key header: internal error")
+		return ctx, err
 	}
-	if !ok {
-		slog.Error("access attempt with incorrect api key header")
-		return nil, errors.New("api key header: token error")
-	}
-	return ctx, nil
-}
-
-// HandleAPIKeyQueryParam implements baldaapi.SecurityHandler.
-func (h *Handlers) HandleAPIKeyQueryParam(ctx context.Context, _ baldaapi.OperationName, t baldaapi.APIKeyQueryParam) (context.Context, error) {
-	ok, err := h.svc.ValidateAPIKey(ctx, t.APIKey)
-	if err != nil {
-		slog.Error("api key query param: db error", slog.Any("error", err))
-		return nil, errors.New("api key param: internal error")
-	}
-	if !ok {
-		slog.Error("access attempt with incorrect api key query param")
-		return nil, errors.New("api key param: token error")
-	}
-	return ctx, nil
+	return auth.WithClaims(ctx, claims), nil
 }

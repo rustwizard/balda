@@ -17,19 +17,11 @@ import (
 
 // AcceptEndGameParams is parameters of acceptEndGame operation.
 type AcceptEndGameParams struct {
-	XAPISession string
 	// ID of the game.
 	ID uuid.UUID
 }
 
 func unpackAcceptEndGameParams(packed middleware.Parameters) (params AcceptEndGameParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "X-API-Session",
-			In:   "header",
-		}
-		params.XAPISession = packed[key].(string)
-	}
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -41,41 +33,6 @@ func unpackAcceptEndGameParams(packed middleware.Parameters) (params AcceptEndGa
 }
 
 func decodeAcceptEndGameParams(args [1]string, argsEscaped bool, r *http.Request) (params AcceptEndGameParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
-	// Decode header: X-API-Session.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.XAPISession = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-Session",
-			In:   "header",
-			Err:  err,
-		}
-	}
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -118,116 +75,6 @@ func decodeAcceptEndGameParams(args [1]string, argsEscaped bool, r *http.Request
 		return params, &ogenerrors.DecodeParamError{
 			Name: "id",
 			In:   "path",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// CreateGameParams is parameters of createGame operation.
-type CreateGameParams struct {
-	XAPISession string
-}
-
-func unpackCreateGameParams(packed middleware.Parameters) (params CreateGameParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "X-API-Session",
-			In:   "header",
-		}
-		params.XAPISession = packed[key].(string)
-	}
-	return params
-}
-
-func decodeCreateGameParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateGameParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
-	// Decode header: X-API-Session.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.XAPISession = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-Session",
-			In:   "header",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
-// CreateGameWithBotParams is parameters of createGameWithBot operation.
-type CreateGameWithBotParams struct {
-	XAPISession string
-}
-
-func unpackCreateGameWithBotParams(packed middleware.Parameters) (params CreateGameWithBotParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "X-API-Session",
-			In:   "header",
-		}
-		params.XAPISession = packed[key].(string)
-	}
-	return params
-}
-
-func decodeCreateGameWithBotParams(args [0]string, argsEscaped bool, r *http.Request) (params CreateGameWithBotParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
-	// Decode header: X-API-Session.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.XAPISession = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-Session",
-			In:   "header",
 			Err:  err,
 		}
 	}
@@ -302,19 +149,11 @@ func decodeGetPlayerStateUIDParams(args [1]string, argsEscaped bool, r *http.Req
 
 // JoinGameParams is parameters of joinGame operation.
 type JoinGameParams struct {
-	XAPISession string
 	// ID of the game to join.
 	ID uuid.UUID
 }
 
 func unpackJoinGameParams(packed middleware.Parameters) (params JoinGameParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "X-API-Session",
-			In:   "header",
-		}
-		params.XAPISession = packed[key].(string)
-	}
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -326,41 +165,6 @@ func unpackJoinGameParams(packed middleware.Parameters) (params JoinGameParams) 
 }
 
 func decodeJoinGameParams(args [1]string, argsEscaped bool, r *http.Request) (params JoinGameParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
-	// Decode header: X-API-Session.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.XAPISession = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-Session",
-			In:   "header",
-			Err:  err,
-		}
-	}
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -409,76 +213,13 @@ func decodeJoinGameParams(args [1]string, argsEscaped bool, r *http.Request) (pa
 	return params, nil
 }
 
-// ListGamesParams is parameters of listGames operation.
-type ListGamesParams struct {
-	XAPISession string
-}
-
-func unpackListGamesParams(packed middleware.Parameters) (params ListGamesParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "X-API-Session",
-			In:   "header",
-		}
-		params.XAPISession = packed[key].(string)
-	}
-	return params
-}
-
-func decodeListGamesParams(args [0]string, argsEscaped bool, r *http.Request) (params ListGamesParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
-	// Decode header: X-API-Session.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.XAPISession = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-Session",
-			In:   "header",
-			Err:  err,
-		}
-	}
-	return params, nil
-}
-
 // MoveGameParams is parameters of moveGame operation.
 type MoveGameParams struct {
-	XAPISession string
 	// ID of the game.
 	ID uuid.UUID
 }
 
 func unpackMoveGameParams(packed middleware.Parameters) (params MoveGameParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "X-API-Session",
-			In:   "header",
-		}
-		params.XAPISession = packed[key].(string)
-	}
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -490,41 +231,6 @@ func unpackMoveGameParams(packed middleware.Parameters) (params MoveGameParams) 
 }
 
 func decodeMoveGameParams(args [1]string, argsEscaped bool, r *http.Request) (params MoveGameParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
-	// Decode header: X-API-Session.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.XAPISession = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-Session",
-			In:   "header",
-			Err:  err,
-		}
-	}
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -575,8 +281,7 @@ func decodeMoveGameParams(args [1]string, argsEscaped bool, r *http.Request) (pa
 
 // PingParams is parameters of ping operation.
 type PingParams struct {
-	XRequestID  int64
-	XAPISession string
+	XRequestID int64
 }
 
 func unpackPingParams(packed middleware.Parameters) (params PingParams) {
@@ -586,13 +291,6 @@ func unpackPingParams(packed middleware.Parameters) (params PingParams) {
 			In:   "header",
 		}
 		params.XRequestID = packed[key].(int64)
-	}
-	{
-		key := middleware.ParameterKey{
-			Name: "X-API-Session",
-			In:   "header",
-		}
-		params.XAPISession = packed[key].(string)
 	}
 	return params
 }
@@ -651,58 +349,16 @@ func decodePingParams(args [0]string, argsEscaped bool, r *http.Request) (params
 			Err:  err,
 		}
 	}
-	// Decode header: X-API-Session.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.XAPISession = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-Session",
-			In:   "header",
-			Err:  err,
-		}
-	}
 	return params, nil
 }
 
 // ProposeEndGameParams is parameters of proposeEndGame operation.
 type ProposeEndGameParams struct {
-	XAPISession string
 	// ID of the game.
 	ID uuid.UUID
 }
 
 func unpackProposeEndGameParams(packed middleware.Parameters) (params ProposeEndGameParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "X-API-Session",
-			In:   "header",
-		}
-		params.XAPISession = packed[key].(string)
-	}
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -714,41 +370,6 @@ func unpackProposeEndGameParams(packed middleware.Parameters) (params ProposeEnd
 }
 
 func decodeProposeEndGameParams(args [1]string, argsEscaped bool, r *http.Request) (params ProposeEndGameParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
-	// Decode header: X-API-Session.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.XAPISession = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-Session",
-			In:   "header",
-			Err:  err,
-		}
-	}
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -799,19 +420,11 @@ func decodeProposeEndGameParams(args [1]string, argsEscaped bool, r *http.Reques
 
 // RejectEndGameParams is parameters of rejectEndGame operation.
 type RejectEndGameParams struct {
-	XAPISession string
 	// ID of the game.
 	ID uuid.UUID
 }
 
 func unpackRejectEndGameParams(packed middleware.Parameters) (params RejectEndGameParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "X-API-Session",
-			In:   "header",
-		}
-		params.XAPISession = packed[key].(string)
-	}
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -823,41 +436,6 @@ func unpackRejectEndGameParams(packed middleware.Parameters) (params RejectEndGa
 }
 
 func decodeRejectEndGameParams(args [1]string, argsEscaped bool, r *http.Request) (params RejectEndGameParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
-	// Decode header: X-API-Session.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.XAPISession = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-Session",
-			In:   "header",
-			Err:  err,
-		}
-	}
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]
@@ -908,19 +486,11 @@ func decodeRejectEndGameParams(args [1]string, argsEscaped bool, r *http.Request
 
 // SkipGameParams is parameters of skipGame operation.
 type SkipGameParams struct {
-	XAPISession string
 	// ID of the game.
 	ID uuid.UUID
 }
 
 func unpackSkipGameParams(packed middleware.Parameters) (params SkipGameParams) {
-	{
-		key := middleware.ParameterKey{
-			Name: "X-API-Session",
-			In:   "header",
-		}
-		params.XAPISession = packed[key].(string)
-	}
 	{
 		key := middleware.ParameterKey{
 			Name: "id",
@@ -932,41 +502,6 @@ func unpackSkipGameParams(packed middleware.Parameters) (params SkipGameParams) 
 }
 
 func decodeSkipGameParams(args [1]string, argsEscaped bool, r *http.Request) (params SkipGameParams, _ error) {
-	h := uri.NewHeaderDecoder(r.Header)
-	// Decode header: X-API-Session.
-	if err := func() error {
-		cfg := uri.HeaderParameterDecodingConfig{
-			Name:    "X-API-Session",
-			Explode: false,
-		}
-		if err := h.HasParam(cfg); err == nil {
-			if err := h.DecodeParam(cfg, func(d uri.Decoder) error {
-				val, err := d.DecodeValue()
-				if err != nil {
-					return err
-				}
-
-				c, err := conv.ToString(val)
-				if err != nil {
-					return err
-				}
-
-				params.XAPISession = c
-				return nil
-			}); err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-		return nil
-	}(); err != nil {
-		return params, &ogenerrors.DecodeParamError{
-			Name: "X-API-Session",
-			In:   "header",
-			Err:  err,
-		}
-	}
 	// Decode path: id.
 	if err := func() error {
 		param := args[0]

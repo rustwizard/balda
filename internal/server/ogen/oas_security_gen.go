@@ -13,10 +13,8 @@ import (
 
 // SecurityHandler is handler for security parameters.
 type SecurityHandler interface {
-	// HandleAPIKeyHeader handles APIKeyHeader security.
-	HandleAPIKeyHeader(ctx context.Context, operationName OperationName, t APIKeyHeader) (context.Context, error)
-	// HandleAPIKeyQueryParam handles APIKeyQueryParam security.
-	HandleAPIKeyQueryParam(ctx context.Context, operationName OperationName, t APIKeyQueryParam) (context.Context, error)
+	// HandleBearerAuth handles BearerAuth security.
+	HandleBearerAuth(ctx context.Context, operationName OperationName, t BearerAuth) (context.Context, error)
 }
 
 func findAuthorization(h http.Header, prefix string) (string, bool) {
@@ -34,13 +32,14 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 	return "", false
 }
 
-// operationRolesAPIKeyHeader is a private map storing roles per operation.
-var operationRolesAPIKeyHeader = map[string][]string{
+// operationRolesBearerAuth is a private map storing roles per operation.
+var operationRolesBearerAuth = map[string][]string{
 	AcceptEndGameOperation:     []string{},
 	CreateGameOperation:        []string{},
 	CreateGameWithBotOperation: []string{},
 	JoinGameOperation:          []string{},
 	ListGamesOperation:         []string{},
+	LogoutOperation:            []string{},
 	MoveGameOperation:          []string{},
 	PingOperation:              []string{},
 	ProposeEndGameOperation:    []string{},
@@ -48,18 +47,18 @@ var operationRolesAPIKeyHeader = map[string][]string{
 	SkipGameOperation:          []string{},
 }
 
-// GetRolesForAPIKeyHeader returns the required roles for the given operation.
+// GetRolesForBearerAuth returns the required roles for the given operation.
 //
 // This is useful for authorization scenarios where you need to know which roles
 // are required for an operation.
 //
 // Example:
 //
-//	requiredRoles := GetRolesForAPIKeyHeader(AddPetOperation)
+//	requiredRoles := GetRolesForBearerAuth(AddPetOperation)
 //
 // Returns nil if the operation has no role requirements or if the operation is unknown.
-func GetRolesForAPIKeyHeader(operation string) []string {
-	roles, ok := operationRolesAPIKeyHeader[operation]
+func GetRolesForBearerAuth(operation string) []string {
+	roles, ok := operationRolesBearerAuth[operation]
 	if !ok {
 		return nil
 	}
@@ -69,70 +68,15 @@ func GetRolesForAPIKeyHeader(operation string) []string {
 	return result
 }
 
-// operationRolesAPIKeyQueryParam is a private map storing roles per operation.
-var operationRolesAPIKeyQueryParam = map[string][]string{
-	AcceptEndGameOperation:     []string{},
-	CreateGameOperation:        []string{},
-	CreateGameWithBotOperation: []string{},
-	JoinGameOperation:          []string{},
-	ListGamesOperation:         []string{},
-	MoveGameOperation:          []string{},
-	PingOperation:              []string{},
-	ProposeEndGameOperation:    []string{},
-	RejectEndGameOperation:     []string{},
-	SkipGameOperation:          []string{},
-}
-
-// GetRolesForAPIKeyQueryParam returns the required roles for the given operation.
-//
-// This is useful for authorization scenarios where you need to know which roles
-// are required for an operation.
-//
-// Example:
-//
-//	requiredRoles := GetRolesForAPIKeyQueryParam(AddPetOperation)
-//
-// Returns nil if the operation has no role requirements or if the operation is unknown.
-func GetRolesForAPIKeyQueryParam(operation string) []string {
-	roles, ok := operationRolesAPIKeyQueryParam[operation]
+func (s *Server) securityBearerAuth(ctx context.Context, operationName OperationName, req *http.Request) (context.Context, bool, error) {
+	var t BearerAuth
+	token, ok := findAuthorization(req.Header, "Bearer")
 	if !ok {
-		return nil
-	}
-	// Return a copy to prevent external modification
-	result := make([]string, len(roles))
-	copy(result, roles)
-	return result
-}
-
-func (s *Server) securityAPIKeyHeader(ctx context.Context, operationName OperationName, req *http.Request) (context.Context, bool, error) {
-	var t APIKeyHeader
-	const parameterName = "X-API-Key"
-	value := req.Header.Get(parameterName)
-	if value == "" {
 		return ctx, false, nil
 	}
-	t.APIKey = value
-	t.Roles = operationRolesAPIKeyHeader[operationName]
-	rctx, err := s.sec.HandleAPIKeyHeader(ctx, operationName, t)
-	if errors.Is(err, ogenerrors.ErrSkipServerSecurity) {
-		return nil, false, nil
-	} else if err != nil {
-		return nil, false, err
-	}
-	return rctx, true, err
-}
-
-func (s *Server) securityAPIKeyQueryParam(ctx context.Context, operationName OperationName, req *http.Request) (context.Context, bool, error) {
-	var t APIKeyQueryParam
-	const parameterName = "api_key"
-	q := req.URL.Query()
-	if !q.Has(parameterName) {
-		return ctx, false, nil
-	}
-	value := q.Get(parameterName)
-	t.APIKey = value
-	t.Roles = operationRolesAPIKeyQueryParam[operationName]
-	rctx, err := s.sec.HandleAPIKeyQueryParam(ctx, operationName, t)
+	t.Token = token
+	t.Roles = operationRolesBearerAuth[operationName]
+	rctx, err := s.sec.HandleBearerAuth(ctx, operationName, t)
 	if errors.Is(err, ogenerrors.ErrSkipServerSecurity) {
 		return nil, false, nil
 	} else if err != nil {
@@ -143,27 +87,15 @@ func (s *Server) securityAPIKeyQueryParam(ctx context.Context, operationName Ope
 
 // SecuritySource is provider of security values (tokens, passwords, etc.).
 type SecuritySource interface {
-	// APIKeyHeader provides APIKeyHeader security value.
-	APIKeyHeader(ctx context.Context, operationName OperationName) (APIKeyHeader, error)
-	// APIKeyQueryParam provides APIKeyQueryParam security value.
-	APIKeyQueryParam(ctx context.Context, operationName OperationName) (APIKeyQueryParam, error)
+	// BearerAuth provides BearerAuth security value.
+	BearerAuth(ctx context.Context, operationName OperationName) (BearerAuth, error)
 }
 
-func (s *Client) securityAPIKeyHeader(ctx context.Context, operationName OperationName, req *http.Request) error {
-	t, err := s.sec.APIKeyHeader(ctx, operationName)
+func (s *Client) securityBearerAuth(ctx context.Context, operationName OperationName, req *http.Request) error {
+	t, err := s.sec.BearerAuth(ctx, operationName)
 	if err != nil {
-		return errors.Wrap(err, "security source \"APIKeyHeader\"")
+		return errors.Wrap(err, "security source \"BearerAuth\"")
 	}
-	req.Header.Set("X-API-Key", t.APIKey)
-	return nil
-}
-func (s *Client) securityAPIKeyQueryParam(ctx context.Context, operationName OperationName, req *http.Request) error {
-	t, err := s.sec.APIKeyQueryParam(ctx, operationName)
-	if err != nil {
-		return errors.Wrap(err, "security source \"APIKeyQueryParam\"")
-	}
-	q := req.URL.Query()
-	q.Set("api_key", t.APIKey)
-	req.URL.RawQuery = q.Encode()
+	req.Header.Set("Authorization", "Bearer "+t.Token)
 	return nil
 }

@@ -2,13 +2,40 @@
 
 ## Overview
 
-This document describes the target authorization architecture for the Balda game server — replacing the current mixed-header scheme with a standard JWT Bearer token flow plus explicit HTTP-layer resource ownership checks.
+This document describes the authorization architecture for the Balda game server — a standard JWT Bearer token flow plus explicit HTTP-layer resource ownership checks, which replaced the earlier mixed-header (`X-API-Key` / `X-API-Session`) scheme.
 
 ---
 
-## Current State and Problems
+## Implementation Status
 
-The server currently has three overlapping auth mechanisms:
+The JWT Bearer cutover is **implemented and live** (backend + frontend). The earlier `X-API-Key` / `X-API-Session` scheme and the `users.api_key` column have been removed.
+
+**Done:**
+- Access (JWT, 1h) + refresh (opaque, 30d, HMAC-hashed in DB) token model; `/signup` and `/auth` return a token pair.
+- `POST /auth/refresh` with rotation + replay detection (a reused/rotated token revokes the family); `POST /auth/logout` revokes the refresh token.
+- `BearerAuth` security scheme; identity from JWT claims (`uid`, `pid`, `role`) in every handler.
+- Password hashing in Go with bcrypt cost 12 (existing pgcrypto `$2a$` hashes verify unchanged).
+- `refresh_tokens` table + `users.role` (migration 004); `users.api_key` dropped (migration 005).
+- HTTP-layer ownership: `403 Forbidden` on game actions for non-participants (`service.ErrNotParticipant`).
+- Custom ogen `ErrorHandler` renders framework errors (401/decode/etc.) in the `ErrorResponse` shape.
+- Frontend holds the token pair, sends `Authorization: Bearer`, and auto-refreshes on 401 with one retry.
+
+**Pending (security hardening — not required for the cutover):**
+- **Rate limiting** on `/auth`, `/auth/refresh`, `/signup` (see [Rate Limiting](#rate-limiting)).
+- **`jti` access-token blacklist** on logout (see [Logout](#logout)); today logout revokes only the refresh token, so an access token stays valid until it expires (≤1h).
+- **Roles / RBAC**: the `role` column and JWT claim exist, but there are no admin endpoints or `RoleCheck` middleware yet (see [Roles](#roles)).
+- **HSTS / HTTPS redirect**: reverse-proxy config, outside the application.
+
+**Deviations from the original target below:**
+- `POST /session/ping` was **kept** (Bearer-authenticated, refreshes game presence), not deprecated — presence is a separate concern from auth and the frontend still pings.
+- `api_key` was dropped in migration **005** (not 004): it was actively validated by the interim per-user-key scheme, so dropping it earlier would have broken auth mid-migration.
+- Refresh tokens are stored as **HMAC-SHA256** hashes (not bcrypt) — deterministic, enabling indexed lookup.
+
+---
+
+## Original Motivation (pre-migration)
+
+Before this work the server had three overlapping auth mechanisms:
 
 | Mechanism | Header | Scope | Problem |
 |-----------|--------|-------|---------|
@@ -72,7 +99,7 @@ Server:
   1. Hash password with bcrypt (cost 12) in Go (move hashing out of Postgres)
   2. INSERT into users + player_state (transaction)
   3. Generate access_token JWT
-  4. Generate refresh_token → bcrypt-hash → INSERT into refresh_tokens
+  4. Generate refresh_token → HMAC-SHA256 hash → INSERT into refresh_tokens
   5. Generate Centrifugo connection + lobby subscription JWTs
 
 Response 201:
@@ -140,15 +167,20 @@ Authorization: Bearer <access_token>
 Body: { "refresh_token": "<opaque>" }   // optional; revokes this device's refresh token
 
 Server:
-  1. Validate access_token (must be valid)
-  2. Mark refresh_token row revoked=true (if provided)
-  3. Add jti to Redis blacklist with TTL = remaining access_token lifetime
+  1. Validate access_token (must be valid)              [implemented]
+  2. Mark refresh_token row revoked=true (if provided)   [implemented]
+  3. Add jti to Redis blacklist with TTL = remaining access_token lifetime  [NOT YET IMPLEMENTED]
      Key: "jwt:blacklist:<jti>", Value: "1", TTL: claims.exp - now()
      Without this step a logged-out access token remains valid for up to 1 hour.
      BearerAuth middleware must check this key after signature verification.
 
 Response 204
 ```
+
+> **Status:** steps 1–2 are implemented. The `jti` blacklist (step 3) is pending;
+> until then logout revokes the refresh token but the current access token remains
+> valid until it expires (≤1h). The JWT already carries a `jti` claim, so adding the
+> blacklist later is non-breaking.
 
 ### Authorization Model
 
@@ -254,16 +286,19 @@ All tokens must be transmitted over TLS only. Configure the reverse proxy (nginx
 
 ### Database Changes
 
-**Migration 004** — add `role` to users, add `refresh_tokens` table, drop unused `api_key`:
+As implemented, this was split across **two** migrations (tern up-only files with a
+`---- create above / drop below ----` separator). `api_key` is dropped in 005, not
+004, because the interim per-user-key scheme still validated it during the migration.
+
+**Migration 004** — add `role` to users, add `refresh_tokens` table:
 
 ```sql
 -- 004_auth_tokens.up.sql
 
 ALTER TABLE users
-  ADD COLUMN role TEXT NOT NULL DEFAULT 'player',
-  DROP COLUMN api_key;
+  ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'player';
 
-CREATE TABLE refresh_tokens (
+CREATE TABLE IF NOT EXISTS refresh_tokens (
   token_id   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id    BIGINT      NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   token_hash TEXT        NOT NULL UNIQUE,   -- HMAC-SHA256(JWT_SECRET, rawToken)
@@ -274,17 +309,25 @@ CREATE TABLE refresh_tokens (
   ip_addr    INET
 );
 
-CREATE INDEX idx_refresh_tokens_user_id ON refresh_tokens(user_id);
-CREATE INDEX idx_refresh_tokens_expires ON refresh_tokens(expires_at) WHERE revoked = false;
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires ON refresh_tokens(expires_at) WHERE revoked = false;
+
+---- create above / drop below ----
+
+DROP TABLE IF EXISTS refresh_tokens;
+ALTER TABLE users DROP COLUMN IF EXISTS role;
 ```
 
-```sql
--- 004_auth_tokens.down.sql
+**Migration 005** — drop the now-unused `api_key` (done last, after the handler cutover):
 
-DROP TABLE refresh_tokens;
-ALTER TABLE users
-  DROP COLUMN role,
-  ADD COLUMN api_key UUID DEFAULT gen_random_uuid();
+```sql
+-- 005_drop_api_key.up.sql
+
+ALTER TABLE users DROP COLUMN IF EXISTS api_key;
+
+---- create above / drop below ----
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS api_key UUID DEFAULT gen_random_uuid() NOT NULL;
 ```
 
 ### Storage Layer
@@ -387,53 +430,56 @@ make code-gen
 Replace `HandleAPIKeyHeader` / `HandleAPIKeyQueryParam` with:
 
 ```go
-func (h *Handlers) HandleBearerAuth(ctx context.Context, operationName ogen.OperationName, t ogen.BearerAuth) (context.Context, error) {
+func (h *Handlers) HandleBearerAuth(ctx context.Context, _ baldaapi.OperationName, t baldaapi.BearerAuth) (context.Context, error) {
     claims, err := auth.ParseAccessToken(t.Token, h.jwtSecret)
     if err != nil {
-        return ctx, &ogen.SecurityError{Err: err}
+        return ctx, err // ogen wraps this in a SecurityError → rendered as 401
     }
-    ctx = auth.WithClaims(ctx, claims)
-    return ctx, nil
+    return auth.WithClaims(ctx, claims), nil
 }
 ```
 
-Remove the `xAPIToken` field and `--server.x_api_token` CLI flag from `cmd/server.go`.
-Add `--auth.jwt_secret` flag (or `JWT_SECRET` env var).
+The `xAPIToken` field / CLI flag had already been removed by the interim per-user-key
+work; this added the `--auth.jwt_secret` flag (env `AUTH_JWT_SECRET`). A custom
+`baldaapi.WithErrorHandler(handlers.ErrorHandler)` renders the resulting 401 (and other
+framework errors) in the `ErrorResponse` JSON shape rather than ogen's default body.
 
 ### New Handlers
 
 - `internal/server/restapi/handlers/refresh.go` — `POST /auth/refresh`
 - `internal/server/restapi/handlers/logout.go` — `POST /auth/logout`
 
-### Game Ownership Middleware
+### Game Ownership (403)
 
-Add to `internal/lobby/lobby.go`:
-```go
-// IsParticipant returns true if the player identified by uid is currently in the given game.
-func (l *Lobby) IsParticipant(gameID string, uid int64) bool
-```
+As implemented, ownership is enforced in the service layer, which already fetches the
+game record and checks membership. The membership failure now returns a sentinel
+`service.ErrNotParticipant` (instead of a generic error), and the game-action handlers
+(move, skip, propose-end, accept-end, reject-end) map it to the generated `403 Forbidden`
+response. Unknown games still return `404` (checked before membership), so 404 vs 403 stay
+distinct. No separate `lobby.IsParticipant` HTTP gate was needed.
 
-Call it at the top of game action handlers (move, propose-end, accept-end, reject-end, skip)
-before delegating to the service layer. Return `403 Forbidden` on failure.
+### Migration Path (as executed)
 
-### Migration Path
+| Step | Action | Status |
+|------|--------|--------|
+| 1 | Add `docs/auth-system.md` | ✅ done |
+| 2 | Migration 004 (add `role`, add `refresh_tokens`) | ✅ done |
+| 3 | Implement `internal/auth/jwt.go` | ✅ done |
+| 4 | Implement `internal/storage/token.go` | ✅ done |
+| 5 | Update OpenAPI spec + `make code-gen` | ✅ done (with the cutover, not separable — ogen is all-or-nothing) |
+| 6 | `/auth` and `/signup` return JWT pair | ✅ done (breaking — response shape) |
+| 7 | Add `POST /auth/refresh`, `POST /auth/logout` | ✅ done |
+| 8 | JWT claims for identity in all handlers | ✅ done (breaking — `X-API-Session` removed) |
+| 9 | Ownership 403 for non-participants | ✅ done (via `service.ErrNotParticipant`, not `lobby.IsParticipant`) |
+| 10 | Add `--auth.jwt_secret` (the old `x_api_token` flag was already gone) | ✅ done |
+| 11 | Migration 005 — drop `api_key` | ✅ done |
+| — | `POST /session/ping` | ↪ **kept** (Bearer + presence), not deprecated |
+| — | Rate limiting | ⏳ pending |
+| — | `jti` blacklist on logout | ⏳ pending |
+| — | Admin role endpoints / `RoleCheck` | ⏳ pending |
 
-| Step | Action | Breaking change |
-|------|--------|-----------------|
-| 1 | Add `docs/auth-system.md` | No |
-| 2 | Run migration 004 (add `role`, add `refresh_tokens`, drop `api_key`) | `api_key` removed from DB |
-| 3 | Implement `internal/auth/jwt.go` | No |
-| 4 | Implement `internal/storage/token.go` | No |
-| 5 | Update OpenAPI spec + `make code-gen` | No (additive) |
-| 6 | Update `/auth` and `/signup` to return JWT pair | Yes — response shape changes |
-| 7 | Add `POST /auth/refresh`, `POST /auth/logout` | No (new endpoints) |
-| 8 | Replace session-based identity extraction with JWT claims in all handlers | Yes — `X-API-Session` no longer accepted |
-| 9 | Add `lobby.IsParticipant` ownership check | No (stricter, but correct) |
-| 10 | Remove `--server.x_api_token` flag, add `--auth.jwt_secret` | Config change |
-| 11 | Deprecate `POST /session/ping` (return 410 Gone for one release, then remove) | Soft |
-
-Steps 1–5 are non-breaking and can be merged first. Steps 6–8 are the breaking cutover — coordinate
-with client teams.
+The frontend (`frontend/`) was migrated in the same effort: it stores the token pair,
+sends `Authorization: Bearer`, and auto-refreshes on 401 with one retry.
 
 ---
 

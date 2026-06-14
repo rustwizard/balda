@@ -4,9 +4,14 @@ export interface Player {
   uid: string;
   firstname: string;
   lastname: string;
-  sid: string;
-  key: string;
   exp?: number;
+}
+
+export interface TokenPair {
+  access_token?: string;
+  refresh_token?: string;
+  token_type?: string;
+  expires_in?: number;
 }
 
 export interface LobbyPlayer {
@@ -21,7 +26,7 @@ export interface SignupRequest {
   password: string;
 }
 
-export interface SignupResponse {
+export interface SignupResponse extends TokenPair {
   user: Player;
   centrifugo_token?: string;
   lobby_token?: string;
@@ -32,11 +37,13 @@ export interface AuthRequest {
   password: string;
 }
 
-export interface AuthResponse {
+export interface AuthResponse extends TokenPair {
   player: Player;
   centrifugo_token?: string;
   lobby_token?: string;
 }
+
+export interface RefreshResponse extends TokenPair {}
 
 export type GameStatus = "waiting" | "in_progress" | "finished";
 

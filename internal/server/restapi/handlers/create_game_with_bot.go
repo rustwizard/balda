@@ -12,24 +12,15 @@ import (
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
-	"github.com/rustwizard/balda/internal/session"
 )
 
 // CreateGameWithBot implements baldaapi.Handler.
-func (h *Handlers) CreateGameWithBot(ctx context.Context, params baldaapi.CreateGameWithBotParams) (baldaapi.CreateGameWithBotRes, error) {
-	uid, err := h.sess.GetUID(params.XAPISession)
-	if err != nil {
-		if errors.Is(err, session.ErrNotFound) {
-			return &baldaapi.CreateGameWithBotUnauthorized{
-				Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-				Message: baldaapi.NewOptString("session not found"),
-				Type:    baldaapi.NewOptString("Unauthorized"),
-			}, nil
-		}
-		slog.Error("create_game_with_bot: get uid", slog.String("sid", params.XAPISession), slog.Any("error", err))
+func (h *Handlers) CreateGameWithBot(ctx context.Context) (baldaapi.CreateGameWithBotRes, error) {
+	uid, ok := uidFromContext(ctx)
+	if !ok {
 		return &baldaapi.CreateGameWithBotUnauthorized{
 			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
-			Message: baldaapi.NewOptString("session unavailable"),
+			Message: baldaapi.NewOptString("unauthorized"),
 			Type:    baldaapi.NewOptString("Unauthorized"),
 		}, nil
 	}

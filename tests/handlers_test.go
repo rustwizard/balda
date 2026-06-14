@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/rustwizard/balda/internal/auth"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
@@ -22,7 +23,6 @@ import (
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/server/restapi/handlers"
 	"github.com/rustwizard/balda/internal/service"
-	"github.com/rustwizard/balda/internal/session"
 	"github.com/rustwizard/balda/internal/storage"
 	"github.com/rustwizard/balda/migrations"
 	"github.com/stretchr/testify/assert"
@@ -60,10 +60,34 @@ func startRedis(ctx context.Context, t *testing.T) (addr string, cleanup func())
 
 type coreSetup struct {
 	svc     *service.Balda
-	sess    *session.Service
 	pres    *presence.Service
 	lby     *lobby.Lobby
 	cleanup func()
+}
+
+// testJWTSecret signs access tokens in tests; authCtx parses with the same secret.
+const testJWTSecret = "test-jwt-secret-at-least-32-bytes!!"
+
+// authCtx parses a raw access token and returns a context carrying its claims,
+// mirroring what HandleBearerAuth does in production for direct handler calls.
+func authCtx(t *testing.T, token string) context.Context {
+	t.Helper()
+	claims, err := auth.ParseAccessToken(token, testJWTSecret)
+	require.NoError(t, err)
+	return auth.WithClaims(context.Background(), claims)
+}
+
+// signupCtx signs up a user via the handler and returns a context carrying their
+// JWT claims plus the player UUID (pid), for direct handler-call tests.
+func signupCtx(t *testing.T, h *handlers.Handlers, email string) (context.Context, uuid.UUID) {
+	t.Helper()
+	res, err := h.Signup(context.Background(), &baldaapi.SignupRequest{
+		Firstname: "Test", Lastname: "User", Email: email, Password: "secret",
+	})
+	require.NoError(t, err)
+	resp, ok := res.(*baldaapi.SignupResponse)
+	require.True(t, ok, "expected *SignupResponse, got %T", res)
+	return authCtx(t, resp.AccessToken.Value), resp.User.Value.UID.Value
 }
 
 // setupCore starts postgres + redis containers, runs migrations, and returns
@@ -91,10 +115,6 @@ func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 	redisAddr, redisCleanup := startRedis(ctx, t)
 
 	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
-	sess := session.NewService(session.Config{
-		Addr:       redisAddr,
-		Expiration: 30 * time.Second,
-	}, rdb)
 	pres := presence.NewService(presence.Config{}, rdb)
 
 	lby := lobby.New(func(_ context.Context, _ string, players []*game.Player, n game.Notifier) (*game.Game, error) {
@@ -110,7 +130,6 @@ func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 
 	return &coreSetup{
 		svc:  svc,
-		sess: sess,
 		pres: pres,
 		lby:  lby,
 		cleanup: func() {
@@ -126,7 +145,7 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.sess, core.pres, cf, "test-secret")
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret")
 	return h, core.cleanup
 }
 
@@ -153,8 +172,10 @@ func TestSignupHandler(t *testing.T) {
 		assert.NotEqual(t, uuid.UUID{}, u.UID.Value)
 		assert.Equal(t, "John", u.Firstname.Value)
 		assert.Equal(t, "Smith", u.Lastname.Value)
-		assert.NotEmpty(t, u.Sid.Value)
-		assert.NotEmpty(t, u.Key.Value)
+		assert.NotEmpty(t, ok.AccessToken.Value)
+		assert.NotEmpty(t, ok.RefreshToken.Value)
+		assert.Equal(t, "Bearer", ok.TokenType.Value)
+		assert.Positive(t, ok.ExpiresIn.Value)
 	})
 
 	t.Run("duplicate email returns error", func(t *testing.T) {
@@ -200,11 +221,12 @@ func TestAuthHandler(t *testing.T) {
 
 		u := ok.Player.Value
 		assert.NotEqual(t, uuid.UUID{}, u.UID.Value)
-		assert.NotEmpty(t, u.Sid.Value)
-		assert.NotEmpty(t, u.Key.Value, "expected api key to be returned")
+		assert.NotEmpty(t, ok.AccessToken.Value, "expected access token")
+		assert.NotEmpty(t, ok.RefreshToken.Value, "expected refresh token")
+		assert.Equal(t, "Bearer", ok.TokenType.Value)
 	})
 
-	t.Run("session reuse on second login", func(t *testing.T) {
+	t.Run("each login issues a fresh token pair", func(t *testing.T) {
 		res1, err := h.Auth(ctx, &baldaapi.AuthRequest{
 			Email: "auth.user@example.org", Password: "mypassword",
 		})
@@ -214,9 +236,10 @@ func TestAuthHandler(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		sid1 := res1.(*baldaapi.AuthResponse).Player.Value.Sid.Value
-		sid2 := res2.(*baldaapi.AuthResponse).Player.Value.Sid.Value
-		assert.Equal(t, sid1, sid2, "expected same session ID on repeated login")
+		rt1 := res1.(*baldaapi.AuthResponse).RefreshToken.Value
+		rt2 := res2.(*baldaapi.AuthResponse).RefreshToken.Value
+		assert.NotEmpty(t, rt1)
+		assert.NotEqual(t, rt1, rt2, "expected a new refresh token on each login")
 	})
 
 	t.Run("wrong password returns 401", func(t *testing.T) {
@@ -257,29 +280,20 @@ func TestAuthHandler(t *testing.T) {
 
 	t.Run("active_game returned after joining an in_progress game", func(t *testing.T) {
 		// Sign up two players and start a game.
-		creatorRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
-			Firstname: "Reconnect", Lastname: "Creator", Email: "reconnect.creator@example.org", Password: "pass",
-		})
-		require.NoError(t, err)
-		creator := creatorRes.(*baldaapi.SignupResponse).User.Value
+		creatorCtx, _ := signupCtx(t, h, "reconnect.creator@example.org")
+		joinerCtx, _ := signupCtx(t, h, "reconnect.joiner@example.org")
 
-		joinerRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
-			Firstname: "Reconnect", Lastname: "Joiner", Email: "reconnect.joiner@example.org", Password: "pass",
-		})
-		require.NoError(t, err)
-		joiner := joinerRes.(*baldaapi.SignupResponse).User.Value
-
-		createRes, err := h.CreateGame(ctx, baldaapi.CreateGameParams{XAPISession: creator.Sid.Value})
+		createRes, err := h.CreateGame(creatorCtx)
 		require.NoError(t, err)
 		gameID := createRes.(*baldaapi.CreateGameResponse).Game.Value.ID.Value
 
-		_, err = h.JoinGame(ctx, baldaapi.JoinGameParams{XAPISession: joiner.Sid.Value, ID: gameID})
+		_, err = h.JoinGame(joinerCtx, baldaapi.JoinGameParams{ID: gameID})
 		require.NoError(t, err)
 
 		// Creator re-authenticates — should get active_game.
 		res, err := h.Auth(ctx, &baldaapi.AuthRequest{
 			Email:    "reconnect.creator@example.org",
-			Password: "pass",
+			Password: "secret",
 		})
 		require.NoError(t, err)
 
@@ -298,19 +312,16 @@ func TestAuthHandler(t *testing.T) {
 }
 
 // TestAuthFlow verifies the full browser-facing auth flow over HTTP:
-// signup returns an API key, /auth is public (no API key required),
-// /auth returns the same API key, and that key can access protected endpoints.
+// signup and /auth are public and return a JWT access token, and that token
+// authorizes protected endpoints via the Authorization: Bearer header.
 func TestAuthFlow(t *testing.T) {
-	srv, email, password, apiKey, cleanup := setupServer(t)
+	srv, _, _, _, cleanup := setupServer(t)
 	defer cleanup()
-	_ = email
-	_ = password
-	_ = apiKey
 
 	const flowEmail = "flow.user@example.org"
 	const flowPassword = "flowpass"
 
-	// Sign up via HTTP — no API key required.
+	// Sign up via HTTP — no token required.
 	signupBody, err := json.Marshal(map[string]string{
 		"firstname": "Flow",
 		"lastname":  "User",
@@ -327,17 +338,15 @@ func TestAuthFlow(t *testing.T) {
 	var signupOut struct {
 		User struct {
 			UID string `json:"uid"`
-			Sid string `json:"sid"`
-			Key string `json:"key"`
 		} `json:"user"`
+		AccessToken string `json:"access_token"`
 	}
 	require.NoError(t, json.NewDecoder(signupResp.Body).Decode(&signupOut))
 	signupResp.Body.Close()
 	require.NotEmpty(t, signupOut.User.UID)
-	require.NotEmpty(t, signupOut.User.Sid)
-	require.NotEmpty(t, signupOut.User.Key, "signup should return an api key")
+	require.NotEmpty(t, signupOut.AccessToken, "signup should return an access token")
 
-	// Authenticate via HTTP — no API key required (public endpoint).
+	// Authenticate via HTTP — public endpoint.
 	authBody, err := json.Marshal(map[string]string{
 		"email":    flowEmail,
 		"password": flowPassword,
@@ -352,26 +361,22 @@ func TestAuthFlow(t *testing.T) {
 	var authOut struct {
 		Player struct {
 			UID string `json:"uid"`
-			Sid string `json:"sid"`
-			Key string `json:"key"`
 		} `json:"player"`
+		AccessToken string `json:"access_token"`
 	}
 	require.NoError(t, json.NewDecoder(authResp.Body).Decode(&authOut))
 	authResp.Body.Close()
-	require.NotEmpty(t, authOut.Player.Sid)
-	require.NotEmpty(t, authOut.Player.Key, "auth should return an api key")
+	require.NotEmpty(t, authOut.AccessToken, "auth should return an access token")
 	assert.Equal(t, signupOut.User.UID, authOut.Player.UID)
-	assert.Equal(t, signupOut.User.Key, authOut.Player.Key, "auth should return the same api key as signup")
 
-	// The returned API key must work for a protected endpoint.
+	// The returned access token must work for a protected endpoint.
 	listReq, err := http.NewRequest(http.MethodGet, srv.URL+"/balda/api/v1/games", http.NoBody)
 	require.NoError(t, err)
-	listReq.Header.Set("X-API-Key", authOut.Player.Key)
-	listReq.Header.Set("X-API-Session", authOut.Player.Sid)
+	listReq.Header.Set("Authorization", "Bearer "+authOut.AccessToken)
 	listResp, err := http.DefaultClient.Do(listReq)
 	require.NoError(t, err)
 	defer listResp.Body.Close()
-	assert.Equal(t, http.StatusOK, listResp.StatusCode, "returned api key should access protected endpoints")
+	assert.Equal(t, http.StatusOK, listResp.StatusCode, "access token should authorize protected endpoints")
 
 	// Auth with wrong password must still reject.
 	badAuthBody, err := json.Marshal(map[string]string{
@@ -437,7 +442,7 @@ func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.sess, core.pres, cf, "test-secret")
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret")
 	return h, core.lby, core.cleanup
 }
 
@@ -525,19 +530,10 @@ func TestPingHandler(t *testing.T) {
 	h, cleanup := setupHandlers(t)
 	defer cleanup()
 
-	ctx := context.Background()
+	playerCtx, _ := signupCtx(t, h, "ping.user@example.org")
 
-	signupRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
-		Firstname: "Ping",
-		Lastname:  "User",
-		Email:     "ping.user@example.org",
-		Password:  "pingpass",
-	})
-	require.NoError(t, err)
-	player := signupRes.(*baldaapi.SignupResponse).User.Value
-
-	t.Run("valid session returns 204", func(t *testing.T) {
-		res, err := h.Ping(ctx, baldaapi.PingParams{XRequestID: 1, XAPISession: player.Sid.Value})
+	t.Run("authenticated ping returns 204", func(t *testing.T) {
+		res, err := h.Ping(playerCtx, baldaapi.PingParams{XRequestID: 1})
 		require.NoError(t, err)
 
 		_, ok := res.(*baldaapi.PingNoContent)
@@ -546,7 +542,7 @@ func TestPingHandler(t *testing.T) {
 
 	t.Run("x-request-id is echoed back", func(t *testing.T) {
 		const reqID int64 = 42
-		res, err := h.Ping(ctx, baldaapi.PingParams{XRequestID: reqID, XAPISession: player.Sid.Value})
+		res, err := h.Ping(playerCtx, baldaapi.PingParams{XRequestID: reqID})
 		require.NoError(t, err)
 
 		pong := res.(*baldaapi.PingNoContent)
@@ -555,15 +551,15 @@ func TestPingHandler(t *testing.T) {
 
 	t.Run("x-server-time reflects current time", func(t *testing.T) {
 		before := time.Now().UnixMilli()
-		res, err := h.Ping(ctx, baldaapi.PingParams{XRequestID: 1, XAPISession: player.Sid.Value})
+		res, err := h.Ping(playerCtx, baldaapi.PingParams{XRequestID: 1})
 		require.NoError(t, err)
 
 		pong := res.(*baldaapi.PingNoContent)
 		assert.GreaterOrEqual(t, pong.XServerTime.Value, before)
 	})
 
-	t.Run("expired or unknown sid returns 401", func(t *testing.T) {
-		res, err := h.Ping(ctx, baldaapi.PingParams{XRequestID: 1, XAPISession: "non-existent-sid"})
+	t.Run("missing claims returns 401", func(t *testing.T) {
+		res, err := h.Ping(context.Background(), baldaapi.PingParams{XRequestID: 1})
 		require.NoError(t, err)
 
 		errResp, ok := res.(*baldaapi.ErrorResponse)
@@ -573,38 +569,15 @@ func TestPingHandler(t *testing.T) {
 }
 
 func TestPingHTTP(t *testing.T) {
-	srv, email, password, apiKey, cleanup := setupServer(t)
+	srv, _, _, token, cleanup := setupServer(t)
 	defer cleanup()
-
-	// Auth to get the session SID.
-	body, _ := json.Marshal(map[string]string{"email": email, "password": password})
-	req, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth", bytes.NewReader(body))
-	require.NoError(t, err)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", apiKey)
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	var authBody struct {
-		Player struct {
-			Sid string `json:"sid"`
-		} `json:"player"`
-	}
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&authBody))
-	resp.Body.Close()
-
-	sid := authBody.Player.Sid
-	require.NotEmpty(t, sid)
 
 	pingURL := srv.URL + "/balda/api/v1/session/ping"
 
-	t.Run("missing api key returns 401", func(t *testing.T) {
+	t.Run("missing token returns 401", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, pingURL, http.NoBody)
 		require.NoError(t, err)
 		req.Header.Set("X-Request-ID", "1")
-		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -612,12 +585,11 @@ func TestPingHTTP(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
-	t.Run("unknown sid returns 401", func(t *testing.T) {
+	t.Run("invalid token returns 401", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, pingURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", apiKey)
+		req.Header.Set("Authorization", "Bearer not-a-valid-jwt")
 		req.Header.Set("X-Request-ID", "1")
-		req.Header.Set("X-API-Session", "unknown-sid")
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -625,12 +597,11 @@ func TestPingHTTP(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
-	t.Run("valid session returns 204 with response headers", func(t *testing.T) {
+	t.Run("valid token returns 204 with response headers", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPost, pingURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", apiKey)
+		req.Header.Set("Authorization", "Bearer "+token)
 		req.Header.Set("X-Request-ID", "42")
-		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -644,12 +615,15 @@ func TestPingHTTP(t *testing.T) {
 
 // setupServer returns an httptest.Server wired with a full ogen server
 // (including security middleware) plus a seeded user for auth requests.
-// apiKey is the per-user UUID that must be sent as X-API-Key on protected endpoints.
-func setupServer(t *testing.T) (srv *httptest.Server, email, password, apiKey string, cleanup func()) {
+// token is the seeded user's JWT access token for the Authorization header.
+func setupServer(t *testing.T) (srv *httptest.Server, email, password, token string, cleanup func()) {
 	t.Helper()
 	h, cleanupHandlers := setupHandlers(t)
 
-	ogenSrv, err := baldaapi.NewServer(h, h, baldaapi.WithPathPrefix("/balda/api/v1"))
+	ogenSrv, err := baldaapi.NewServer(h, h,
+		baldaapi.WithPathPrefix("/balda/api/v1"),
+		baldaapi.WithErrorHandler(handlers.ErrorHandler),
+	)
 	require.NoError(t, err)
 
 	srv = httptest.NewServer(ogenSrv)
@@ -666,16 +640,16 @@ func setupServer(t *testing.T) (srv *httptest.Server, email, password, apiKey st
 	require.NoError(t, err)
 	signupRes, ok := res.(*baldaapi.SignupResponse)
 	require.True(t, ok)
-	apiKey = signupRes.User.Value.Key.Value
+	token = signupRes.AccessToken.Value
 
 	cleanup = func() {
 		srv.Close()
 		cleanupHandlers()
 	}
-	return srv, email, password, apiKey, cleanup
+	return srv, email, password, token, cleanup
 }
 
-// postSignup signs up a new user via HTTP and returns their session ID.
+// postSignup signs up a new user via HTTP and returns their JWT access token.
 func postSignup(t *testing.T, srv *httptest.Server, email, password string) string {
 	t.Helper()
 	body, err := json.Marshal(map[string]string{
@@ -689,43 +663,23 @@ func postSignup(t *testing.T, srv *httptest.Server, email, password string) stri
 	require.NoError(t, err)
 	defer resp.Body.Close()
 	var out struct {
-		User struct {
-			Sid string `json:"sid"`
-		} `json:"user"`
+		AccessToken string `json:"access_token"`
 	}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&out))
-	require.NotEmpty(t, out.User.Sid)
-	return out.User.Sid
+	require.NotEmpty(t, out.AccessToken)
+	return out.AccessToken
 }
 
 func TestSecurityHandlers(t *testing.T) {
-	srv, email, password, apiKey, cleanup := setupServer(t)
+	srv, _, _, token, cleanup := setupServer(t)
 	defer cleanup()
 
-	// Authenticate to get a valid session for the protected endpoint.
-	authBody, _ := json.Marshal(map[string]string{"email": email, "password": password})
-	authReq, err := http.NewRequest(http.MethodPost, srv.URL+"/balda/api/v1/auth",
-		bytes.NewReader(authBody))
-	require.NoError(t, err)
-	authReq.Header.Set("Content-Type", "application/json")
-	authResp, err := http.DefaultClient.Do(authReq)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, authResp.StatusCode)
-	var authOut struct {
-		Player struct {
-			Sid string `json:"sid"`
-		} `json:"player"`
-	}
-	require.NoError(t, json.NewDecoder(authResp.Body).Decode(&authOut))
-	require.NotEmpty(t, authOut.Player.Sid)
-	authResp.Body.Close()
-	sid := authOut.Player.Sid
+	gamesURL := srv.URL + "/balda/api/v1/games"
 
-	t.Run("HandleAPIKeyHeader: valid key returns 200", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet, srv.URL+"/balda/api/v1/games", http.NoBody)
+	t.Run("valid bearer token returns 200", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", apiKey)
-		req.Header.Set("X-API-Session", sid)
+		req.Header.Set("Authorization", "Bearer "+token)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -733,11 +687,10 @@ func TestSecurityHandlers(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
 	})
 
-	t.Run("HandleAPIKeyHeader: invalid key returns 401", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet, srv.URL+"/balda/api/v1/games", http.NoBody)
+	t.Run("invalid bearer token returns 401", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Key", "wrong-token")
-		req.Header.Set("X-API-Session", sid)
+		req.Header.Set("Authorization", "Bearer garbage.token.value")
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -745,40 +698,22 @@ func TestSecurityHandlers(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 	})
 
-	t.Run("HandleAPIKeyQueryParam: valid key returns 200", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet,
-			srv.URL+"/balda/api/v1/games?api_key="+apiKey,
-			http.NoBody)
+	t.Run("missing token returns 401 in ErrorResponse shape", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, gamesURL, http.NoBody)
 		require.NoError(t, err)
-		req.Header.Set("X-API-Session", sid)
-
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-	})
-
-	t.Run("HandleAPIKeyQueryParam: invalid key returns 401", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet,
-			srv.URL+"/balda/api/v1/games?api_key=bad-key",
-			http.NoBody)
-		require.NoError(t, err)
-		req.Header.Set("X-API-Session", sid)
 
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
-	})
 
-	t.Run("no key returns 401", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet, srv.URL+"/balda/api/v1/games", http.NoBody)
-		require.NoError(t, err)
-		req.Header.Set("X-API-Session", sid)
-
-		resp, err := http.DefaultClient.Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+		// Body must follow the ErrorResponse schema, not ogen's raw error_message,
+		// and must not leak operation/security internals.
+		var body map[string]any
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+		assert.EqualValues(t, http.StatusUnauthorized, body["status"])
+		assert.NotEmpty(t, body["message"])
+		assert.NotContains(t, body, "error_message")
+		assert.NotContains(t, body["message"], "security")
 	})
 }

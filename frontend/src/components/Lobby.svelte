@@ -11,7 +11,7 @@
     loading = true;
     error = '';
     try {
-      const res = await createGame(gameState.apiKey, gameState.sessionId);
+      const res = await createGame();
       if (res.game_token) {
         centrifugo.subscribe(`game:${res.game.id}`, res.game_token);
       }
@@ -27,7 +27,7 @@
     loading = true;
     error = '';
     try {
-      const res = await joinGame(id, gameState.apiKey, gameState.sessionId);
+      const res = await joinGame(id);
       if (res.game_token) {
         centrifugo.subscribe(`game:${res.game.id}`, res.game_token);
       }
@@ -57,7 +57,7 @@
     loading = true;
     error = '';
     try {
-      const res = await createGameWithBot(gameState.apiKey, gameState.sessionId);
+      const res = await createGameWithBot();
       if (res.game_token) {
         centrifugo.subscribe(`game:${res.game.id}`, res.game_token);
       }
@@ -85,7 +85,7 @@
 
   // Load initial game list and subscribe to lobby channel once
   $effect(() => {
-    listGames(gameState.apiKey, gameState.sessionId)
+    listGames()
       .then((res) => gameState.setLobbyGames(res.games))
       .catch((err) => { error = err.message; });
 
