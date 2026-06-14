@@ -108,7 +108,7 @@ classDiagram
     +Board() *LettersTable
     +PlayerScores() []PlayerState
     +CurrentPlayerID() string
-    +Done() chan struct{}
+    +Done() chan struct&#123;&#125;
   }
 
   class Player {
