@@ -137,17 +137,17 @@ _Все критические задачи решены._
 
 **Предложение:** добавить `golangci-lint run`, `go test -race`, убрать ненужный go-swagger.
 
-### 16. Артефакт coverage.out в репозитории
+### 16. ✅ Артефакт coverage.out в репозитории
 **Файл:** `coverage.out`
 
 Закоммичен отчёт покрытия.
 
 **Предложение:** удалить из git и добавить в `.gitignore`.
 
-### 17. Мелочи в storage
+### 17. ✅ Мелочи в storage
 **Файл:** `internal/storage/storage.go`
 
-`func (b Balda) Pool()` — value receiver копирует структуру.
+`func (b Balda) Pool()` — value receiver копирует структуру. консистентность ресиверов
 
 **Предложение:** перейти на pointer receiver.
 

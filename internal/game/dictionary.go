@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"unicode"
 	"unicode/utf8"
 
 	"github.com/rustwizard/balda/internal/rnd"
@@ -16,15 +17,14 @@ var data embed.FS
 
 type Dictionary struct {
 	Definition  map[string]string
-	FiveLetters map[int]string
+	FiveLetters []string
 }
 
 var Dict *Dictionary
 
 func NewDictionary() (*Dictionary, error) {
 	dict := &Dictionary{
-		Definition:  make(map[string]string),
-		FiveLetters: make(map[int]string),
+		Definition: make(map[string]string),
 	}
 
 	f, err := data.Open("assets/russian_nouns_with_definition.json")
@@ -45,15 +45,20 @@ func NewDictionary() (*Dictionary, error) {
 			break
 		}
 
-		i := 0
 		for k, v := range words {
+			// Balda uses common nouns only — skip proper nouns (leading-uppercase
+			// keys like "Диана", "Аллах"). Their lowercase common-noun homographs
+			// (парка, земля, север) are separate keys and remain.
+			if r, _ := utf8.DecodeRuneInString(k); unicode.IsUpper(r) {
+				continue
+			}
+
 			def := v.(map[string]interface{})
 			normK := normalizeWord(k)
 			dict.Definition[normK] = def["definition"].(string)
 
 			if utf8.RuneCountInString(normK) == 5 {
-				dict.FiveLetters[i] = normK
-				i++
+				dict.FiveLetters = append(dict.FiveLetters, normK)
 			}
 		}
 	}
