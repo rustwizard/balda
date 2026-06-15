@@ -81,7 +81,7 @@ func TestListGamesHandler(t *testing.T) {
 }
 
 func TestListGamesHTTP(t *testing.T) {
-	srv, _, _, token, cleanup := setupServer(t)
+	srv, token, cleanup := setupServer(t)
 	defer cleanup()
 
 	gamesURL := srv.URL + "/balda/api/v1/games"

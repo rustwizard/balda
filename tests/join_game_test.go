@@ -88,7 +88,7 @@ func TestJoinGameHandler(t *testing.T) {
 }
 
 func TestJoinGameHTTP(t *testing.T) {
-	srv, _, _, creatorToken, cleanup := setupServer(t)
+	srv, creatorToken, cleanup := setupServer(t)
 	defer cleanup()
 
 	joinerToken := postSignup(t, srv, "http.joiner@example.org", "pass")

@@ -135,14 +135,13 @@ _Все критические задачи решены._
 
 ## 🟢 Низкий приоритет (чистота, инфраструктура, тесты)
 
-### 15. CI без линтера и без -race
+### 15. ✅ CI: добавлены линтер и -race
 **Файл:** `.github/workflows/ci.yml`
 
-Есть `.golangci.yml`, но в CI нет шага `golangci-lint`. Тесты гоняются без `-race` (критично
-для конкурентного игрового сервера). Шаг `Install swagger` (go-swagger) устарел — code-gen
-использует ogen.
-
-**Предложение:** добавить `golangci-lint run`, `go test -race`, убрать ненужный go-swagger.
+Убран мёртвый шаг `Install swagger` (code-gen на ogen). Добавлен шаг `Lint`
+(`golangci/golangci-lint-action@v7`, pin `v2.12.2` под конфиг v2). Тесты теперь гоняются с
+`-race` (`go test -race`). Локально проверено: линт 0 issues, `-race` на `internal/...` и
+`tests/` зелёный (гонок нет).
 
 ### 16. ✅ Артефакт coverage.out в репозитории
 **Файл:** `coverage.out`

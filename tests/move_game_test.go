@@ -227,7 +227,7 @@ func TestSkipGameHandler(t *testing.T) {
 }
 
 func TestMoveGameHTTP(t *testing.T) {
-	srv, _, _, creatorToken, cleanup := setupServer(t)
+	srv, creatorToken, cleanup := setupServer(t)
 	defer cleanup()
 
 	joinerToken := postSignup(t, srv, "http.movejoiner@example.org", "pass")
@@ -306,7 +306,7 @@ func TestMoveGameHTTP(t *testing.T) {
 }
 
 func TestSkipGameHTTP(t *testing.T) {
-	srv, _, _, creatorToken, cleanup := setupServer(t)
+	srv, creatorToken, cleanup := setupServer(t)
 	defer cleanup()
 
 	joinerToken := postSignup(t, srv, "http.skipjoiner@example.org", "pass")

@@ -18,17 +18,19 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Install swagger
-        run: go install github.com/go-swagger/go-swagger/cmd/swagger@latest
-
       - name: Generate
         run: make code-gen
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.12.2
 
       - name: Build
         run: go build ./...
 
       - name: Test
-        run: go test -v $(go list ./... | grep -v integration)
+        run: go test -race -v $(go list ./... | grep -v integration)
 
       - name: Docker build
         run: docker build -f build/Dockerfile .

@@ -153,4 +153,3 @@ func nextPlayerID(moverID string, players []game.PlayerState) string {
 	}
 	return ""
 }
-
