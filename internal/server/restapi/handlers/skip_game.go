@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/lobby"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
@@ -24,7 +23,7 @@ func (h *Handlers) SkipGame(ctx context.Context, params baldaapi.SkipGameParams)
 		}, nil
 	}
 
-	rec, moverID, err := h.svc.SkipTurn(ctx, uid, params.ID.String())
+	_, _, err := h.svc.SkipTurn(ctx, uid, params.ID.String())
 	if err != nil {
 		switch {
 		case errors.Is(err, lobby.ErrGameNotFound):
@@ -55,11 +54,8 @@ func (h *Handlers) SkipGame(ctx context.Context, params baldaapi.SkipGameParams)
 		}
 	}
 
-	nextTurnUID := nextPlayerID(moverID, rec.Game.PlayerScores())
-	gameState := buildGameState(rec, nextTurnUID)
-	if err := h.cf.Publish(ctx, centrifugo.ChannelGame(rec.ID), gameState); err != nil {
-		slog.Error("skip_game: publish game state", slog.Any("error", err))
-	}
-
+	// gamecoord publishes the authoritative turn_change + game_state on the
+	// FSM's NotifyTurnStart after the skip advances the turn (single source of
+	// truth); the handler only acknowledges.
 	return &baldaapi.SkipGameNoContent{}, nil
 }
