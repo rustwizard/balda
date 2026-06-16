@@ -32,12 +32,30 @@ const (
 	MaxConsecutiveSkips    = 3
 )
 
+// OfflineGraceDuration is the shortened turn timer used when the current human
+// player is offline (no presence ping within the absence window), so an
+// abandoned game advances and cleans up quickly instead of waiting a full turn.
+// It is a var so tests can shrink it. Only ever reduces a turn, never extends.
+var OfflineGraceDuration = 10 * time.Second
+
+// OnlineChecker reports whether a player (by player_id) is currently present.
+// Injected so the FSM can shorten an offline player's turn without depending on
+// Redis/presence directly (same DI style as Notifier).
+type OnlineChecker interface {
+	IsOnline(playerID string) bool
+}
+
 // Option configures a Game at construction time.
 type Option func(*Game)
 
 // WithTurnDuration overrides the per-turn timer duration.
 func WithTurnDuration(d time.Duration) Option {
 	return func(g *Game) { g.turnDuration = d }
+}
+
+// WithOnlineChecker enables accelerated turn timeout for offline human players.
+func WithOnlineChecker(c OnlineChecker) Option {
+	return func(g *Game) { g.online = c }
 }
 
 type Turn struct {
@@ -78,6 +96,7 @@ type Game struct {
 	eventCh               chan TurnEvent
 	done                  chan struct{}
 	notifier              Notifier
+	online                OnlineChecker // nil disables accelerated offline timeout
 	turnDuration          time.Duration // 0 means use TurnDuration constant
 	pausedTurnRemaining   time.Duration // remaining turn time when paused for end proposal
 	consecutiveSkipsTotal int           // total skips across all players without a move
@@ -303,6 +322,11 @@ func (g *Game) startTurn() {
 		d = TurnDuration
 	}
 	p := g.currentPlayer()
+	// If a human player is offline, shorten the turn to a grace window so an
+	// abandoned game advances quickly. Only ever reduces the duration.
+	if g.online != nil && p.Type == PlayerTypeHuman && OfflineGraceDuration < d && !g.online.IsOnline(p.ID) {
+		d = OfflineGraceDuration
+	}
 	g.turn = &Turn{
 		PlayerID:  p.ID,
 		StartedAt: time.Now(),

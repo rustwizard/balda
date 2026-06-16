@@ -153,7 +153,8 @@ var serverCmd = &cobra.Command{
 				}
 			}
 
-			g, err := game.NewGame(players, game.NewCompositeNotifier(notifiers...))
+			g, err := game.NewGame(players, game.NewCompositeNotifier(notifiers...),
+				game.WithOnlineChecker(presenceChecker{pres}))
 			if err != nil {
 				return nil, err
 			}
@@ -269,6 +270,18 @@ func init() {
 }
 
 // hasBotPlayer reports whether any player in the list is a bot.
+// presenceChecker adapts *presence.Service to game.OnlineChecker, bridging the
+// no-context FSM call to the ctx-based presence lookup with a short timeout.
+type presenceChecker struct {
+	p *presence.Service
+}
+
+func (c presenceChecker) IsOnline(playerID string) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	return c.p.IsOnline(ctx, playerID)
+}
+
 func hasBotPlayer(players []*game.Player) bool {
 	for _, p := range players {
 		if p.Type == game.PlayerTypeBot {
