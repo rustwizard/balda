@@ -315,7 +315,7 @@ func TestAuthHandler(t *testing.T) {
 // signup and /auth are public and return a JWT access token, and that token
 // authorizes protected endpoints via the Authorization: Bearer header.
 func TestAuthFlow(t *testing.T) {
-	srv, _, _, _, cleanup := setupServer(t)
+	srv, _, cleanup := setupServer(t)
 	defer cleanup()
 
 	const flowEmail = "flow.user@example.org"
@@ -569,7 +569,7 @@ func TestPingHandler(t *testing.T) {
 }
 
 func TestPingHTTP(t *testing.T) {
-	srv, _, _, token, cleanup := setupServer(t)
+	srv, token, cleanup := setupServer(t)
 	defer cleanup()
 
 	pingURL := srv.URL + "/balda/api/v1/session/ping"
@@ -616,7 +616,7 @@ func TestPingHTTP(t *testing.T) {
 // setupServer returns an httptest.Server wired with a full ogen server
 // (including security middleware) plus a seeded user for auth requests.
 // token is the seeded user's JWT access token for the Authorization header.
-func setupServer(t *testing.T) (srv *httptest.Server, email, password, token string, cleanup func()) {
+func setupServer(t *testing.T) (srv *httptest.Server, token string, cleanup func()) {
 	t.Helper()
 	h, cleanupHandlers := setupHandlers(t)
 
@@ -629,13 +629,12 @@ func setupServer(t *testing.T) (srv *httptest.Server, email, password, token str
 	srv = httptest.NewServer(ogenSrv)
 
 	// Seed a user so auth requests have a valid target.
-	email, password = "sec.user@example.org", "secpass"
 	ctx := context.Background()
 	res, err := h.Signup(ctx, &baldaapi.SignupRequest{
 		Firstname: "Sec",
 		Lastname:  "User",
-		Email:     email,
-		Password:  password,
+		Email:     "sec.user@example.org",
+		Password:  "secpass",
 	})
 	require.NoError(t, err)
 	signupRes, ok := res.(*baldaapi.SignupResponse)
@@ -646,7 +645,7 @@ func setupServer(t *testing.T) (srv *httptest.Server, email, password, token str
 		srv.Close()
 		cleanupHandlers()
 	}
-	return srv, email, password, token, cleanup
+	return srv, token, cleanup
 }
 
 // postSignup signs up a new user via HTTP and returns their JWT access token.
@@ -671,7 +670,7 @@ func postSignup(t *testing.T, srv *httptest.Server, email, password string) stri
 }
 
 func TestSecurityHandlers(t *testing.T) {
-	srv, _, _, token, cleanup := setupServer(t)
+	srv, token, cleanup := setupServer(t)
 	defer cleanup()
 
 	gamesURL := srv.URL + "/balda/api/v1/games"

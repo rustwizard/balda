@@ -45,7 +45,7 @@ func postRefresh(t *testing.T, srv *httptest.Server, refreshToken string) *http.
 }
 
 func TestRefreshTokenHTTP(t *testing.T) {
-	srv, _, _, _, cleanup := setupServer(t)
+	srv, _, cleanup := setupServer(t)
 	defer cleanup()
 
 	t.Run("valid refresh returns a new pair and rotates the old token", func(t *testing.T) {
@@ -99,7 +99,7 @@ func TestRefreshTokenHTTP(t *testing.T) {
 }
 
 func TestLogoutHTTP(t *testing.T) {
-	srv, _, _, _, cleanup := setupServer(t)
+	srv, _, cleanup := setupServer(t)
 	defer cleanup()
 
 	logoutURL := srv.URL + "/balda/api/v1/auth/logout"
