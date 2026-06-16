@@ -1,0 +1,149 @@
+# Balda — C4 architecture (D2 source, for fun alongside the canonical Mermaid in architecture.md)
+#
+# Render all three boards (Context / Container / Component) to one SVG:
+#   d2 docs/architecture.d2 docs/architecture.svg
+# or watch live:
+#   d2 --watch docs/architecture.d2
+
+direction: down
+
+title: |md
+  # Balda — C4 architecture
+| {
+  near: top-center
+  style.font-size: 28
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Level 1 — System Context
+# ─────────────────────────────────────────────────────────────────────────────
+layers: {
+  context: {
+    title: |md
+      ## Level 1 — System Context
+    | { near: top-center }
+
+    player: Player {
+      shape: person
+      tooltip: Plays Balda via a web browser
+    }
+    balda: Balda {
+      shape: rectangle
+      tooltip: Word game server — JWT auth, game lifecycle, real-time gameplay
+      style.fill: "#1f6feb"
+      style.font-color: white
+    }
+    player -> balda: "signup / auth / create-join games / move\nHTTPS + WebSocket"
+  }
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Level 2 — Container
+  # ───────────────────────────────────────────────────────────────────────────
+  container: {
+    title: |md
+      ## Level 2 — Container
+    | { near: top-center }
+
+    player: Player { shape: person }
+
+    balda: Balda {
+      style.fill: "#eaf2ff"
+      frontend: Frontend {
+        tooltip: Single-page app served by nginx; stores JWT, sends Authorization Bearer
+        style.fill: "#dbe9ff"
+      }
+      frontend.label: "Frontend\n(Svelte 5 + Vite)"
+
+      api: Go HTTP Server {
+        tooltip: REST API — signup, auth, refresh, logout, game lifecycle, moves
+        style.fill: "#1f6feb"
+        style.font-color: white
+      }
+      api.label: "Go HTTP Server\n(Go, ogen)"
+
+      postgres: PostgreSQL 16 {
+        shape: cylinder
+        tooltip: users, player_state, refresh_tokens, game_results; migrations via tern
+      }
+      redis: Redis 8 {
+        shape: cylinder
+        tooltip: game presence keys (TTL 30s)
+      }
+      centrifugo: Centrifugo 6 {
+        tooltip: real-time pub/sub — lobby and game channels
+      }
+    }
+
+    player -> balda.frontend: "opens (HTTPS)"
+    balda.frontend -> balda.api: "REST + Authorization: Bearer\nHTTPS / JSON"
+    balda.frontend -> balda.centrifugo: "subscribe (WebSocket)"
+    balda.api -> balda.postgres: "users, players, tokens, results\npgx/v5"
+    balda.api -> balda.redis: "track presence\ngo-redis/v9"
+    balda.api -> balda.centrifugo: "publish game events\nHTTP API"
+  }
+
+  # ───────────────────────────────────────────────────────────────────────────
+  # Level 3 — Component (inside the Go HTTP Server)
+  # ───────────────────────────────────────────────────────────────────────────
+  component: {
+    title: |md
+      ## Level 3 — Component (Go HTTP Server)
+    | { near: top-center }
+
+    player: Player { shape: person }
+    postgres: PostgreSQL { shape: cylinder }
+    redis: Redis { shape: cylinder }
+    centrifugo: Centrifugo
+
+    api: Go HTTP Server {
+      style.fill: "#eaf2ff"
+
+      ogen: ogen Router {
+        tooltip: Generated router + BearerAuth (JWT) security middleware
+      }
+      authpkg: Auth {
+        tooltip: internal/auth — issue/verify JWT, HMAC refresh-token hashing, claims in ctx
+      }
+      handlers: HTTP Handlers {
+        tooltip: internal/server/restapi/handlers — signup, auth, refresh, logout, games, move, skip, end-proposal, ping
+      }
+      svc: Balda Service {
+        tooltip: internal/service — orchestrates lobby, storage, real-time publishing
+      }
+      lobby: Lobby {
+        tooltip: internal/lobby — in-memory active games; starts game.Run on join
+      }
+      mm: Matchmaking Queue {
+        tooltip: internal/matchmaking — Exp-window pairing (present, not wired to an endpoint)
+        style.stroke-dash: 3
+      }
+      presence: Presence {
+        tooltip: internal/presence — Redis-backed game presence (TTL 30s)
+      }
+      storage: Storage {
+        tooltip: internal/storage — typed PostgreSQL access
+      }
+      gamecoord: Game Coordinator {
+        tooltip: internal/gamecoord — implements game.Notifier; bridges FSM events to Centrifugo
+      }
+      cfclient: Centrifugo Client {
+        tooltip: internal/centrifugo — HTTP publish; generates connection/subscription JWTs
+      }
+    }
+
+    player -> api.ogen: "HTTP + Bearer JWT"
+    api.ogen -> api.authpkg: "verify access token"
+    api.ogen -> api.handlers: "routes to"
+    api.handlers -> api.authpkg: "issue token pairs (auth/signup/refresh)"
+    api.handlers -> api.svc: "delegate domain logic"
+    api.handlers -> api.presence: "refresh presence on ping"
+    api.handlers -> api.cfclient: "publish game_created, lobby_update"
+    api.svc -> api.lobby: "create/join/query games"
+    api.svc -> api.storage: "players; persist refresh tokens & results"
+    api.lobby -> api.gamecoord: "as game.Notifier"
+    api.gamecoord -> api.cfclient: "turn_change, game_state, game_over, skip_warn, end_proposal(_result)"
+    api.storage -> postgres: "SQL (pgx/v5)"
+    api.presence -> redis: "GET/SET presence keys"
+    api.cfclient -> centrifugo: "POST /publish"
+  }
+}
