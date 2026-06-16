@@ -7,6 +7,21 @@ on:
     branches: ["master"]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.12.2
+
   build-and-test:
     runs-on: ubuntu-latest
 
@@ -21,16 +36,18 @@ jobs:
       - name: Generate
         run: make code-gen
 
-      - name: Lint
-        uses: golangci/golangci-lint-action@v7
-        with:
-          version: v2.12.2
-
       - name: Build
         run: go build ./...
 
-      - name: Test
-        run: go test -race -v $(go list ./... | grep -v integration)
+      # Race detector on the fast unit packages where the concurrency lives.
+      - name: Unit tests (race)
+        run: go test -race -v $(go list ./... | grep -v '/tests$')
+
+      # Heavy integration tests (testcontainers: Postgres/Redis/Centrifugo) run
+      # without -race to keep CI fast; their concurrency is exercised by the
+      # raced unit tests above.
+      - name: Integration tests
+        run: go test -v ./tests/...
 
       - name: Docker build
         run: docker build -f build/Dockerfile .

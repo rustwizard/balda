@@ -135,13 +135,16 @@ _Все критические задачи решены._
 
 ## 🟢 Низкий приоритет (чистота, инфраструктура, тесты)
 
-### 15. ✅ CI: добавлены линтер и -race
+### 15. ✅ CI: линтер + -race, разбиение job'ов
 **Файл:** `.github/workflows/ci.yml`
 
-Убран мёртвый шаг `Install swagger` (code-gen на ogen). Добавлен шаг `Lint`
-(`golangci/golangci-lint-action@v7`, pin `v2.12.2` под конфиг v2). Тесты теперь гоняются с
-`-race` (`go test -race`). Локально проверено: линт 0 issues, `-race` на `internal/...` и
-`tests/` зелёный (гонок нет).
+Убран мёртвый шаг `Install swagger` (code-gen на ogen). `Lint` вынесен в отдельный
+параллельный job (`golangci/golangci-lint-action@v7`, pin `v2.12.2` под конфиг v2).
+Тесты разделены: быстрые unit-пакеты гоняются с `-race`
+(`go test -race $(go list ./... | grep -v '/tests$')`), а тяжёлые интеграционные
+(`./tests/...`, testcontainers: Postgres/Redis/Centrifugo) — **без** `-race`, чтобы не
+раздувать CI (с `-race` они шли ~172s против ~68s). Их конкурентность покрыта raced
+unit-тестами. Локально: линт 0 issues, `-race` на unit-пакетах зелёный (гонок нет).
 
 ### 16. ✅ Артефакт coverage.out в репозитории
 **Файл:** `coverage.out`
