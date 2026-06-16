@@ -122,6 +122,82 @@ docker-compose:
 - Метки без PII: использовать `player_id`/`game_id` как метки **нельзя** (высокая
   кардинальность + утечка) — только агрегаты и низкокардинальные лейблы (reason, event, mode).
 
+## Расширение: игровые метрики (углублённо)
+
+Расширяет Фазу 2 — добавляет «качество партий» и фиксирует швы/интерфейс инъекции.
+
+### Что мерить — по вопросам, на которые отвечает метрика
+
+**Вовлечённость / нагрузка**
+- `balda.games.active` (gauge), `balda.games.started{mode}`, `balda.presence.online`.
+- Лейбл `mode=pvp|bot` важен: бот-игры быстрые и иначе устроены — без разреза зашумят всё.
+
+**Здоровье/качество партий** (главное, чего нет в базовой таблице)
+- `balda.games.finished{reason}` + производная **abandonment rate** = (kick + timeout-конец) / всего.
+- `balda.game.duration` (histogram, сек; бакеты ~`10,30,60,120,300,600`).
+- `balda.game.moves` (histogram) — ходов за партию; `balda.game.words_per_player` (histogram).
+- `balda.game.score_margin` (histogram) — разрыв победитель−проигравший (0 ≈ ничья/баланс).
+- `balda.games.draws` / draw rate.
+
+**Трение игрока** (диагностика UX/словаря)
+- `balda.moves.rejected{reason}` — самый ценный сигнал «где игрокам больно». Высокий
+  `not_in_dict` → дыры в словаре или путаница раскладки (ср. баг с заглавными буквами);
+  `too_short`/`gaps` → проблема ввода. `reason` — фиксированный набор из ошибок `SubmitWord`.
+- `balda.turns.timeout{offline}` (offline отделён после #21), `balda.turns.skipped`.
+
+**Real-time здоровье**
+- `balda.centrifugo.publish{event,result}` + `.duration` — если Centrifugo лагает/падает,
+  игроки не видят ходы, а HTTP-метрики при этом «зелёные». Иначе это не заметно.
+
+**Безопасность/абьюз**
+- `balda.auth.refresh_replays` (воровство токенов), `balda.auth.failures{kind}` (брутфорс).
+
+### Швы инструментации (не трогая пакет `game`)
+
+1. **`gamecoord`** — главный сенсор: уже реализует `Notifier`, видит timeout/skip/kick/
+   turn/game_over/end-proposal. Сюда — timeouts, skips, kicks, `games.finished{reason}`, а на
+   game_over из `PlayerScores()` + времени старта (по первому `NotifyTurnStart(game_start)`):
+   `duration`, `moves`, `words_per_player`, `score_margin`, draws. ~90% игровых метрик.
+2. **`MoveGame` хендлер** — `moves.submitted` и `moves.rejected{reason}`: он получает ошибку
+   из `SubmitWord` и уже свитчит по типам для маппинга в 400 → тот же свитч даёт `reason`.
+3. **`lobby`** — `games.active` (observable gauge, читает размер реестра; нужен метод
+   `Len()`/`Count()`), `games.created`.
+
+### Интерфейс инъекции (в стиле проекта)
+
+Тонкий рекордер в `internal/metrics`, no-op по умолчанию — как `Notifier`/`OnlineChecker`:
+```go
+type GameRecorder interface {
+    MoveSubmitted()
+    MoveRejected(reason string)
+    GameStarted(mode string)
+    GameFinished(reason, mode string, dur time.Duration, moves int)
+    TurnTimeout(offline bool)
+    TurnSkipped()
+    PlayerKicked()
+}
+```
+- OTel-инструменты живут только в `internal/metrics`; доменный код зовёт
+  `rec.MoveRejected("not_in_dict")`. Тестируемо (no-op в тестах), `game` не зависит от OTel.
+- Инжектится в `gamecoord.New(...)`, `Handlers`, `lobby.New(...)`.
+
+### Грабли
+
+- **Кардинальность:** никогда `player_id`/`game_id` в лейблы (взрыв серий + утечка PII). Только
+  bounded: `reason`, `event`, `mode`, `offline`, `result`.
+- **Bot vs pvp:** почти всё игровое полезно резать по `mode` (×2 серий — приемлемо).
+- **Гистограммы дороже counter'ов** — `duration`/`moves`/`score_margin` оправданы, но без нужды
+  не плодить.
+- **Observable gauges** (active/online/pool) читаются в callback под локом — callback должен быть
+  дешёвым и не держать лок долго.
+
+### Минимальные добавки в код (для оценки)
+
+- `lobby`: экспортировать счётчик активных игр (`Len()`), вызвать `rec.GameCreated/Started`.
+- `gamecoord`: хранить время старта партии; на game_over посчитать агрегаты из `PlayerScores()`.
+- `MoveGame`: инкремент в существующем `switch` по ошибке.
+- `internal/metrics`: реализация `GameRecorder` поверх OTel-инструментов + no-op.
+
 ## Открытые вопросы / на будущее
 
 - Трейсинг: ogen уже умеет (`WithTracerProvider`) — можно добавить OTLP-экспортёр трейсов
