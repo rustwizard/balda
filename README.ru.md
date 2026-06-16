@@ -529,7 +529,8 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | `--redis.username` | | Имя пользователя Redis |
 | `--redis.password` | | Пароль Redis |
 | `--redis.db_num` | `0` | Номер базы данных Redis |
-| `--redis.expiration` | `5m` | Длительность сессии |
+| `--redis.expiration` | `5m` | Legacy TTL auth-сессии — не используется после перехода на JWT; оставлен для совместимости |
+| `--presence.ttl` | `30s` | TTL игрового присутствия — игрок считается отсутствующим после этого времени без пинга |
 | `--centrifugo.api_url` | | URL HTTP API Centrifugo |
 | `--centrifugo.api_key` | | API-ключ Centrifugo |
 | `--centrifugo.token_hmac_secret_key` | | Секрет для подписи токенов Centrifugo |

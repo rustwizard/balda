@@ -536,7 +536,8 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | `--redis.username` | | Redis username |
 | `--redis.password` | | Redis password |
 | `--redis.db_num` | `0` | Redis database number |
-| `--redis.expiration` | `5m` | Session expiration duration |
+| `--redis.expiration` | `5m` | Legacy auth-session TTL — unused since the JWT cutover; kept for compatibility |
+| `--presence.ttl` | `30s` | Game presence TTL — a player is considered absent after this long without a ping |
 | `--centrifugo.api_url` | | Centrifugo HTTP API URL |
 | `--centrifugo.api_key` | | Centrifugo API key |
 | `--centrifugo.token_hmac_secret_key` | | Secret for signing Centrifugo tokens |

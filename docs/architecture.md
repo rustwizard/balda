@@ -1,5 +1,10 @@
 # Architecture — C4 Model
 
+> The Mermaid diagrams below are the canonical, GitHub-rendered source of truth.
+> A D2 variant lives in [`architecture.d2`](architecture.d2) with pre-rendered SVGs
+> in [`architecture/`](architecture/) (`context.svg` / `container.svg` / `component.svg`);
+> regenerate with `d2 docs/architecture.d2 docs/architecture.svg`.
+
 ## Level 1 — System Context
 
 ```mermaid
