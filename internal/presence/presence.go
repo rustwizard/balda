@@ -5,7 +5,6 @@ package presence
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -23,19 +22,20 @@ func NewService(cfg Config, rdb *redis.Client) *Service {
 }
 
 // Refresh marks the player as online, resetting the absence timer.
-func (s *Service) Refresh(ctx context.Context, uid int64) error {
-	return s.rdb.Set(ctx, s.key(uid), 1, s.cfg.TTL).Err()
+// playerID is the player's UUID (player_id) — the identity the game uses.
+func (s *Service) Refresh(ctx context.Context, playerID string) error {
+	return s.rdb.Set(ctx, s.key(playerID), 1, s.cfg.TTL).Err()
 }
 
 // IsOnline reports whether the player has pinged within the TTL window.
-func (s *Service) IsOnline(ctx context.Context, uid int64) bool {
-	n, err := s.rdb.Exists(ctx, s.key(uid)).Result()
+func (s *Service) IsOnline(ctx context.Context, playerID string) bool {
+	n, err := s.rdb.Exists(ctx, s.key(playerID)).Result()
 	return err == nil && n > 0
 }
 
 // Remove deletes the presence key immediately (e.g. on game end or logout).
-func (s *Service) Remove(ctx context.Context, uid int64) error {
-	return s.rdb.Del(ctx, s.key(uid)).Err()
+func (s *Service) Remove(ctx context.Context, playerID string) error {
+	return s.rdb.Del(ctx, s.key(playerID)).Err()
 }
 
 // TTL returns the configured absence window.
@@ -43,6 +43,6 @@ func (s *Service) TTL() time.Duration {
 	return s.cfg.TTL
 }
 
-func (s *Service) key(uid int64) string {
-	return keyPrefix + strconv.FormatInt(uid, 10)
+func (s *Service) key(playerID string) string {
+	return keyPrefix + playerID
 }
