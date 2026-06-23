@@ -1,7 +1,7 @@
 # Balda — C4 architecture (D2 source, for fun alongside the canonical Mermaid in architecture.md)
 #
-# Render all three boards (Context / Container / Component) to one SVG:
-#   d2 docs/architecture.d2 docs/architecture.svg
+# Render all boards (Context / Container / Component) to layered SVGs:
+#   d2 docs/architecture.d2 docs/architecture/index.svg
 # or watch live:
 #   d2 --watch docs/architecture.d2
 
@@ -121,7 +121,7 @@ layers: {
         tooltip: internal/presence — Redis-backed game presence (TTL 30s)
       }
       storage: Storage {
-        tooltip: internal/storage — typed PostgreSQL access
+        tooltip: internal/storage — typed PostgreSQL access; game results are persisted via a callback wired in cmd/server.go
       }
       gamecoord: Game Coordinator {
         tooltip: internal/gamecoord — implements game.Notifier; bridges FSM events to Centrifugo
@@ -139,7 +139,7 @@ layers: {
     api.handlers -> api.presence: "refresh presence on ping"
     api.handlers -> api.cfclient: "publish game_created, lobby_update"
     api.svc -> api.lobby: "create/join/query games"
-    api.svc -> api.storage: "players; persist refresh tokens & results"
+    api.svc -> api.storage: "players; persist refresh tokens. Game results via callback in cmd/server.go"
     api.lobby -> api.gamecoord: "as game.Notifier"
     api.gamecoord -> api.cfclient: "turn_change, game_state, game_over, skip_warn, end_proposal(_result)"
     api.storage -> postgres: "SQL (pgx/v5)"
