@@ -2,8 +2,8 @@
 
 > The Mermaid diagrams below are the canonical, GitHub-rendered source of truth.
 > A D2 variant lives in [`architecture.d2`](architecture.d2) with pre-rendered SVGs
-> in [`architecture/`](architecture/) (`context.svg` / `container.svg` / `component.svg`);
-> regenerate with `d2 docs/architecture.d2 docs/architecture.svg`.
+> in [`architecture/`](architecture/) (`index.svg` / `context.svg` / `container.svg` / `component.svg`);
+> regenerate with `d2 docs/architecture.d2 docs/architecture/index.svg`.
 
 ## Level 1 — System Context
 
@@ -65,7 +65,7 @@ C4Component
     Component(lobby, "Lobby", "internal/lobby", "In-memory registry of active games; starts game.Run goroutine on join")
     Component(mm, "Matchmaking Queue", "internal/matchmaking", "Rating-window pairing (present; not yet wired to an endpoint)")
     Component(presence, "Presence", "internal/presence", "Redis-backed game presence; refreshed by ping (TTL 30s)")
-    Component(storage, "Storage", "internal/storage", "Typed PostgreSQL access: users, player_state, refresh_tokens, game_results")
+    Component(storage, "Storage", "internal/storage", "Typed PostgreSQL access: users, player_state, refresh_tokens; game results are persisted via a callback wired in cmd/server.go")
     Component(gamecoord, "Game Coordinator", "internal/gamecoord", "Implements game.Notifier; bridges FSM events to Centrifugo channels")
     Component(cfclient, "Centrifugo Client", "internal/centrifugo", "HTTP publish client; generates JWT tokens for connection/subscription")
   }
@@ -78,7 +78,7 @@ C4Component
   Rel(handlers, presence, "Refreshes presence on ping")
   Rel(handlers, cfclient, "Publishes game_created, lobby_update")
   Rel(svc, lobby, "Creates/joins/queries games")
-  Rel(svc, storage, "Reads players; persists refresh tokens and results")
+  Rel(svc, storage, "Reads players; persists refresh tokens. Game results are saved via a callback wired in cmd/server.go")
   Rel(lobby, gamecoord, "Passes as game.Notifier")
   Rel(gamecoord, cfclient, "Publishes turn_change, game_state, game_over, skip_warn, end_proposal(_result)")
   Rel(storage, postgres, "SQL queries", "pgx/v5")
@@ -110,14 +110,19 @@ classDiagram
     +RejectEnd(playerID) error
     +AckTimeout()
     +Kick()
-    +Board() *LettersTable
+    +BoardSnapshot() [5][5]string
+    +BoardIsFull() bool
+    +InitialWord() string
+    +UsedWords() []string
+    +MoveNumber() int
     +PlayerScores() []PlayerState
     +CurrentPlayerID() string
-    +Done() chan struct&#123;&#125;
+    +Done() <-chan struct&#123;&#125;
   }
 
   class Player {
     +ID string
+    +Type PlayerType
     +Exp int
     +Score int
     +Words []string
@@ -176,6 +181,7 @@ classDiagram
 
   class Dictionary {
     +Definition map[string]string
+    +FiveLetters []string
     +RandomFiveLetterWord() string
   }
 
