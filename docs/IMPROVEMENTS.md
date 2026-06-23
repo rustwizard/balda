@@ -55,21 +55,24 @@ Callback обёрнут в retry (3 попытки, backoff 100/200 мс) и у�
 `storage.GetPlayerByUID`. `service.Balda` лишился метода `DB()` — хендлеры больше не трогают
 `Pool()` напрямую.
 
-### 8. Утечка кредов в логи устранена
+### 8. ✅ Утечка кредов в логи устранена
 **Файл:** `internal/server/restapi/handlers/handlers.go`
 
 Убрано логирование значения токена, удалён шумный `slog.Info("KeyAuth ... handler called")`.
-Валидация токена вынесена в `storage.ValidateAPIKey` — проверка UUID формата + запрос
-`SELECT EXISTS` в БД (см. пункт 9).
+Аутентификация переведена на JWT Bearer (см. пункт 9): токен больше не логируется и не
+передаётся в storage напрямую.
 
-### 9. Единый статический API-токен заменён на персональные ключи
+### 9. ✅ Единый статический API-токен заменён на JWT Bearer
 **Файлы:** `cmd/server.go`, `internal/server/restapi/handlers/handlers.go`,
-`internal/storage/user.go`, `internal/service/balda_service.go`
+`internal/service/balda_service.go`, `internal/auth/`
 
-Глобальный `xAPIToken` из конфига удалён. `HandleAPIKeyHeader` и `HandleAPIKeyQueryParam`
-теперь вызывают `storage.ValidateAPIKey`, который проверяет, существует ли переданный UUID
-в колонке `api_key` таблицы `users`. Каждый пользователь получает свой ключ при регистрации
-(`POST /signup → Key`). Не-UUID формат быстро отклоняется без обращения к БД.
+Глобальный `xAPIToken` из конфига удалён. Вместо персональных API-ключей реализована
+JWT-аутентификация: `/signup` и `/auth` выдают пару `access_token` (1h) + `refresh_token` (30d),
+защищённые эндпоинты принимают `Authorization: Bearer <access_token>`, а `HandleBearerAuth`
+проверяет подпись JWT без обращения к БД на каждый запрос.
+
+**Нюанс:** персональные API-ключи в колонке `users.api_key` не используются кодом
+(колонка создаётся/пересоздаётся миграциями, но не читается).
 
 ### 10. Проверка минимальной длины слова (≥3)
 **Файл:** `internal/game/game.go` (`SubmitWord`)
@@ -146,12 +149,12 @@ _Все критические задачи решены._
 раздувать CI (с `-race` они шли ~172s против ~68s). Их конкурентность покрыта raced
 unit-тестами. Локально: линт 0 issues, `-race` на unit-пакетах зелёный (гонок нет).
 
-### 16. ✅ Артефакт coverage.out в репозитории
+### 16. ✅ Артефакт coverage.out удалён из репозитория
 **Файл:** `coverage.out`
 
-Закоммичен отчёт покрытия.
+Отчёт покрытия больше не коммитится; файл добавлен в `.gitignore`.
 
-**Предложение:** удалить из git и добавить в `.gitignore`.
+**Статус:** предложение выполнено — артефакт исключён из git.
 
 ### 17. ✅ Мелочи в storage
 **Файл:** `internal/storage/storage.go`
@@ -218,14 +221,19 @@ TTL 30s), так что к старту партии игрок обычно у�
 
 ### Режимы игры
 
-### 22. Боты (P0 — план уже готов, docs/bots.md)
+### 22. 🔶 Боты (частично реализовано)
 **Затрагивает:** `internal/game/bot/` (новый), `internal/lobby/`, `internal/game/`, `cmd/server.go`, фронт
 
-Три варианта стратегии: `RandomValidStrategy` (MVP), `GreedyStrategy` (макс. длина слова),
-`MinimaxStrategy` (оценка позиции). Добавить `PlayerType` в `Player`, `CompositeNotifier` для
-раздельной нотификации человека и бота, эндпоинт `POST /games/with-bot`.
+Базовая игра против бота работает.
 
-Детальный план реализации: `docs/bots.md`.
+**Сделано:**
+- `internal/game/bot/` — движок, trie и стратегия `RandomValidStrategy`;
+- `PlayerType` (`Human`/`Bot`) добавлен в `Player`;
+- `CompositeNotifier` раздельно нотифицирует человека и бота;
+- эндпоинт `POST /games/with-bot` реализован.
+
+**Осталось:** стратегии `GreedyStrategy` (макс. длина слова) и `MinimaxStrategy` не
+реализованы. Детальный план `docs/bots.md` больше не существует.
 
 ### 23. Мгновенная сдача / forfeit (P0)
 **Затрагивает:** `internal/game/game.go`, `internal/game/fsm.go`, REST API, фронт
@@ -243,11 +251,17 @@ TTL 30s), так что к старту партии игрок обычно у�
 **Предложение:** добавить `POST /games/solo`, пропускать проверки второго игрока в лобби,
 не публиковать избыточные Centrifugo-события.
 
-### 25. Контроль времени на выбор (P1)
+### 25. 🔶 Контроль времени на выбор (P1, частично)
 **Затрагивает:** `internal/game/game.go` (`TurnDuration`), REST API, фронт
 
 Сейчас жёстко 60s на ход. Добавить режимы: блиц (15s), рапид (30s), классика (60s).
 Параметр `turn_duration` в `CreateGame`. Отображать режим в списке игр и в лобби.
+
+**Сделано:** внутренняя поддержка есть — `game.WithTurnDuration` + `Game.turnDuration`,
+по умолчанию 60s.
+
+**Осталось:** не выведено в API — `CreateGame` не принимает `turn_duration`, нет режимов
+блиц/рапид/классика и отображения в лобби.
 
 ### 26. Вариативность размера доски (P2)
 **Затрагивает:** `internal/game/table.go` (`[5][5]`), `internal/game/game.go`, REST API
