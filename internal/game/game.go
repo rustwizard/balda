@@ -78,6 +78,7 @@ type Notifier interface {
 type Player struct {
 	ID                  string
 	Exp                 int
+	Rating              int
 	Score               int
 	Words               []string
 	ConsecutiveTimeouts int

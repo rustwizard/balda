@@ -1,5 +1,5 @@
 // Package matchmaking implements a rating-based matchmaking queue.
-// Players enter the queue and are paired with opponents of similar Exp rating.
+// Players enter the queue and are paired with opponents of similar ELO rating.
 // The longer a player waits, the wider the acceptable rating gap becomes.
 package matchmaking
 
@@ -20,9 +20,9 @@ var (
 
 // Config controls all tunable parameters of the matchmaker.
 type Config struct {
-	// InitialRange is the starting acceptable Exp difference between players.
+	// InitialRange is the starting acceptable ELO rating difference between players.
 	InitialRange int
-	// ExpandStep is the number of Exp units added per ExpandInterval of waiting.
+	// ExpandStep is the number of ELO rating points added per ExpandInterval of waiting.
 	ExpandStep int
 	// ExpandInterval is how long a player must wait before the range widens by ExpandStep.
 	ExpandInterval time.Duration
@@ -53,7 +53,7 @@ type entry struct {
 // Queue is the matchmaking queue. Safe for concurrent use.
 type Queue struct {
 	mu      sync.Mutex
-	entries []*entry          // insertion-ordered (FIFO within same Exp bucket)
+	entries []*entry          // insertion-ordered (FIFO within same rating bucket)
 	indexed map[string]*entry // playerID → entry for O(1) lookup
 	cfg     Config
 	onMatch MatchCallback
@@ -166,7 +166,7 @@ func (q *Queue) Tick(now time.Time) {
 				continue
 			}
 			b := q.entries[j]
-			diff := abs(a.player.Exp - b.player.Exp)
+			diff := abs(a.player.Rating - b.player.Rating)
 			if diff > winA {
 				continue
 			}
@@ -208,7 +208,7 @@ func (q *Queue) Tick(now time.Time) {
 	}
 }
 
-// window computes the current acceptable Exp difference for entry e at time now.
+// window computes the current acceptable ELO rating difference for entry e at time now.
 func (q *Queue) window(e *entry, now time.Time) int {
 	waited := max(now.Sub(e.enqueuedAt), 0)
 	steps := int(waited / q.cfg.ExpandInterval)

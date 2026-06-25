@@ -15,8 +15,8 @@ import (
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-func player(id string, exp int) *game.Player {
-	return &game.Player{ID: id, Exp: exp, Type: game.PlayerTypeHuman}
+func player(id string, rating int) *game.Player {
+	return &game.Player{ID: id, Rating: rating, Type: game.PlayerTypeHuman}
 }
 
 // noopCallback is a MatchCallback that always succeeds without side effects.
@@ -97,7 +97,7 @@ func TestQueue_Tick_MatchWithinInitialRange(t *testing.T) {
 }
 
 // TestQueue_Tick_MatchAfterExpansion verifies that the window grows over time.
-// Exp difference = 300, InitialRange = 100, ExpandStep = 100, ExpandInterval = 10s.
+// Rating difference = 300, InitialRange = 100, ExpandStep = 100, ExpandInterval = 10s.
 // After 25s: steps = floor(25/10) = 2 → window = 100 + 2×100 = 300 → match.
 func TestQueue_Tick_MatchAfterExpansion(t *testing.T) {
 	var matched []*game.Player
@@ -125,7 +125,7 @@ func TestQueue_Tick_MatchAfterExpansion(t *testing.T) {
 }
 
 // TestQueue_Tick_ClosestRatingChosen verifies that among multiple candidates the
-// one with the smallest Exp difference is preferred.
+// one with the smallest rating difference is preferred.
 func TestQueue_Tick_ClosestRatingChosen(t *testing.T) {
 	var matched []*game.Player
 	cb := func(ps []*game.Player) error { matched = ps; return nil }
