@@ -516,9 +516,9 @@ type JoinGameResponse struct {
 	Game OptGameSummary `json:"game"`
 	// Centrifugo subscription JWT for the game channel.
 	GameToken OptString `json:"game_token"`
-	// Initial 5x5 board state. Each row is an array of 5 single-character strings
-	// (empty string means empty cell). Included so the joining player can render
-	// the board immediately without waiting for the Centrifugo game_state event.
+	// Initial 5x5 board state. Each row is an array of 5 single-character strings (empty string means
+	// empty cell). Included so the joining player can render the board immediately without waiting for the
+	// Centrifugo game_state event.
 	Board [][]string `json:"board"`
 	// ID of the player whose turn it is first (the game creator).
 	CurrentTurnUID OptString `json:"current_turn_uid"`
@@ -594,6 +594,8 @@ type LobbyPlayer struct {
 	UID OptUUID `json:"uid"`
 	// Player's total EXP.
 	Exp OptInt64 `json:"exp"`
+	// Player's ELO rating.
+	Rating OptInt64 `json:"rating"`
 }
 
 // GetUID returns the value of UID.
@@ -606,6 +608,11 @@ func (s *LobbyPlayer) GetExp() OptInt64 {
 	return s.Exp
 }
 
+// GetRating returns the value of Rating.
+func (s *LobbyPlayer) GetRating() OptInt64 {
+	return s.Rating
+}
+
 // SetUID sets the value of UID.
 func (s *LobbyPlayer) SetUID(val OptUUID) {
 	s.UID = val
@@ -614,6 +621,11 @@ func (s *LobbyPlayer) SetUID(val OptUUID) {
 // SetExp sets the value of Exp.
 func (s *LobbyPlayer) SetExp(val OptInt64) {
 	s.Exp = val
+}
+
+// SetRating sets the value of Rating.
+func (s *LobbyPlayer) SetRating(val OptInt64) {
+	s.Rating = val
 }
 
 // LogoutNoContent is response for Logout operation.
@@ -1239,6 +1251,8 @@ type Player struct {
 	Lastname OptString `json:"lastname"`
 	// Player's total EXP.
 	Exp OptInt64 `json:"exp"`
+	// Player's ELO rating.
+	Rating OptInt64 `json:"rating"`
 }
 
 // GetUID returns the value of UID.
@@ -1261,6 +1275,11 @@ func (s *Player) GetExp() OptInt64 {
 	return s.Exp
 }
 
+// GetRating returns the value of Rating.
+func (s *Player) GetRating() OptInt64 {
+	return s.Rating
+}
+
 // SetUID sets the value of UID.
 func (s *Player) SetUID(val OptUUID) {
 	s.UID = val
@@ -1281,12 +1300,19 @@ func (s *Player) SetExp(val OptInt64) {
 	s.Exp = val
 }
 
+// SetRating sets the value of Rating.
+func (s *Player) SetRating(val OptInt64) {
+	s.Rating = val
+}
+
 // Ref: #/components/schemas/PlayerGameState
 type PlayerGameState struct {
 	// Player's ID.
 	UID OptUUID `json:"uid"`
 	// Player's total EXP at the time of the event.
 	Exp OptInt64 `json:"exp"`
+	// Player's ELO rating at the time of the event.
+	Rating OptInt64 `json:"rating"`
 	// EXP earned in this game (only present in game_over events).
 	ExpGained OptInt `json:"exp_gained"`
 	// Number of points scored in the current game.
@@ -1305,6 +1331,11 @@ func (s *PlayerGameState) GetUID() OptUUID {
 // GetExp returns the value of Exp.
 func (s *PlayerGameState) GetExp() OptInt64 {
 	return s.Exp
+}
+
+// GetRating returns the value of Rating.
+func (s *PlayerGameState) GetRating() OptInt64 {
+	return s.Rating
 }
 
 // GetExpGained returns the value of ExpGained.
@@ -1337,6 +1368,11 @@ func (s *PlayerGameState) SetExp(val OptInt64) {
 	s.Exp = val
 }
 
+// SetRating sets the value of Rating.
+func (s *PlayerGameState) SetRating(val OptInt64) {
+	s.Rating = val
+}
+
 // SetExpGained sets the value of ExpGained.
 func (s *PlayerGameState) SetExpGained(val OptInt) {
 	s.ExpGained = val
@@ -1365,6 +1401,8 @@ type PlayerState struct {
 	Nickname OptString `json:"nickname"`
 	// Player's exp points in the system.
 	Exp OptInt64 `json:"exp"`
+	// Player's ELO rating in the system.
+	Rating OptInt64 `json:"rating"`
 	// Player's lives count in the system.
 	Lives OptInt64 `json:"lives"`
 	// Some Player's flags.
@@ -1386,6 +1424,11 @@ func (s *PlayerState) GetNickname() OptString {
 // GetExp returns the value of Exp.
 func (s *PlayerState) GetExp() OptInt64 {
 	return s.Exp
+}
+
+// GetRating returns the value of Rating.
+func (s *PlayerState) GetRating() OptInt64 {
+	return s.Rating
 }
 
 // GetLives returns the value of Lives.
@@ -1416,6 +1459,11 @@ func (s *PlayerState) SetNickname(val OptString) {
 // SetExp sets the value of Exp.
 func (s *PlayerState) SetExp(val OptInt64) {
 	s.Exp = val
+}
+
+// SetRating sets the value of Rating.
+func (s *PlayerState) SetRating(val OptInt64) {
+	s.Rating = val
 }
 
 // SetLives sets the value of Lives.

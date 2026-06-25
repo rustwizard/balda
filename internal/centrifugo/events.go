@@ -19,8 +19,9 @@ type EvGameCreated struct {
 
 // LobbyPlayer is a player entry inside a lobby GameEntry.
 type LobbyPlayer struct {
-	UID string `json:"uid"`
-	Exp int    `json:"exp"`
+	UID    string `json:"uid"`
+	Exp    int    `json:"exp"`
+	Rating int    `json:"rating"`
 }
 
 // GameEntry is a single game item inside EvLobbyUpdate.
@@ -51,6 +52,7 @@ type EvGameStarted struct {
 type PlayerState struct {
 	UID        string   `json:"uid"`
 	Exp        int      `json:"exp"`
+	Rating     int      `json:"rating"`
 	Score      int      `json:"score"`
 	WordsCount int      `json:"words_count"`
 	Words      []string `json:"words"`

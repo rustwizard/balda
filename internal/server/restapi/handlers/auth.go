@@ -61,6 +61,7 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 			Firstname: baldaapi.NewOptString(u.Firstname),
 			Lastname:  baldaapi.NewOptString(u.Lastname),
 			Exp:       baldaapi.NewOptInt64(u.Exp),
+			Rating:    baldaapi.NewOptInt64(u.Rating),
 		}),
 		AccessToken:     baldaapi.NewOptString(access),
 		RefreshToken:    baldaapi.NewOptString(refresh),
@@ -104,6 +105,7 @@ func (h *Handlers) buildActiveGame(uid int64, playerID string) *baldaapi.ActiveG
 		players = append(players, baldaapi.PlayerGameState{
 			UID:        baldaapi.NewOptUUID(pid),
 			Exp:        baldaapi.NewOptInt64(int64(s.Exp)),
+			Rating:     baldaapi.NewOptInt64(int64(s.Rating)),
 			Score:      baldaapi.NewOptInt(s.Score),
 			WordsCount: baldaapi.NewOptInt(s.WordsCount),
 			Words:      s.Words,

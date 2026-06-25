@@ -15,8 +15,8 @@ var _ Handler = UnimplementedHandler{}
 
 // AcceptEndGame implements acceptEndGame operation.
 //
-// The opponent accepts the end-game proposal. The game ends immediately with
-// the current scores. Only the non-proposing player may call this.
+// The opponent accepts the end-game proposal. The game ends immediately with the current scores. Only
+// the non-proposing player may call this.
 //
 // POST /games/{id}/accept-end
 func (UnimplementedHandler) AcceptEndGame(ctx context.Context, params AcceptEndGameParams) (r AcceptEndGameRes, _ error) {
@@ -43,8 +43,8 @@ func (UnimplementedHandler) CreateGame(ctx context.Context) (r CreateGameRes, _ 
 
 // CreateGameWithBot implements createGameWithBot operation.
 //
-// Creates a new game where the authenticated player plays against a server-side bot.
-// The game starts immediately and the first move belongs to the human player.
+// Creates a new game where the authenticated player plays against a server-side bot. The game starts
+// immediately and the first move belongs to the human player.
 //
 // POST /games/with-bot
 func (UnimplementedHandler) CreateGameWithBot(ctx context.Context) (r CreateGameWithBotRes, _ error) {
@@ -62,10 +62,9 @@ func (UnimplementedHandler) GetPlayerStateUID(ctx context.Context, params GetPla
 
 // JoinGame implements joinGame operation.
 //
-// Adds the authenticated player to the specified waiting game.
-// When the second player joins (quorum of 2 is reached) the game
-// transitions to in_progress and the first move belongs to the
-// player who created the game.
+// Adds the authenticated player to the specified waiting game. When the second player joins (quorum of
+// 2 is reached) the game transitions to in_progress and the first move belongs to the player who
+// created the game.
 //
 // POST /games/{id}/join
 func (UnimplementedHandler) JoinGame(ctx context.Context, params JoinGameParams) (r JoinGameRes, _ error) {
@@ -92,8 +91,8 @@ func (UnimplementedHandler) Logout(ctx context.Context, req OptLogoutRequest) (r
 
 // MoveGame implements moveGame operation.
 //
-// Places a new letter on the board and submits a word. If the word is valid,
-// the player's score is updated and the turn passes to the opponent.
+// Places a new letter on the board and submits a word. If the word is valid, the player's score is
+// updated and the turn passes to the opponent.
 //
 // POST /games/{id}/move
 func (UnimplementedHandler) MoveGame(ctx context.Context, req *MoveRequest, params MoveGameParams) (r MoveGameRes, _ error) {
@@ -102,8 +101,7 @@ func (UnimplementedHandler) MoveGame(ctx context.Context, req *MoveRequest, para
 
 // Ping implements ping operation.
 //
-// POST not GET — mutates session TTL.
-// Returns 204 with X-Server-Time header instead of a JSON body
+// POST not GET — mutates session TTL. Returns 204 with X-Server-Time header instead of a JSON body
 // to minimize bandwidth on frequent pings (every ping_delay ms).
 //
 // POST /session/ping
@@ -113,9 +111,8 @@ func (UnimplementedHandler) Ping(ctx context.Context, params PingParams) (r Ping
 
 // ProposeEndGame implements proposeEndGame operation.
 //
-// The current player proposes to end the game (e.g. no valid moves are available).
-// The turn timer is paused until the opponent responds.
-// Only the player whose turn it currently is may call this.
+// The current player proposes to end the game (e.g. no valid moves are available). The turn timer is
+// paused until the opponent responds. Only the player whose turn it currently is may call this.
 //
 // POST /games/{id}/propose-end
 func (UnimplementedHandler) ProposeEndGame(ctx context.Context, params ProposeEndGameParams) (r ProposeEndGameRes, _ error) {
@@ -133,8 +130,8 @@ func (UnimplementedHandler) RefreshToken(ctx context.Context, req *RefreshReques
 
 // RejectEndGame implements rejectEndGame operation.
 //
-// The opponent rejects the end-game proposal. The game resumes with the
-// remaining turn time (minimum 10 seconds). Only the non-proposing player may call this.
+// The opponent rejects the end-game proposal. The game resumes with the remaining turn time (minimum
+// 10 seconds). Only the non-proposing player may call this.
 //
 // POST /games/{id}/reject-end
 func (UnimplementedHandler) RejectEndGame(ctx context.Context, params RejectEndGameParams) (r RejectEndGameRes, _ error) {

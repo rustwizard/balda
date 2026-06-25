@@ -17,14 +17,12 @@ func encodeAcceptEndGameResponse(response AcceptEndGameRes, w http.ResponseWrite
 	switch response := response.(type) {
 	case *AcceptEndGameNoContent:
 		w.WriteHeader(204)
-		span.SetStatus(codes.Ok, http.StatusText(204))
 
 		return nil
 
 	case *AcceptEndGameUnauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -37,7 +35,6 @@ func encodeAcceptEndGameResponse(response AcceptEndGameRes, w http.ResponseWrite
 	case *AcceptEndGameForbidden:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(403)
-		span.SetStatus(codes.Error, http.StatusText(403))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -50,7 +47,6 @@ func encodeAcceptEndGameResponse(response AcceptEndGameRes, w http.ResponseWrite
 	case *AcceptEndGameNotFound:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -63,7 +59,6 @@ func encodeAcceptEndGameResponse(response AcceptEndGameRes, w http.ResponseWrite
 	case *AcceptEndGameConflict:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(409)
-		span.SetStatus(codes.Error, http.StatusText(409))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -83,7 +78,6 @@ func encodeAuthResponse(response AuthRes, w http.ResponseWriter, span trace.Span
 	case *AuthResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -96,7 +90,6 @@ func encodeAuthResponse(response AuthRes, w http.ResponseWriter, span trace.Span
 	case *ErrorResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -116,7 +109,6 @@ func encodeCreateGameResponse(response CreateGameRes, w http.ResponseWriter, spa
 	case *CreateGameResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -129,7 +121,6 @@ func encodeCreateGameResponse(response CreateGameRes, w http.ResponseWriter, spa
 	case *ErrorResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -149,7 +140,6 @@ func encodeCreateGameWithBotResponse(response CreateGameWithBotRes, w http.Respo
 	case *JoinGameResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -162,7 +152,6 @@ func encodeCreateGameWithBotResponse(response CreateGameWithBotRes, w http.Respo
 	case *CreateGameWithBotUnauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -175,7 +164,6 @@ func encodeCreateGameWithBotResponse(response CreateGameWithBotRes, w http.Respo
 	case *CreateGameWithBotConflict:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(409)
-		span.SetStatus(codes.Error, http.StatusText(409))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -208,7 +196,6 @@ func encodeGetPlayerStateUIDResponse(response GetPlayerStateUIDRes, w http.Respo
 	case *PlayerState:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -221,7 +208,6 @@ func encodeGetPlayerStateUIDResponse(response GetPlayerStateUIDRes, w http.Respo
 	case *ErrorResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -241,7 +227,6 @@ func encodeJoinGameResponse(response JoinGameRes, w http.ResponseWriter, span tr
 	case *JoinGameResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -254,7 +239,6 @@ func encodeJoinGameResponse(response JoinGameRes, w http.ResponseWriter, span tr
 	case *JoinGameUnauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -267,7 +251,6 @@ func encodeJoinGameResponse(response JoinGameRes, w http.ResponseWriter, span tr
 	case *JoinGameNotFound:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -280,7 +263,6 @@ func encodeJoinGameResponse(response JoinGameRes, w http.ResponseWriter, span tr
 	case *JoinGameConflict:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(409)
-		span.SetStatus(codes.Error, http.StatusText(409))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -313,7 +295,6 @@ func encodeListGamesResponse(response ListGamesRes, w http.ResponseWriter, span 
 	case *ListGamesResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -326,7 +307,6 @@ func encodeListGamesResponse(response ListGamesRes, w http.ResponseWriter, span 
 	case *ErrorResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -345,14 +325,12 @@ func encodeLogoutResponse(response LogoutRes, w http.ResponseWriter, span trace.
 	switch response := response.(type) {
 	case *LogoutNoContent:
 		w.WriteHeader(204)
-		span.SetStatus(codes.Ok, http.StatusText(204))
 
 		return nil
 
 	case *ErrorResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -372,7 +350,6 @@ func encodeMoveGameResponse(response MoveGameRes, w http.ResponseWriter, span tr
 	case *MoveResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -385,7 +362,6 @@ func encodeMoveGameResponse(response MoveGameRes, w http.ResponseWriter, span tr
 	case *MoveGameBadRequest:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -398,7 +374,6 @@ func encodeMoveGameResponse(response MoveGameRes, w http.ResponseWriter, span tr
 	case *MoveGameUnauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -411,7 +386,6 @@ func encodeMoveGameResponse(response MoveGameRes, w http.ResponseWriter, span tr
 	case *MoveGameForbidden:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(403)
-		span.SetStatus(codes.Error, http.StatusText(403))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -424,7 +398,6 @@ func encodeMoveGameResponse(response MoveGameRes, w http.ResponseWriter, span tr
 	case *MoveGameNotFound:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -437,7 +410,6 @@ func encodeMoveGameResponse(response MoveGameRes, w http.ResponseWriter, span tr
 	case *MoveGameConflict:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(409)
-		span.SetStatus(codes.Error, http.StatusText(409))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -504,14 +476,12 @@ func encodePingResponse(response PingRes, w http.ResponseWriter, span trace.Span
 			}
 		}
 		w.WriteHeader(204)
-		span.SetStatus(codes.Ok, http.StatusText(204))
 
 		return nil
 
 	case *ErrorResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -530,14 +500,12 @@ func encodeProposeEndGameResponse(response ProposeEndGameRes, w http.ResponseWri
 	switch response := response.(type) {
 	case *ProposeEndGameNoContent:
 		w.WriteHeader(204)
-		span.SetStatus(codes.Ok, http.StatusText(204))
 
 		return nil
 
 	case *ProposeEndGameUnauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -550,7 +518,6 @@ func encodeProposeEndGameResponse(response ProposeEndGameRes, w http.ResponseWri
 	case *ProposeEndGameForbidden:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(403)
-		span.SetStatus(codes.Error, http.StatusText(403))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -563,7 +530,6 @@ func encodeProposeEndGameResponse(response ProposeEndGameRes, w http.ResponseWri
 	case *ProposeEndGameNotFound:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -576,7 +542,6 @@ func encodeProposeEndGameResponse(response ProposeEndGameRes, w http.ResponseWri
 	case *ProposeEndGameConflict:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(409)
-		span.SetStatus(codes.Error, http.StatusText(409))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -596,7 +561,6 @@ func encodeRefreshTokenResponse(response RefreshTokenRes, w http.ResponseWriter,
 	case *RefreshResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -609,7 +573,6 @@ func encodeRefreshTokenResponse(response RefreshTokenRes, w http.ResponseWriter,
 	case *ErrorResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -628,14 +591,12 @@ func encodeRejectEndGameResponse(response RejectEndGameRes, w http.ResponseWrite
 	switch response := response.(type) {
 	case *RejectEndGameNoContent:
 		w.WriteHeader(204)
-		span.SetStatus(codes.Ok, http.StatusText(204))
 
 		return nil
 
 	case *RejectEndGameUnauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -648,7 +609,6 @@ func encodeRejectEndGameResponse(response RejectEndGameRes, w http.ResponseWrite
 	case *RejectEndGameForbidden:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(403)
-		span.SetStatus(codes.Error, http.StatusText(403))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -661,7 +621,6 @@ func encodeRejectEndGameResponse(response RejectEndGameRes, w http.ResponseWrite
 	case *RejectEndGameNotFound:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -674,7 +633,6 @@ func encodeRejectEndGameResponse(response RejectEndGameRes, w http.ResponseWrite
 	case *RejectEndGameConflict:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(409)
-		span.SetStatus(codes.Error, http.StatusText(409))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -694,7 +652,6 @@ func encodeSignupResponse(response SignupRes, w http.ResponseWriter, span trace.
 	case *SignupResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(200)
-		span.SetStatus(codes.Ok, http.StatusText(200))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -707,7 +664,6 @@ func encodeSignupResponse(response SignupRes, w http.ResponseWriter, span trace.
 	case *ErrorResponse:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(400)
-		span.SetStatus(codes.Error, http.StatusText(400))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -726,14 +682,12 @@ func encodeSkipGameResponse(response SkipGameRes, w http.ResponseWriter, span tr
 	switch response := response.(type) {
 	case *SkipGameNoContent:
 		w.WriteHeader(204)
-		span.SetStatus(codes.Ok, http.StatusText(204))
 
 		return nil
 
 	case *SkipGameUnauthorized:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(401)
-		span.SetStatus(codes.Error, http.StatusText(401))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -746,7 +700,6 @@ func encodeSkipGameResponse(response SkipGameRes, w http.ResponseWriter, span tr
 	case *SkipGameForbidden:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(403)
-		span.SetStatus(codes.Error, http.StatusText(403))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -759,7 +712,6 @@ func encodeSkipGameResponse(response SkipGameRes, w http.ResponseWriter, span tr
 	case *SkipGameNotFound:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(404)
-		span.SetStatus(codes.Error, http.StatusText(404))
 
 		e := new(jx.Encoder)
 		response.Encode(e)
@@ -772,7 +724,6 @@ func encodeSkipGameResponse(response SkipGameRes, w http.ResponseWriter, span tr
 	case *SkipGameConflict:
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(409)
-		span.SetStatus(codes.Error, http.StatusText(409))
 
 		e := new(jx.Encoder)
 		response.Encode(e)

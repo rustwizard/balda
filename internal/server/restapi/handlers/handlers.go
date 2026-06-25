@@ -85,7 +85,7 @@ func (h *Handlers) publishLobbyUpdate(ctx context.Context) {
 		lobbyPlayers := make([]centrifugo.LobbyPlayer, 0, len(g.Players))
 		for _, p := range g.Players {
 			playerIDs = append(playerIDs, p.ID)
-			lobbyPlayers = append(lobbyPlayers, centrifugo.LobbyPlayer{UID: p.ID, Exp: p.Exp})
+			lobbyPlayers = append(lobbyPlayers, centrifugo.LobbyPlayer{UID: p.ID, Exp: p.Exp, Rating: p.Rating})
 		}
 		ev.Games = append(ev.Games, centrifugo.GameEntry{
 			ID:        g.ID,

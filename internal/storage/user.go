@@ -24,6 +24,7 @@ type UserAuth struct {
 	Lastname  string
 	PlayerID  uuid.UUID
 	Exp       int64
+	Rating    int64
 	Role      string
 }
 
@@ -37,6 +38,7 @@ type UserForToken struct {
 type UserCreated struct {
 	UID      int64
 	PlayerID uuid.UUID
+	Rating   int64
 	Role     string
 }
 
@@ -48,11 +50,11 @@ func (b *Balda) AuthUser(ctx context.Context, email, password string) (UserAuth,
 	var u UserAuth
 	var hash string
 	err := b.db.QueryRow(ctx, `
-		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0), u.role, u.hash_password
+		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0), COALESCE(ps.rating, $1), u.role, u.hash_password
 		FROM users u
 		JOIN player_state ps ON ps.user_id = u.user_id
-		WHERE u.email = $1
-	`, email).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp, &u.Role, &hash)
+		WHERE u.email = $2
+	`, DefaultRating, email).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp, &u.Rating, &u.Role, &hash)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return UserAuth{}, ErrInvalidCredentials
 	}
@@ -115,6 +117,7 @@ func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, pass
 		 VALUES($1, $2, $3, $4, $5, $6) RETURNING player_id`,
 		created.UID, nickname, 0, DefaultRating, 0, 5,
 	).Scan(&created.PlayerID)
+	created.Rating = DefaultRating
 	if err != nil {
 		return UserCreated{}, fmt.Errorf("create user: insert player_state: %w", err)
 	}

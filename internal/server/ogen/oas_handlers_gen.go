@@ -35,8 +35,8 @@ func (c *codeRecorder) Unwrap() http.ResponseWriter {
 
 // handleAcceptEndGameRequest handles acceptEndGame operation.
 //
-// The opponent accepts the end-game proposal. The game ends immediately with
-// the current scores. Only the non-proposing player may call this.
+// The opponent accepts the end-game proposal. The game ends immediately with the current scores. Only
+// the non-proposing player may call this.
 //
 // POST /games/{id}/accept-end
 func (s *Server) handleAcceptEndGameRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -72,7 +72,7 @@ func (s *Server) handleAcceptEndGameRequest(args [1]string, argsEscaped bool, w 
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -259,7 +259,7 @@ func (s *Server) handleAuthRequest(args [0]string, argsEscaped bool, w http.Resp
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -402,7 +402,7 @@ func (s *Server) handleCreateGameRequest(args [0]string, argsEscaped bool, w htt
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -538,8 +538,8 @@ func (s *Server) handleCreateGameRequest(args [0]string, argsEscaped bool, w htt
 
 // handleCreateGameWithBotRequest handles createGameWithBot operation.
 //
-// Creates a new game where the authenticated player plays against a server-side bot.
-// The game starts immediately and the first move belongs to the human player.
+// Creates a new game where the authenticated player plays against a server-side bot. The game starts
+// immediately and the first move belongs to the human player.
 //
 // POST /games/with-bot
 func (s *Server) handleCreateGameWithBotRequest(args [0]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -575,7 +575,7 @@ func (s *Server) handleCreateGameWithBotRequest(args [0]string, argsEscaped bool
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -747,7 +747,7 @@ func (s *Server) handleGetPlayerStateUIDRequest(args [1]string, argsEscaped bool
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -854,10 +854,9 @@ func (s *Server) handleGetPlayerStateUIDRequest(args [1]string, argsEscaped bool
 
 // handleJoinGameRequest handles joinGame operation.
 //
-// Adds the authenticated player to the specified waiting game.
-// When the second player joins (quorum of 2 is reached) the game
-// transitions to in_progress and the first move belongs to the
-// player who created the game.
+// Adds the authenticated player to the specified waiting game. When the second player joins (quorum of
+// 2 is reached) the game transitions to in_progress and the first move belongs to the player who
+// created the game.
 //
 // POST /games/{id}/join
 func (s *Server) handleJoinGameRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -893,7 +892,7 @@ func (s *Server) handleJoinGameRequest(args [1]string, argsEscaped bool, w http.
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -1080,7 +1079,7 @@ func (s *Server) handleListGamesRequest(args [0]string, argsEscaped bool, w http
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -1252,7 +1251,7 @@ func (s *Server) handleLogoutRequest(args [0]string, argsEscaped bool, w http.Re
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -1403,8 +1402,8 @@ func (s *Server) handleLogoutRequest(args [0]string, argsEscaped bool, w http.Re
 
 // handleMoveGameRequest handles moveGame operation.
 //
-// Places a new letter on the board and submits a word. If the word is valid,
-// the player's score is updated and the turn passes to the opponent.
+// Places a new letter on the board and submits a word. If the word is valid, the player's score is
+// updated and the turn passes to the opponent.
 //
 // POST /games/{id}/move
 func (s *Server) handleMoveGameRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -1440,7 +1439,7 @@ func (s *Server) handleMoveGameRequest(args [1]string, argsEscaped bool, w http.
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -1606,8 +1605,7 @@ func (s *Server) handleMoveGameRequest(args [1]string, argsEscaped bool, w http.
 
 // handlePingRequest handles ping operation.
 //
-// POST not GET — mutates session TTL.
-// Returns 204 with X-Server-Time header instead of a JSON body
+// POST not GET — mutates session TTL. Returns 204 with X-Server-Time header instead of a JSON body
 // to minimize bandwidth on frequent pings (every ping_delay ms).
 //
 // POST /session/ping
@@ -1644,7 +1642,7 @@ func (s *Server) handlePingRequest(args [0]string, argsEscaped bool, w http.Resp
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -1795,9 +1793,8 @@ func (s *Server) handlePingRequest(args [0]string, argsEscaped bool, w http.Resp
 
 // handleProposeEndGameRequest handles proposeEndGame operation.
 //
-// The current player proposes to end the game (e.g. no valid moves are available).
-// The turn timer is paused until the opponent responds.
-// Only the player whose turn it currently is may call this.
+// The current player proposes to end the game (e.g. no valid moves are available). The turn timer is
+// paused until the opponent responds. Only the player whose turn it currently is may call this.
 //
 // POST /games/{id}/propose-end
 func (s *Server) handleProposeEndGameRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -1833,7 +1830,7 @@ func (s *Server) handleProposeEndGameRequest(args [1]string, argsEscaped bool, w
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -2020,7 +2017,7 @@ func (s *Server) handleRefreshTokenRequest(args [0]string, argsEscaped bool, w h
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -2127,8 +2124,8 @@ func (s *Server) handleRefreshTokenRequest(args [0]string, argsEscaped bool, w h
 
 // handleRejectEndGameRequest handles rejectEndGame operation.
 //
-// The opponent rejects the end-game proposal. The game resumes with the
-// remaining turn time (minimum 10 seconds). Only the non-proposing player may call this.
+// The opponent rejects the end-game proposal. The game resumes with the remaining turn time (minimum
+// 10 seconds). Only the non-proposing player may call this.
 //
 // POST /games/{id}/reject-end
 func (s *Server) handleRejectEndGameRequest(args [1]string, argsEscaped bool, w http.ResponseWriter, r *http.Request) {
@@ -2164,7 +2161,7 @@ func (s *Server) handleRejectEndGameRequest(args [1]string, argsEscaped bool, w 
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -2351,7 +2348,7 @@ func (s *Server) handleSignupRequest(args [0]string, argsEscaped bool, w http.Re
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 
@@ -2494,7 +2491,7 @@ func (s *Server) handleSkipGameRequest(args [1]string, argsEscaped bool, w http.
 		if code != 0 {
 			codeAttr := semconv.HTTPResponseStatusCode(code)
 			attrs = append(attrs, codeAttr)
-			span.SetAttributes(codeAttr)
+			span.SetAttributes(attrs...)
 		}
 		attrOpt := metric.WithAttributes(attrs...)
 

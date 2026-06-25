@@ -27,6 +27,7 @@ func (h *Handlers) GetPlayerStateUID(ctx context.Context, params baldaapi.GetPla
 			UID:      baldaapi.NewOptUUID(params.UID),
 			Nickname: baldaapi.NewOptString(ps.Nickname),
 			Exp:      baldaapi.NewOptInt64(ps.Exp),
+			Rating:   baldaapi.NewOptInt64(ps.Rating),
 			Flags:    baldaapi.NewOptInt64(ps.Flags),
 			Lives:    baldaapi.NewOptInt64(ps.Lives),
 		}, nil
@@ -46,6 +47,7 @@ func (h *Handlers) GetPlayerStateUID(ctx context.Context, params baldaapi.GetPla
 		UID:      baldaapi.NewOptUUID(params.UID),
 		Nickname: baldaapi.NewOptString(ps.Nickname),
 		Exp:      baldaapi.NewOptInt64(ps.Exp),
+		Rating:   baldaapi.NewOptInt64(ps.Rating),
 		Flags:    baldaapi.NewOptInt64(ps.Flags),
 		Lives:    baldaapi.NewOptInt64(ps.Lives),
 		GameID:   baldaapi.NewOptUUID(gameID),
