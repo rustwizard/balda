@@ -491,6 +491,7 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | player_id | uuid | unique player identifier |
 | nickname | text | auto-generated |
 | exp | bigint | experience points |
+| rating | int | ELO rating (default 1000) |
 | flags | bigint | feature flags |
 | lives | bigint | |
 | created_at | timestamp | |
