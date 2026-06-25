@@ -7,10 +7,14 @@ import (
 	"github.com/google/uuid"
 )
 
+// DefaultRating is the starting ELO rating for new players.
+const DefaultRating = 1000
+
 // PlayerState holds the profile fields stored in player_state.
 type PlayerState struct {
 	Nickname string
 	Exp      int64
+	Rating   int64
 	Flags    int64
 	Lives    int64
 }
@@ -19,6 +23,7 @@ type PlayerState struct {
 type PlayerForGame struct {
 	PlayerID uuid.UUID
 	Exp      int
+	Rating   int
 }
 
 // GetPlayerState returns profile fields for the given player UUID.
@@ -28,10 +33,10 @@ func (b *Balda) GetPlayerState(ctx context.Context, playerID uuid.UUID) (PlayerS
 
 	var ps PlayerState
 	err := b.db.QueryRow(ctx,
-		`SELECT nickname, COALESCE(exp, 0), COALESCE(flags, 0), COALESCE(lives, 0)
-		 FROM player_state WHERE player_id = $1`,
-		playerID,
-	).Scan(&ps.Nickname, &ps.Exp, &ps.Flags, &ps.Lives)
+		`SELECT nickname, COALESCE(exp, 0), COALESCE(rating, $1), COALESCE(flags, 0), COALESCE(lives, 0)
+		 FROM player_state WHERE player_id = $2`,
+		DefaultRating, playerID,
+	).Scan(&ps.Nickname, &ps.Exp, &ps.Rating, &ps.Flags, &ps.Lives)
 	if err != nil {
 		return PlayerState{}, fmt.Errorf("get player state: %w", err)
 	}
@@ -45,8 +50,10 @@ func (b *Balda) GetPlayerByUID(ctx context.Context, uid int64) (PlayerForGame, e
 
 	var p PlayerForGame
 	err := b.db.QueryRow(ctx,
-		`SELECT player_id, COALESCE(exp, 0) FROM player_state WHERE user_id = $1`, uid,
-	).Scan(&p.PlayerID, &p.Exp)
+		`SELECT player_id, COALESCE(exp, 0), COALESCE(rating, $1)
+		 FROM player_state WHERE user_id = $2`,
+		DefaultRating, uid,
+	).Scan(&p.PlayerID, &p.Exp, &p.Rating)
 	if err != nil {
 		return PlayerForGame{}, fmt.Errorf("get player by uid: %w", err)
 	}

@@ -111,9 +111,9 @@ func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, pass
 	}
 
 	err = tx.QueryRow(ctx,
-		`INSERT INTO player_state(user_id, nickname, exp, flags, lives)
-		 VALUES($1, $2, $3, $4, $5) RETURNING player_id`,
-		created.UID, nickname, 0, 0, 5,
+		`INSERT INTO player_state(user_id, nickname, exp, rating, flags, lives)
+		 VALUES($1, $2, $3, $4, $5, $6) RETURNING player_id`,
+		created.UID, nickname, 0, DefaultRating, 0, 5,
 	).Scan(&created.PlayerID)
 	if err != nil {
 		return UserCreated{}, fmt.Errorf("create user: insert player_state: %w", err)
