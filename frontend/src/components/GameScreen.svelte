@@ -151,6 +151,8 @@
         name={p.nickname}
         score={p.score}
         exp={p.exp}
+        rating={p.rating}
+        ratingGained={p.ratingGained}
         expGained={p.expGained}
         wordsCount={p.wordsCount}
         words={p.words}

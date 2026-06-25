@@ -7,6 +7,8 @@
     name: string;
     score: number;
     exp?: number;
+    rating?: number;
+    ratingGained?: number;
     expGained?: number;
     wordsCount: number;
     words?: string[];
@@ -15,7 +17,7 @@
     isWinner?: boolean;
   }
 
-  let { name, score, exp = 0, expGained = 0, wordsCount, words = [], consecutiveSkips = 0, isActive = false, isWinner = false }: Props = $props();
+  let { name, score, exp = 0, rating = 0, ratingGained = 0, expGained = 0, wordsCount, words = [], consecutiveSkips = 0, isActive = false, isWinner = false }: Props = $props();
 
   let showWords = $state(false);
 
@@ -35,6 +37,12 @@
   <div class="text-xs text-stone-500">{exp} XP</div>
   {#if expGained > 0}
     <div class="text-xs font-semibold text-green-600">+{expGained} XP</div>
+  {/if}
+  <div class="text-xs text-stone-500">{rating} ELO</div>
+  {#if ratingGained !== 0}
+    <div class="text-xs font-semibold {ratingGained > 0 ? 'text-green-600' : 'text-red-600'}">
+      {ratingGained > 0 ? '+' : ''}{ratingGained} ELO
+    </div>
   {/if}
   <button
     class="mt-1 text-xs text-stone-500 {words.length > 0 ? 'cursor-pointer hover:text-blue-500' : 'cursor-default'}"

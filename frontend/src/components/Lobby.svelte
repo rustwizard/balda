@@ -34,8 +34,8 @@
       gameState.startGame(res.game);
       if (res.board && res.current_turn_uid) {
         const players = res.game.players?.length
-          ? res.game.players.map((p) => ({ uid: p.uid, score: 0, words_count: 0, words: [] }))
-          : res.game.player_ids.map((uid) => ({ uid, score: 0, words_count: 0, words: [] }));
+          ? res.game.players.map((p) => ({ uid: p.uid, rating: p.rating, score: 0, words_count: 0, words: [] }))
+          : res.game.player_ids.map((uid) => ({ uid, rating: 0, score: 0, words_count: 0, words: [] }));
         gameState.applyGameState({
           type: 'game_state',
           game_id: res.game.id,
@@ -64,8 +64,8 @@
       gameState.startGame(res.game);
       if (res.board && res.current_turn_uid) {
         const players = res.game.players?.length
-          ? res.game.players.map((p) => ({ uid: p.uid, score: 0, words_count: 0, words: [] }))
-          : res.game.player_ids.map((uid) => ({ uid, score: 0, words_count: 0, words: [] }));
+          ? res.game.players.map((p) => ({ uid: p.uid, rating: p.rating, score: 0, words_count: 0, words: [] }))
+          : res.game.player_ids.map((uid) => ({ uid, rating: 0, score: 0, words_count: 0, words: [] }));
         gameState.applyGameState({
           type: 'game_state',
           game_id: res.game.id,
@@ -102,6 +102,7 @@
     <div class="text-sm font-medium text-stone-600">
       {gameState.nickname}
       <span class="ml-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{gameState.exp} XP</span>
+      <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">{gameState.rating} ELO</span>
     </div>
   </div>
 
