@@ -11,6 +11,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestEloDelta(t *testing.T) {
+	cases := []struct {
+		name           string
+		rating         int
+		opponentRating int
+		score          float64
+		want           int
+	}{
+		{"equal rated win", 1000, 1000, 1.0, 16},
+		{"equal rated loss", 1000, 1000, 0.0, -16},
+		{"equal rated draw", 1000, 1000, 0.5, 0},
+		{"underdog win", 1200, 1400, 1.0, 24},
+		{"underdog loss", 1200, 1400, 0.0, -8},
+		{"favorite win", 1400, 1200, 1.0, 8},
+		{"favorite loss", 1400, 1200, 0.0, -24},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, storage.EloDelta(tc.rating, tc.opponentRating, tc.score))
+		})
+	}
+}
+
 func TestExpGained(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -45,8 +68,8 @@ func seedPlayer(ctx context.Context, t *testing.T, s *storage.Balda, email strin
 	require.NoError(t, err)
 
 	_, err = s.Pool().Exec(ctx,
-		`INSERT INTO player_state (user_id, player_id, exp, flags, lives) VALUES ($1, $2, 0, 0, 5)`,
-		userID, playerID,
+		`INSERT INTO player_state (user_id, player_id, exp, rating, flags, lives) VALUES ($1, $2, 0, $3, 0, 5)`,
+		userID, playerID, storage.DefaultRating,
 	)
 	require.NoError(t, err)
 	return playerID
