@@ -78,6 +78,7 @@ type Notifier interface {
 type Player struct {
 	ID                  string
 	Exp                 int
+	Rating              int
 	Score               int
 	Words               []string
 	ConsecutiveTimeouts int
@@ -502,6 +503,7 @@ func (g *Game) FillCell(row, col uint8, char string) {
 type PlayerState struct {
 	UID        string
 	Exp        int
+	Rating     int
 	Score      int
 	WordsCount int
 	Words      []string
@@ -515,7 +517,7 @@ func (g *Game) PlayerScores() []PlayerState {
 	for i, p := range g.players {
 		words := make([]string, len(p.Words))
 		copy(words, p.Words)
-		out[i] = PlayerState{UID: p.ID, Exp: p.Exp, Score: p.Score, WordsCount: len(p.Words), Words: words}
+		out[i] = PlayerState{UID: p.ID, Exp: p.Exp, Rating: p.Rating, Score: p.Score, WordsCount: len(p.Words), Words: words}
 	}
 	return out
 }

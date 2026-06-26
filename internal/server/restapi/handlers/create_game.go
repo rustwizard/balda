@@ -55,8 +55,9 @@ func (h *Handlers) CreateGame(ctx context.Context) (baldaapi.CreateGameRes, erro
 		}
 		playerIDs = append(playerIDs, pid)
 		lobbyPlayers = append(lobbyPlayers, baldaapi.LobbyPlayer{
-			UID: baldaapi.NewOptUUID(pid),
-			Exp: baldaapi.NewOptInt64(int64(p.Exp)),
+			UID:    baldaapi.NewOptUUID(pid),
+			Exp:    baldaapi.NewOptInt64(int64(p.Exp)),
+			Rating: baldaapi.NewOptInt64(int64(p.Rating)),
 		})
 	}
 

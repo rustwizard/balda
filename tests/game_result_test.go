@@ -11,6 +11,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestEloDelta(t *testing.T) {
+	cases := []struct {
+		name           string
+		rating         int
+		opponentRating int
+		score          float64
+		want           int
+	}{
+		{"equal rated win", 1000, 1000, 1.0, 16},
+		{"equal rated loss", 1000, 1000, 0.0, -16},
+		{"equal rated draw", 1000, 1000, 0.5, 0},
+		{"underdog win", 1200, 1400, 1.0, 24},
+		{"underdog loss", 1200, 1400, 0.0, -8},
+		{"favorite win", 1400, 1200, 1.0, 8},
+		{"favorite loss", 1400, 1200, 0.0, -24},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, storage.EloDelta(tc.rating, tc.opponentRating, tc.score))
+		})
+	}
+}
+
 func TestExpGained(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -35,6 +58,11 @@ func TestExpGained(t *testing.T) {
 
 // seedPlayer inserts a user + player_state row and returns the player_id UUID.
 func seedPlayer(ctx context.Context, t *testing.T, s *storage.Balda, email string) uuid.UUID {
+	return seedPlayerWithRating(ctx, t, s, email, storage.DefaultRating)
+}
+
+// seedPlayerWithRating inserts a user + player_state row with a specific rating.
+func seedPlayerWithRating(ctx context.Context, t *testing.T, s *storage.Balda, email string, rating int) uuid.UUID {
 	t.Helper()
 	playerID := uuid.New()
 	var userID int64
@@ -45,8 +73,8 @@ func seedPlayer(ctx context.Context, t *testing.T, s *storage.Balda, email strin
 	require.NoError(t, err)
 
 	_, err = s.Pool().Exec(ctx,
-		`INSERT INTO player_state (user_id, player_id, exp, flags, lives) VALUES ($1, $2, 0, 0, 5)`,
-		userID, playerID,
+		`INSERT INTO player_state (user_id, player_id, exp, rating, flags, lives) VALUES ($1, $2, 0, $3, 0, 5)`,
+		userID, playerID, rating,
 	)
 	require.NoError(t, err)
 	return playerID
@@ -132,6 +160,43 @@ func TestSaveGameResult_Winner(t *testing.T) {
 	}
 	checkExp(p1, 18)
 	checkExp(p2, 5)
+}
+
+func TestSaveGameResult_UpdatesRating(t *testing.T) {
+	ctx := context.Background()
+	s, cleanup := initStorage(ctx, t)
+	defer cleanup()
+
+	p1 := seedPlayerWithRating(ctx, t, s, "gr.rating.winner@example.org", 1200)
+	p2 := seedPlayerWithRating(ctx, t, s, "gr.rating.loser@example.org", 1400)
+	gameID := uuid.New()
+
+	result := storage.GameResult{
+		GameID:       gameID.String(),
+		WinnerID:     p1.String(),
+		FinishReason: storage.FinishReasonGameFinished,
+		FinishedAt:   time.Now().UTC().Truncate(time.Second),
+		Players: []storage.PlayerResult{
+			{PlayerID: p1.String(), Score: 8, WordsCount: 3, ExpGained: storage.ExpGained(8, true, false)},
+			{PlayerID: p2.String(), Score: 5, WordsCount: 2, ExpGained: storage.ExpGained(5, false, false)},
+		},
+	}
+
+	require.NoError(t, s.SaveGameResult(ctx, result))
+
+	checkRating := func(playerID uuid.UUID, want int) {
+		t.Helper()
+		var rating int
+		require.NoError(t, s.Pool().QueryRow(ctx,
+			`SELECT rating FROM player_state WHERE player_id = $1`, playerID,
+		).Scan(&rating))
+		assert.Equal(t, want, rating)
+	}
+
+	// Underdog (1200) beats favorite (1400): delta = +24.
+	checkRating(p1, 1224)
+	// Favorite loses: delta = -24.
+	checkRating(p2, 1376)
 }
 
 func TestSaveGameResult_Draw(t *testing.T) {

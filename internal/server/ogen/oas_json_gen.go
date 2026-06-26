@@ -1648,11 +1648,18 @@ func (s *LobbyPlayer) encodeFields(e *jx.Encoder) {
 			s.Exp.Encode(e)
 		}
 	}
+	{
+		if s.Rating.Set {
+			e.FieldStart("rating")
+			s.Rating.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfLobbyPlayer = [2]string{
+var jsonFieldsNameOfLobbyPlayer = [3]string{
 	0: "uid",
 	1: "exp",
+	2: "rating",
 }
 
 // Decode decodes LobbyPlayer from json.
@@ -1682,6 +1689,16 @@ func (s *LobbyPlayer) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"exp\"")
+			}
+		case "rating":
+			if err := func() error {
+				s.Rating.Reset()
+				if err := s.Rating.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rating\"")
 			}
 		default:
 			return d.Skip()
@@ -2754,13 +2771,20 @@ func (s *Player) encodeFields(e *jx.Encoder) {
 			s.Exp.Encode(e)
 		}
 	}
+	{
+		if s.Rating.Set {
+			e.FieldStart("rating")
+			s.Rating.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfPlayer = [4]string{
+var jsonFieldsNameOfPlayer = [5]string{
 	0: "uid",
 	1: "firstname",
 	2: "lastname",
 	3: "exp",
+	4: "rating",
 }
 
 // Decode decodes Player from json.
@@ -2811,6 +2835,16 @@ func (s *Player) Decode(d *jx.Decoder) error {
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"exp\"")
 			}
+		case "rating":
+			if err := func() error {
+				s.Rating.Reset()
+				if err := s.Rating.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rating\"")
+			}
 		default:
 			return d.Skip()
 		}
@@ -2857,6 +2891,12 @@ func (s *PlayerGameState) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Rating.Set {
+			e.FieldStart("rating")
+			s.Rating.Encode(e)
+		}
+	}
+	{
 		if s.ExpGained.Set {
 			e.FieldStart("exp_gained")
 			s.ExpGained.Encode(e)
@@ -2886,13 +2926,14 @@ func (s *PlayerGameState) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfPlayerGameState = [6]string{
+var jsonFieldsNameOfPlayerGameState = [7]string{
 	0: "uid",
 	1: "exp",
-	2: "exp_gained",
-	3: "score",
-	4: "words_count",
-	5: "words",
+	2: "rating",
+	3: "exp_gained",
+	4: "score",
+	5: "words_count",
+	6: "words",
 }
 
 // Decode decodes PlayerGameState from json.
@@ -2922,6 +2963,16 @@ func (s *PlayerGameState) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"exp\"")
+			}
+		case "rating":
+			if err := func() error {
+				s.Rating.Reset()
+				if err := s.Rating.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rating\"")
 			}
 		case "exp_gained":
 			if err := func() error {
@@ -3024,6 +3075,12 @@ func (s *PlayerState) encodeFields(e *jx.Encoder) {
 		}
 	}
 	{
+		if s.Rating.Set {
+			e.FieldStart("rating")
+			s.Rating.Encode(e)
+		}
+	}
+	{
 		if s.Lives.Set {
 			e.FieldStart("lives")
 			s.Lives.Encode(e)
@@ -3043,13 +3100,14 @@ func (s *PlayerState) encodeFields(e *jx.Encoder) {
 	}
 }
 
-var jsonFieldsNameOfPlayerState = [6]string{
+var jsonFieldsNameOfPlayerState = [7]string{
 	0: "uid",
 	1: "nickname",
 	2: "exp",
-	3: "lives",
-	4: "flags",
-	5: "game_id",
+	3: "rating",
+	4: "lives",
+	5: "flags",
+	6: "game_id",
 }
 
 // Decode decodes PlayerState from json.
@@ -3089,6 +3147,16 @@ func (s *PlayerState) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"exp\"")
+			}
+		case "rating":
+			if err := func() error {
+				s.Rating.Reset()
+				if err := s.Rating.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"rating\"")
 			}
 		case "lives":
 			if err := func() error {

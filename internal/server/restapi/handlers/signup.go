@@ -47,6 +47,7 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 			Firstname: baldaapi.NewOptString(req.Firstname),
 			Lastname:  baldaapi.NewOptString(req.Lastname),
 			Exp:       baldaapi.NewOptInt64(0),
+			Rating:    baldaapi.NewOptInt64(created.Rating),
 		}),
 		AccessToken:     baldaapi.NewOptString(access),
 		RefreshToken:    baldaapi.NewOptString(refresh),

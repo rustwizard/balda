@@ -38,8 +38,9 @@ type GameRecord struct {
 
 // PlayerInfo is a lightweight player descriptor carried in GameSummary.
 type PlayerInfo struct {
-	ID  string
-	Exp int
+	ID     string
+	Exp    int
+	Rating int
 }
 
 // GameSummary is the read-only snapshot returned by List and FindByPlayer.
@@ -311,7 +312,7 @@ func (l *Lobby) removeRecordLocked(rec *GameRecord) {
 func summaryOf(rec *GameRecord) GameSummary {
 	players := make([]PlayerInfo, len(rec.Players))
 	for i, p := range rec.Players {
-		players[i] = PlayerInfo{ID: p.ID, Exp: p.Exp}
+		players[i] = PlayerInfo{ID: p.ID, Exp: p.Exp, Rating: p.Rating}
 	}
 	return GameSummary{
 		ID:        rec.ID,

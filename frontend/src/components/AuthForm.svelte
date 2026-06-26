@@ -30,6 +30,7 @@
         playerUid: player.uid,
         nickname: player.firstname,
         exp: player.exp ?? 0,
+        rating: player.rating ?? 0,
         centrifugoToken: res.centrifugo_token || '',
         lobbyToken: res.lobby_token || '',
       });

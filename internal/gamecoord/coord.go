@@ -189,7 +189,7 @@ func (c *Coordinator) publishEndProposalResult(accepted bool, remainingMs int64)
 		for i, s := range scores {
 			isWinner := s.UID == winnerUID
 			players[i] = centrifugo.PlayerState{
-				UID: s.UID, Exp: s.Exp, Score: s.Score,
+				UID: s.UID, Exp: s.Exp, Rating: s.Rating, Score: s.Score,
 				WordsCount: s.WordsCount, Words: s.Words,
 				ExpGained: storage.ExpGained(s.Score, isWinner, isDraw),
 			}
@@ -255,7 +255,7 @@ func (c *Coordinator) publishGameState() {
 
 	players := make([]centrifugo.PlayerState, len(scores))
 	for i, s := range scores {
-		players[i] = centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
+		players[i] = centrifugo.PlayerState{UID: s.UID, Exp: s.Exp, Rating: s.Rating, Score: s.Score, WordsCount: s.WordsCount, Words: s.Words}
 	}
 
 	ev := centrifugo.EvGameState{
@@ -303,7 +303,7 @@ func (c *Coordinator) publishNaturalGameOver() {
 	for i, s := range scores {
 		isWinner := s.UID == winnerUID
 		players[i] = centrifugo.PlayerState{
-			UID: s.UID, Exp: s.Exp, Score: s.Score,
+			UID: s.UID, Exp: s.Exp, Rating: s.Rating, Score: s.Score,
 			WordsCount: s.WordsCount, Words: s.Words,
 			ExpGained: storage.ExpGained(s.Score, isWinner, isDraw),
 		}
@@ -337,7 +337,7 @@ func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 	for i, s := range scores {
 		isWinner := s.UID == winnerUID
 		players[i] = centrifugo.PlayerState{
-			UID: s.UID, Exp: s.Exp, Score: s.Score,
+			UID: s.UID, Exp: s.Exp, Rating: s.Rating, Score: s.Score,
 			WordsCount: s.WordsCount, Words: s.Words,
 			ExpGained: storage.ExpGained(s.Score, isWinner, isDraw),
 		}

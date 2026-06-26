@@ -4,6 +4,7 @@ package baldaapi
 
 import (
 	"context"
+	"io"
 	"net/url"
 	"strings"
 	"time"
@@ -30,8 +31,8 @@ func trimTrailingSlashes(u *url.URL) {
 type Invoker interface {
 	// AcceptEndGame invokes acceptEndGame operation.
 	//
-	// The opponent accepts the end-game proposal. The game ends immediately with
-	// the current scores. Only the non-proposing player may call this.
+	// The opponent accepts the end-game proposal. The game ends immediately with the current scores. Only
+	// the non-proposing player may call this.
 	//
 	// POST /games/{id}/accept-end
 	AcceptEndGame(ctx context.Context, params AcceptEndGameParams) (AcceptEndGameRes, error)
@@ -49,8 +50,8 @@ type Invoker interface {
 	CreateGame(ctx context.Context) (CreateGameRes, error)
 	// CreateGameWithBot invokes createGameWithBot operation.
 	//
-	// Creates a new game where the authenticated player plays against a server-side bot.
-	// The game starts immediately and the first move belongs to the human player.
+	// Creates a new game where the authenticated player plays against a server-side bot. The game starts
+	// immediately and the first move belongs to the human player.
 	//
 	// POST /games/with-bot
 	CreateGameWithBot(ctx context.Context) (CreateGameWithBotRes, error)
@@ -62,10 +63,9 @@ type Invoker interface {
 	GetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (GetPlayerStateUIDRes, error)
 	// JoinGame invokes joinGame operation.
 	//
-	// Adds the authenticated player to the specified waiting game.
-	// When the second player joins (quorum of 2 is reached) the game
-	// transitions to in_progress and the first move belongs to the
-	// player who created the game.
+	// Adds the authenticated player to the specified waiting game. When the second player joins (quorum of
+	// 2 is reached) the game transitions to in_progress and the first move belongs to the player who
+	// created the game.
 	//
 	// POST /games/{id}/join
 	JoinGame(ctx context.Context, params JoinGameParams) (JoinGameRes, error)
@@ -83,24 +83,22 @@ type Invoker interface {
 	Logout(ctx context.Context, request OptLogoutRequest) (LogoutRes, error)
 	// MoveGame invokes moveGame operation.
 	//
-	// Places a new letter on the board and submits a word. If the word is valid,
-	// the player's score is updated and the turn passes to the opponent.
+	// Places a new letter on the board and submits a word. If the word is valid, the player's score is
+	// updated and the turn passes to the opponent.
 	//
 	// POST /games/{id}/move
 	MoveGame(ctx context.Context, request *MoveRequest, params MoveGameParams) (MoveGameRes, error)
 	// Ping invokes ping operation.
 	//
-	// POST not GET — mutates session TTL.
-	// Returns 204 with X-Server-Time header instead of a JSON body
+	// POST not GET — mutates session TTL. Returns 204 with X-Server-Time header instead of a JSON body
 	// to minimize bandwidth on frequent pings (every ping_delay ms).
 	//
 	// POST /session/ping
 	Ping(ctx context.Context, params PingParams) (PingRes, error)
 	// ProposeEndGame invokes proposeEndGame operation.
 	//
-	// The current player proposes to end the game (e.g. no valid moves are available).
-	// The turn timer is paused until the opponent responds.
-	// Only the player whose turn it currently is may call this.
+	// The current player proposes to end the game (e.g. no valid moves are available). The turn timer is
+	// paused until the opponent responds. Only the player whose turn it currently is may call this.
 	//
 	// POST /games/{id}/propose-end
 	ProposeEndGame(ctx context.Context, params ProposeEndGameParams) (ProposeEndGameRes, error)
@@ -112,8 +110,8 @@ type Invoker interface {
 	RefreshToken(ctx context.Context, request *RefreshRequest) (RefreshTokenRes, error)
 	// RejectEndGame invokes rejectEndGame operation.
 	//
-	// The opponent rejects the end-game proposal. The game resumes with the
-	// remaining turn time (minimum 10 seconds). Only the non-proposing player may call this.
+	// The opponent rejects the end-game proposal. The game resumes with the remaining turn time (minimum
+	// 10 seconds). Only the non-proposing player may call this.
 	//
 	// POST /games/{id}/reject-end
 	RejectEndGame(ctx context.Context, params RejectEndGameParams) (RejectEndGameRes, error)
@@ -174,8 +172,8 @@ func (c *Client) requestURL(ctx context.Context) *url.URL {
 
 // AcceptEndGame invokes acceptEndGame operation.
 //
-// The opponent accepts the end-game proposal. The game ends immediately with
-// the current scores. Only the non-proposing player may call this.
+// The opponent accepts the end-game proposal. The game ends immediately with the current scores. Only
+// the non-proposing player may call this.
 //
 // POST /games/{id}/accept-end
 func (c *Client) AcceptEndGame(ctx context.Context, params AcceptEndGameParams) (AcceptEndGameRes, error) {
@@ -288,7 +286,13 @@ func (c *Client) sendAcceptEndGame(ctx context.Context, params AcceptEndGamePara
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeAcceptEndGameResponse(resp)
@@ -365,7 +369,13 @@ func (c *Client) sendAuth(ctx context.Context, request *AuthRequest) (res AuthRe
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeAuthResponse(resp)
@@ -472,7 +482,13 @@ func (c *Client) sendCreateGame(ctx context.Context) (res CreateGameRes, err err
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateGameResponse(resp)
@@ -485,8 +501,8 @@ func (c *Client) sendCreateGame(ctx context.Context) (res CreateGameRes, err err
 
 // CreateGameWithBot invokes createGameWithBot operation.
 //
-// Creates a new game where the authenticated player plays against a server-side bot.
-// The game starts immediately and the first move belongs to the human player.
+// Creates a new game where the authenticated player plays against a server-side bot. The game starts
+// immediately and the first move belongs to the human player.
 //
 // POST /games/with-bot
 func (c *Client) CreateGameWithBot(ctx context.Context) (CreateGameWithBotRes, error) {
@@ -580,7 +596,13 @@ func (c *Client) sendCreateGameWithBot(ctx context.Context) (res CreateGameWithB
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeCreateGameWithBotResponse(resp)
@@ -672,7 +694,13 @@ func (c *Client) sendGetPlayerStateUID(ctx context.Context, params GetPlayerStat
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeGetPlayerStateUIDResponse(resp)
@@ -685,10 +713,9 @@ func (c *Client) sendGetPlayerStateUID(ctx context.Context, params GetPlayerStat
 
 // JoinGame invokes joinGame operation.
 //
-// Adds the authenticated player to the specified waiting game.
-// When the second player joins (quorum of 2 is reached) the game
-// transitions to in_progress and the first move belongs to the
-// player who created the game.
+// Adds the authenticated player to the specified waiting game. When the second player joins (quorum of
+// 2 is reached) the game transitions to in_progress and the first move belongs to the player who
+// created the game.
 //
 // POST /games/{id}/join
 func (c *Client) JoinGame(ctx context.Context, params JoinGameParams) (JoinGameRes, error) {
@@ -801,7 +828,13 @@ func (c *Client) sendJoinGame(ctx context.Context, params JoinGameParams) (res J
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeJoinGameResponse(resp)
@@ -908,7 +941,13 @@ func (c *Client) sendListGames(ctx context.Context) (res ListGamesRes, err error
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeListGamesResponse(resp)
@@ -1018,7 +1057,13 @@ func (c *Client) sendLogout(ctx context.Context, request OptLogoutRequest) (res 
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeLogoutResponse(resp)
@@ -1031,8 +1076,8 @@ func (c *Client) sendLogout(ctx context.Context, request OptLogoutRequest) (res 
 
 // MoveGame invokes moveGame operation.
 //
-// Places a new letter on the board and submits a word. If the word is valid,
-// the player's score is updated and the turn passes to the opponent.
+// Places a new letter on the board and submits a word. If the word is valid, the player's score is
+// updated and the turn passes to the opponent.
 //
 // POST /games/{id}/move
 func (c *Client) MoveGame(ctx context.Context, request *MoveRequest, params MoveGameParams) (MoveGameRes, error) {
@@ -1148,7 +1193,13 @@ func (c *Client) sendMoveGame(ctx context.Context, request *MoveRequest, params 
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeMoveGameResponse(resp)
@@ -1161,8 +1212,7 @@ func (c *Client) sendMoveGame(ctx context.Context, request *MoveRequest, params 
 
 // Ping invokes ping operation.
 //
-// POST not GET — mutates session TTL.
-// Returns 204 with X-Server-Time header instead of a JSON body
+// POST not GET — mutates session TTL. Returns 204 with X-Server-Time header instead of a JSON body
 // to minimize bandwidth on frequent pings (every ping_delay ms).
 //
 // POST /session/ping
@@ -1271,7 +1321,13 @@ func (c *Client) sendPing(ctx context.Context, params PingParams) (res PingRes, 
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodePingResponse(resp)
@@ -1284,9 +1340,8 @@ func (c *Client) sendPing(ctx context.Context, params PingParams) (res PingRes, 
 
 // ProposeEndGame invokes proposeEndGame operation.
 //
-// The current player proposes to end the game (e.g. no valid moves are available).
-// The turn timer is paused until the opponent responds.
-// Only the player whose turn it currently is may call this.
+// The current player proposes to end the game (e.g. no valid moves are available). The turn timer is
+// paused until the opponent responds. Only the player whose turn it currently is may call this.
 //
 // POST /games/{id}/propose-end
 func (c *Client) ProposeEndGame(ctx context.Context, params ProposeEndGameParams) (ProposeEndGameRes, error) {
@@ -1399,7 +1454,13 @@ func (c *Client) sendProposeEndGame(ctx context.Context, params ProposeEndGamePa
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeProposeEndGameResponse(resp)
@@ -1476,7 +1537,13 @@ func (c *Client) sendRefreshToken(ctx context.Context, request *RefreshRequest) 
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeRefreshTokenResponse(resp)
@@ -1489,8 +1556,8 @@ func (c *Client) sendRefreshToken(ctx context.Context, request *RefreshRequest) 
 
 // RejectEndGame invokes rejectEndGame operation.
 //
-// The opponent rejects the end-game proposal. The game resumes with the
-// remaining turn time (minimum 10 seconds). Only the non-proposing player may call this.
+// The opponent rejects the end-game proposal. The game resumes with the remaining turn time (minimum
+// 10 seconds). Only the non-proposing player may call this.
 //
 // POST /games/{id}/reject-end
 func (c *Client) RejectEndGame(ctx context.Context, params RejectEndGameParams) (RejectEndGameRes, error) {
@@ -1603,7 +1670,13 @@ func (c *Client) sendRejectEndGame(ctx context.Context, params RejectEndGamePara
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeRejectEndGameResponse(resp)
@@ -1680,7 +1753,13 @@ func (c *Client) sendSignup(ctx context.Context, request *SignupRequest) (res Si
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeSignupResponse(resp)
@@ -1806,7 +1885,13 @@ func (c *Client) sendSkipGame(ctx context.Context, params SkipGameParams) (res S
 		return res, errors.Wrap(err, "do request")
 	}
 	body := resp.Body
-	defer body.Close()
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
 
 	stage = "DecodeResponse"
 	result, err := decodeSkipGameResponse(resp)

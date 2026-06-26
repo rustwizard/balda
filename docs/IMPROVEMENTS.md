@@ -279,15 +279,25 @@ TTL 30s), так что к старту партии игрок обычно у�
 
 ### Рейтинг и прогрессия
 
-### 28. ELO / рейтинговая система (P1)
-**Затрагивает:** `internal/storage/player_state`, `internal/matchmaking/`
+### 28. ✅ ELO / рейтинговая система (P1)
+**Затрагивает:** `internal/storage/player_state`, `internal/storage/game_result.go`,
+`internal/matchmaking/`, REST API, `internal/centrifugo/`, `internal/gamecoord/`
 
-Сейчас есть только EXP (опыт), который всегда растёт. Нужен рейтинг (ELO/Glicko) для честного
-подбора соперников. Переиспользовать существующую `matchmaking.Queue` — она уже реализована
-с окном по EXP, нужно заменить на рейтинг.
+Реализована ELO-рейтинговая система.
 
-**Предложение:** добавить поле `rating int` в `player_state`, формулу ELO с K=32, обновлять
-рейтинг в `storage.SaveGameResult`.
+**Сделано:**
+- Добавлена миграция `006_add_rating.up.sql`: колонка `rating int not null default 1000` в `player_state`.
+- `storage.PlayerState`, `storage.PlayerForGame`, `game.Player`, `lobby.PlayerInfo`,
+  `centrifugo.PlayerState`, `centrifugo.LobbyPlayer` теперь содержат `Rating`.
+- `storage.SaveGameResult` внутри транзакции загружает текущие рейтинги двух игроков,
+  вычисляет дельты по формуле ELO с `K=32` (`storage.EloDelta`) и обновляет `player_state`.
+- `matchmaking.Queue` теперь пэйрит игроков по `Rating` вместо `Exp`.
+- Рейтинг пробрасывается в игру через `service.Balda` и возвращается клиенту в API-ответах
+  (`Player`, `LobbyPlayer`, `PlayerGameState`, `PlayerState`) и Centrifugo-событиях
+  (`game_state`, `game_over`, `lobby_update`).
+
+**Осталось (не в рамках P1):** матчмейкинг всё ещё не подключён в проде — для запуска
+«Быстрого боя» нужен отдельный эндпоинт + UI-кнопка (см. пункт 13).
 
 ### 29. Таблица лидеров (P2)
 **Затрагивает:** `internal/storage/`, REST API, фронт

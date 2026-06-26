@@ -484,6 +484,7 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | player_id | uuid | уникальный идентификатор игрока |
 | nickname | text | автогенерируемый |
 | exp | bigint | очки опыта |
+| rating | int | ELO-рейтинг (по умолчанию 1000) |
 | flags | bigint | флаги функций |
 | lives | bigint | |
 | created_at | timestamp | |
