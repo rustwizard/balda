@@ -51,6 +51,16 @@ func (UnimplementedHandler) CreateGameWithBot(ctx context.Context) (r CreateGame
 	return r, ht.ErrNotImplemented
 }
 
+// GetLeaderboard implements getLeaderboard operation.
+//
+// Returns the top players by current rating or total EXP who were active during the requested period.
+// Results are cached for 5 minutes.
+//
+// GET /leaderboard
+func (UnimplementedHandler) GetLeaderboard(ctx context.Context, params GetLeaderboardParams) (r GetLeaderboardRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetPlayerStateUID implements getPlayerStateUID operation.
 //
 // Get user state.

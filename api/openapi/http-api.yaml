@@ -1,1130 +1,1233 @@
 openapi: "3.0.3"
 info:
-    title: Balda GameServer
-    description: |
-        Balda GameServer API methods and models
+  title: Balda GameServer
+  description: |
+    Balda GameServer API methods and models
 
-        ### Headers
-        | Header | Description |
-        |--------|-------------|
-        | **Authorization** | `Bearer <access_token>` — JWT access token obtained from /auth or /signup. |
-        | **X-Request-ID** | Monotonically increasing client sequence number (for /session/ping). |
-    version: 1.0.0
+    ### Headers
+    | Header | Description |
+    |--------|-------------|
+    | **Authorization** | `Bearer <access_token>` — JWT access token obtained from /auth or /signup. |
+    | **X-Request-ID** | Monotonically increasing client sequence number (for /session/ping). |
+  version: 1.0.0
 
 servers:
-    - url: http://127.0.0.1:9666/balda/api/v1
+  - url: http://127.0.0.1:9666/balda/api/v1
 
 paths:
-    /signup:
-        post:
-            operationId: signup
-            summary: Sign-up request
-            tags:
-                - Signup
-            requestBody:
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/SignupRequest"
-            responses:
-                "200":
-                    description: Response for signup request
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/SignupResponse"
-                "400":
-                    description: Error when signup
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
+  /signup:
+    post:
+      operationId: signup
+      summary: Sign-up request
+      tags:
+        - Signup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignupRequest"
+      responses:
+        "200":
+          description: Response for signup request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignupResponse"
+        "400":
+          description: Error when signup
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-    /auth:
-        post:
-            operationId: auth
-            summary: Auth request
-            tags:
-                - Auth
-            requestBody:
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/AuthRequest"
-            responses:
-                "200":
-                    description: Response for auth request
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/AuthResponse"
-                "401":
-                    description: Error when auth
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
+  /auth:
+    post:
+      operationId: auth
+      summary: Auth request
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthRequest"
+      responses:
+        "200":
+          description: Response for auth request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Error when auth
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-    /auth/refresh:
-        post:
-            operationId: refreshToken
-            summary: Exchange a refresh token for a new access/refresh pair
-            tags:
-                - Auth
-            requestBody:
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/RefreshRequest"
-            responses:
-                "200":
-                    description: New token pair
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/RefreshResponse"
-                "401":
-                    description: Refresh token expired, revoked, or unknown
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      summary: Exchange a refresh token for a new access/refresh pair
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: New token pair
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshResponse"
+        "401":
+          description: Refresh token expired, revoked, or unknown
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-    /auth/logout:
-        post:
-            operationId: logout
-            summary: Revoke the current refresh token
-            tags:
-                - Auth
-            security:
-                - BearerAuth: []
-            requestBody:
-                required: false
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/LogoutRequest"
-            responses:
-                "204":
-                    description: Logged out; refresh token revoked.
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
+  /auth/logout:
+    post:
+      operationId: logout
+      summary: Revoke the current refresh token
+      tags:
+        - Auth
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogoutRequest"
+      responses:
+        "204":
+          description: Logged out; refresh token revoked.
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
-    /session/ping:
-        post:
-            operationId: ping
-            tags: [Session]
-            summary: Keepalive ping
-            description: |
-                POST not GET — mutates session TTL.
-                Returns 204 with X-Server-Time header instead of a JSON body
-                to minimize bandwidth on frequent pings (every ping_delay ms).
-            security:
-                - BearerAuth: []
-            parameters:
-                - $ref: "#/components/parameters/RequestIdHeader"
-            responses:
-                "204":
-                    description: Session alive.
-                    headers:
-                        X-Server-Time:
-                            $ref: "#/components/headers/X-Server-Time"
-                        X-Request-ID:
-                            $ref: "#/components/headers/X-Request-ID"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
+  /session/ping:
+    post:
+      operationId: ping
+      tags: [Session]
+      summary: Keepalive ping
+      description: |
+        POST not GET — mutates session TTL.
+        Returns 204 with X-Server-Time header instead of a JSON body
+        to minimize bandwidth on frequent pings (every ping_delay ms).
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/RequestIdHeader"
+      responses:
+        "204":
+          description: Session alive.
+          headers:
+            X-Server-Time:
+              $ref: "#/components/headers/X-Server-Time"
+            X-Request-ID:
+              $ref: "#/components/headers/X-Request-ID"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
-    /games:
-        post:
-            operationId: createGame
-            summary: Create a new game
-            tags:
-                - Games
-            security:
-                - BearerAuth: []
-            responses:
-                "200":
-                    description: Game created successfully
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/CreateGameResponse"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
-        get:
-            operationId: listGames
-            summary: List active games
-            description: Returns a snapshot of all currently active games.
-            tags:
-                - Games
-            security:
-                - BearerAuth: []
-            responses:
-                "200":
-                    description: List of active games
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ListGamesResponse"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
+  /leaderboard:
+    get:
+      operationId: getLeaderboard
+      summary: Get weekly or monthly leaderboard
+      description: |
+        Returns the top players by current rating or total EXP who were active
+        during the requested period. Results are cached for 5 minutes.
+      tags:
+        - Leaderboard
+      parameters:
+        - name: period
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [week, month]
+          description: Leaderboard period
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [rating, exp]
+            default: rating
+          description: Sort field
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+          description: Maximum number of entries to return
+      responses:
+        "200":
+          description: Leaderboard
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeaderboardResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
-    /games/with-bot:
-        post:
-            operationId: createGameWithBot
-            summary: Create and start a game against a bot
-            description: |
-                Creates a new game where the authenticated player plays against a server-side bot.
-                The game starts immediately and the first move belongs to the human player.
-            tags:
-                - Games
-            security:
-                - BearerAuth: []
-            responses:
-                "200":
-                    description: Game against bot created and started successfully
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/JoinGameResponse"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
-                "409":
-                    description: Player already in a game
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
+  /games:
+    post:
+      operationId: createGame
+      summary: Create a new game
+      tags:
+        - Games
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Game created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateGameResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    get:
+      operationId: listGames
+      summary: List active games
+      description: Returns a snapshot of all currently active games.
+      tags:
+        - Games
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: List of active games
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListGamesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
-    /games/{id}/join:
-        post:
-            operationId: joinGame
-            summary: Join an existing waiting game
-            description: |
-                Adds the authenticated player to the specified waiting game.
-                When the second player joins (quorum of 2 is reached) the game
-                transitions to in_progress and the first move belongs to the
-                player who created the game.
-            tags:
-                - Games
-            security:
-                - BearerAuth: []
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                      type: string
-                      format: uuid
-                  description: ID of the game to join
-            responses:
-                "200":
-                    description: Successfully joined; game is now in_progress
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/JoinGameResponse"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
-                "404":
-                    description: Game not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
-                "409":
-                    description: Cannot join (player already in a game, game not waiting, or game is full)
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
+  /games/with-bot:
+    post:
+      operationId: createGameWithBot
+      summary: Create and start a game against a bot
+      description: |
+        Creates a new game where the authenticated player plays against a server-side bot.
+        The game starts immediately and the first move belongs to the human player.
+      tags:
+        - Games
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Game against bot created and started successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinGameResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Player already in a game
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
-    /games/{id}/move:
-        post:
-            operationId: moveGame
-            summary: Submit a move
-            description: |
-                Places a new letter on the board and submits a word. If the word is valid,
-                the player's score is updated and the turn passes to the opponent.
-            tags:
-                - Games
-            security:
-                - BearerAuth: []
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                      type: string
-                      format: uuid
-                  description: ID of the game
-            requestBody:
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: "#/components/schemas/MoveRequest"
-            responses:
-                "200":
-                    description: Move accepted
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/MoveResponse"
-                "400":
-                    description: Invalid move (bad word placement, word not in dictionary, etc.)
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
-                "403":
-                    $ref: "#/components/responses/Forbidden"
-                "404":
-                    description: Game not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
-                "409":
-                    description: Not the player's turn or game not in progress
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
-                "500":
-                    $ref: "#/components/responses/InternalServerError"
+  /games/{id}/join:
+    post:
+      operationId: joinGame
+      summary: Join an existing waiting game
+      description: |
+        Adds the authenticated player to the specified waiting game.
+        When the second player joins (quorum of 2 is reached) the game
+        transitions to in_progress and the first move belongs to the
+        player who created the game.
+      tags:
+        - Games
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game to join
+      responses:
+        "200":
+          description: Successfully joined; game is now in_progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinGameResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Cannot join (player already in a game, game not waiting, or game is full)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
-    /games/{id}/propose-end:
-        post:
-            operationId: proposeEndGame
-            summary: Propose to end the game
-            description: |
-                The current player proposes to end the game (e.g. no valid moves are available).
-                The turn timer is paused until the opponent responds.
-                Only the player whose turn it currently is may call this.
-            tags:
-                - Games
-            security:
-                - BearerAuth: []
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                      type: string
-                      format: uuid
-                  description: ID of the game
-            responses:
-                "204":
-                    description: Proposal sent successfully; waiting for opponent's response
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
-                "403":
-                    $ref: "#/components/responses/Forbidden"
-                "404":
-                    description: Game not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
-                "409":
-                    description: Not the player's turn, game not in progress, or proposal already pending
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
+  /games/{id}/move:
+    post:
+      operationId: moveGame
+      summary: Submit a move
+      description: |
+        Places a new letter on the board and submits a word. If the word is valid,
+        the player's score is updated and the turn passes to the opponent.
+      tags:
+        - Games
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MoveRequest"
+      responses:
+        "200":
+          description: Move accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MoveResponse"
+        "400":
+          description: Invalid move (bad word placement, word not in dictionary, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Not the player's turn or game not in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
 
-    /games/{id}/accept-end:
-        post:
-            operationId: acceptEndGame
-            summary: Accept the opponent's end-game proposal
-            description: |
-                The opponent accepts the end-game proposal. The game ends immediately with
-                the current scores. Only the non-proposing player may call this.
-            tags:
-                - Games
-            security:
-                - BearerAuth: []
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                      type: string
-                      format: uuid
-                  description: ID of the game
-            responses:
-                "204":
-                    description: Proposal accepted; game is now over
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
-                "403":
-                    $ref: "#/components/responses/Forbidden"
-                "404":
-                    description: Game not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
-                "409":
-                    description: No end proposal is pending or player is not the opponent
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
+  /games/{id}/propose-end:
+    post:
+      operationId: proposeEndGame
+      summary: Propose to end the game
+      description: |
+        The current player proposes to end the game (e.g. no valid moves are available).
+        The turn timer is paused until the opponent responds.
+        Only the player whose turn it currently is may call this.
+      tags:
+        - Games
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      responses:
+        "204":
+          description: Proposal sent successfully; waiting for opponent's response
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Not the player's turn, game not in progress, or proposal already pending
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-    /games/{id}/reject-end:
-        post:
-            operationId: rejectEndGame
-            summary: Reject the opponent's end-game proposal
-            description: |
-                The opponent rejects the end-game proposal. The game resumes with the
-                remaining turn time (minimum 10 seconds). Only the non-proposing player may call this.
-            tags:
-                - Games
-            security:
-                - BearerAuth: []
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                      type: string
-                      format: uuid
-                  description: ID of the game
-            responses:
-                "204":
-                    description: Proposal rejected; game continues
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
-                "403":
-                    $ref: "#/components/responses/Forbidden"
-                "404":
-                    description: Game not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
-                "409":
-                    description: No end proposal is pending or player is not the opponent
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
+  /games/{id}/accept-end:
+    post:
+      operationId: acceptEndGame
+      summary: Accept the opponent's end-game proposal
+      description: |
+        The opponent accepts the end-game proposal. The game ends immediately with
+        the current scores. Only the non-proposing player may call this.
+      tags:
+        - Games
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      responses:
+        "204":
+          description: Proposal accepted; game is now over
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: No end proposal is pending or player is not the opponent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-    /games/{id}/skip:
-        post:
-            operationId: skipGame
-            summary: Skip turn
-            description: |
-                Ends the current turn without making a move. The turn passes to the opponent.
-            tags:
-                - Games
-            security:
-                - BearerAuth: []
-            parameters:
-                - name: id
-                  in: path
-                  required: true
-                  schema:
-                      type: string
-                      format: uuid
-                  description: ID of the game
-            responses:
-                "204":
-                    description: Turn skipped successfully
-                "401":
-                    $ref: "#/components/responses/Unauthorized"
-                "403":
-                    $ref: "#/components/responses/Forbidden"
-                "404":
-                    description: Game not found
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
-                "409":
-                    description: Not the player's turn or game not in progress
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
+  /games/{id}/reject-end:
+    post:
+      operationId: rejectEndGame
+      summary: Reject the opponent's end-game proposal
+      description: |
+        The opponent rejects the end-game proposal. The game resumes with the
+        remaining turn time (minimum 10 seconds). Only the non-proposing player may call this.
+      tags:
+        - Games
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      responses:
+        "204":
+          description: Proposal rejected; game continues
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: No end proposal is pending or player is not the opponent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-    /player/state/{uid}:
-        get:
-            operationId: getPlayerStateUID
-            summary: Get user state
-            parameters:
-                - name: uid
-                  in: path
-                  description: Player ID
-                  required: true
-                  schema:
-                      type: string
-                      format: uuid
-                      description: The unique identifier of the player
-            responses:
-                "200":
-                    description: OK
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/PlayerState"
-                "400":
-                    description: Error when get player state
-                    content:
-                        application/json:
-                            schema:
-                                $ref: "#/components/schemas/ErrorResponse"
+  /games/{id}/skip:
+    post:
+      operationId: skipGame
+      summary: Skip turn
+      description: |
+        Ends the current turn without making a move. The turn passes to the opponent.
+      tags:
+        - Games
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      responses:
+        "204":
+          description: Turn skipped successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Not the player's turn or game not in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /player/state/{uid}:
+    get:
+      operationId: getPlayerStateUID
+      summary: Get user state
+      parameters:
+        - name: uid
+          in: path
+          description: Player ID
+          required: true
+          schema:
+            type: string
+            format: uuid
+            description: The unique identifier of the player
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerState"
+        "400":
+          description: Error when get player state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
-    securitySchemes:
-        BearerAuth:
-            type: http
-            scheme: bearer
-            bearerFormat: JWT
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
 
-    responses:
-        Unauthorized:
-            description: Missing or invalid credentials.
-            content:
-                application/json:
-                    schema:
-                        $ref: "#/components/schemas/ErrorResponse"
-                    example:
-                        status: 401
-                        message: "Session required"
-                        type: "Unauthorized"
-        Forbidden:
-            description: Authenticated but not allowed to act on this resource.
-            content:
-                application/json:
-                    schema:
-                        $ref: "#/components/schemas/ErrorResponse"
-                    example:
-                        status: 403
-                        message: "not a participant of this game"
-                        type: "Forbidden"
-        InternalServerError:
-            description: Unexpected internal server error.
-            content:
-                application/json:
-                    schema:
-                        $ref: "#/components/schemas/ErrorResponse"
-                    example:
-                        status: 500
-                        message: "internal server error"
-                        type: "InternalServerError"
+  responses:
+    Unauthorized:
+      description: Missing or invalid credentials.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: 401
+            message: "Session required"
+            type: "Unauthorized"
+    Forbidden:
+      description: Authenticated but not allowed to act on this resource.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: 403
+            message: "not a participant of this game"
+            type: "Forbidden"
+    BadRequest:
+      description: Invalid request parameters.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: 400
+            message: "invalid period"
+            type: "BadRequest"
+    InternalServerError:
+      description: Unexpected internal server error.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+          example:
+            status: 500
+            message: "internal server error"
+            type: "InternalServerError"
 
-    schemas:
-        Error:
-            type: object
-            properties:
-                code:
-                    description: Error code
-                    type: integer
-                message:
-                    description: Human-readable error message
-                    type: string
+  schemas:
+    Error:
+      type: object
+      properties:
+        code:
+          description: Error code
+          type: integer
+        message:
+          description: Human-readable error message
+          type: string
 
-        ErrorResponse:
-            type: object
-            properties:
-                status:
-                    description: the HTTP response code
-                    example: 401
-                    type: integer
-                message:
-                    description: a human-readable explanation of the error
-                    example: Bad Authentication data.
-                    type: string
-                type:
-                    description: Type of the error message
-                    example: OAuthException
-                    type: string
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          description: the HTTP response code
+          example: 401
+          type: integer
+        message:
+          description: a human-readable explanation of the error
+          example: Bad Authentication data.
+          type: string
+        type:
+          description: Type of the error message
+          example: OAuthException
+          type: string
 
-        SignupRequest:
-            type: object
-            required:
-                - firstname
-                - lastname
-                - email
-                - password
-            properties:
-                firstname:
-                    description: User's first name
-                    example: John
-                    type: string
-                lastname:
-                    description: User's last name
-                    example: Smith
-                    type: string
-                email:
-                    description: User's email
-                    example: js@example.org
-                    type: string
-                    format: email
-                password:
-                    description: User's password
-                    example: some_password
-                    type: string
+    SignupRequest:
+      type: object
+      required:
+        - firstname
+        - lastname
+        - email
+        - password
+      properties:
+        firstname:
+          description: User's first name
+          example: John
+          type: string
+        lastname:
+          description: User's last name
+          example: Smith
+          type: string
+        email:
+          description: User's email
+          example: js@example.org
+          type: string
+          format: email
+        password:
+          description: User's password
+          example: some_password
+          type: string
 
-        SignupResponse:
-            type: object
-            properties:
-                user:
-                    $ref: "#/components/schemas/Player"
-                access_token:
-                    description: Short-lived JWT access token (Authorization:&nbsp;Bearer)
-                    type: string
-                refresh_token:
-                    description: Opaque long-lived token used to obtain a new access token
-                    type: string
-                token_type:
-                    description: Always "Bearer"
-                    type: string
-                    example: Bearer
-                expires_in:
-                    description: Access token lifetime in seconds
-                    type: integer
-                    example: 3600
-                centrifugo_token:
-                    description: JWT for connecting to the Centrifugo WebSocket
-                    type: string
-                lobby_token:
-                    description: Centrifugo subscription JWT for the lobby channel
-                    type: string
+    SignupResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/Player"
+        access_token:
+          description: Short-lived JWT access token (Authorization:&nbsp;Bearer)
+          type: string
+        refresh_token:
+          description: Opaque long-lived token used to obtain a new access token
+          type: string
+        token_type:
+          description: Always "Bearer"
+          type: string
+          example: Bearer
+        expires_in:
+          description: Access token lifetime in seconds
+          type: integer
+          example: 3600
+        centrifugo_token:
+          description: JWT for connecting to the Centrifugo WebSocket
+          type: string
+        lobby_token:
+          description: Centrifugo subscription JWT for the lobby channel
+          type: string
 
-        Player:
-            type: object
-            properties:
-                uid:
-                    description: Player's ID in the system
-                    type: string
-                    format: uuid
-                firstname:
-                    description: Player's first name
-                    example: John
-                    type: string
-                lastname:
-                    description: Player's last name
-                    example: Smith
-                    type: string
-                exp:
-                    description: Player's total EXP
-                    type: integer
-                    format: int64
-                rating:
-                    description: Player's ELO rating
-                    type: integer
-                    format: int64
-                    example: 1000
+    Player:
+      type: object
+      properties:
+        uid:
+          description: Player's ID in the system
+          type: string
+          format: uuid
+        firstname:
+          description: Player's first name
+          example: John
+          type: string
+        lastname:
+          description: Player's last name
+          example: Smith
+          type: string
+        exp:
+          description: Player's total EXP
+          type: integer
+          format: int64
+        rating:
+          description: Player's ELO rating
+          type: integer
+          format: int64
+          example: 1000
 
-        AuthRequest:
-            type: object
-            required:
-                - email
-                - password
-            properties:
-                email:
-                    description: User's email
-                    example: js@example.org
-                    type: string
-                password:
-                    description: User's password
-                    example: some_password
-                    type: string
+    AuthRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          description: User's email
+          example: js@example.org
+          type: string
+        password:
+          description: User's password
+          example: some_password
+          type: string
 
-        AuthResponse:
-            type: object
-            properties:
-                player:
-                    $ref: "#/components/schemas/Player"
-                access_token:
-                    description: Short-lived JWT access token (Authorization:&nbsp;Bearer)
-                    type: string
-                refresh_token:
-                    description: Opaque long-lived token used to obtain a new access token
-                    type: string
-                token_type:
-                    description: Always "Bearer"
-                    type: string
-                    example: Bearer
-                expires_in:
-                    description: Access token lifetime in seconds
-                    type: integer
-                    example: 3600
-                centrifugo_token:
-                    description: JWT for connecting to the Centrifugo WebSocket
-                    type: string
-                lobby_token:
-                    description: Centrifugo subscription JWT for the lobby channel
-                    type: string
-                active_game:
-                    description: Present when the player is currently in an active game. Use this to reconnect after a disconnect.
-                    $ref: "#/components/schemas/ActiveGame"
+    AuthResponse:
+      type: object
+      properties:
+        player:
+          $ref: "#/components/schemas/Player"
+        access_token:
+          description: Short-lived JWT access token (Authorization:&nbsp;Bearer)
+          type: string
+        refresh_token:
+          description: Opaque long-lived token used to obtain a new access token
+          type: string
+        token_type:
+          description: Always "Bearer"
+          type: string
+          example: Bearer
+        expires_in:
+          description: Access token lifetime in seconds
+          type: integer
+          example: 3600
+        centrifugo_token:
+          description: JWT for connecting to the Centrifugo WebSocket
+          type: string
+        lobby_token:
+          description: Centrifugo subscription JWT for the lobby channel
+          type: string
+        active_game:
+          description: Present when the player is currently in an active game. Use this to reconnect after a disconnect.
+          $ref: "#/components/schemas/ActiveGame"
 
-        RefreshRequest:
-            type: object
-            required:
-                - refresh_token
-            properties:
-                refresh_token:
-                    description: The opaque refresh token previously issued
-                    type: string
+    RefreshRequest:
+      type: object
+      required:
+        - refresh_token
+      properties:
+        refresh_token:
+          description: The opaque refresh token previously issued
+          type: string
 
-        RefreshResponse:
-            type: object
-            properties:
-                access_token:
-                    description: New short-lived JWT access token
-                    type: string
-                refresh_token:
-                    description: New opaque refresh token (rotated; the old one is now invalid)
-                    type: string
-                token_type:
-                    description: Always "Bearer"
-                    type: string
-                    example: Bearer
-                expires_in:
-                    description: Access token lifetime in seconds
-                    type: integer
-                    example: 3600
+    RefreshResponse:
+      type: object
+      properties:
+        access_token:
+          description: New short-lived JWT access token
+          type: string
+        refresh_token:
+          description: New opaque refresh token (rotated; the old one is now invalid)
+          type: string
+        token_type:
+          description: Always "Bearer"
+          type: string
+          example: Bearer
+        expires_in:
+          description: Access token lifetime in seconds
+          type: integer
+          example: 3600
 
-        LogoutRequest:
-            type: object
-            properties:
-                refresh_token:
-                    description: Optional. The refresh token to revoke for this device.
-                    type: string
+    LogoutRequest:
+      type: object
+      properties:
+        refresh_token:
+          description: Optional. The refresh token to revoke for this device.
+          type: string
 
-        ActiveGame:
-            type: object
-            properties:
-                game_id:
-                    description: ID of the active game
-                    type: string
-                    format: uuid
-                game_token:
-                    description: Centrifugo subscription JWT for the game channel
-                    type: string
-                board:
-                    description: Current 5x5 board state
-                    type: array
-                    items:
-                        type: array
-                        items:
-                            type: string
-                current_turn_uid:
-                    description: ID of the player whose turn it is
-                    type: string
-                    format: uuid
-                move_number:
-                    type: integer
-                status:
-                    $ref: "#/components/schemas/GameStatus"
-                players:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/PlayerGameState"
+    ActiveGame:
+      type: object
+      properties:
+        game_id:
+          description: ID of the active game
+          type: string
+          format: uuid
+        game_token:
+          description: Centrifugo subscription JWT for the game channel
+          type: string
+        board:
+          description: Current 5x5 board state
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        current_turn_uid:
+          description: ID of the player whose turn it is
+          type: string
+          format: uuid
+        move_number:
+          type: integer
+        status:
+          $ref: "#/components/schemas/GameStatus"
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerGameState"
 
-        GameStatus:
+    GameStatus:
+      type: string
+      enum:
+        - waiting
+        - in_progress
+        - finished
+      description: Current state of the game
+
+    LobbyPlayer:
+      type: object
+      properties:
+        uid:
+          description: Player's ID
+          type: string
+          format: uuid
+        exp:
+          description: Player's total EXP
+          type: integer
+          format: int64
+        rating:
+          description: Player's ELO rating
+          type: integer
+          format: int64
+          example: 1000
+
+    GameSummary:
+      type: object
+      properties:
+        id:
+          description: Game ID
+          type: string
+          format: uuid
+          example: "144e8a2b-3c1d-4e5f-a6b7-8c9d0e1f2a3b"
+        player_ids:
+          description: IDs of players participating in the game
+          type: array
+          items:
             type: string
-            enum:
-                - waiting
-                - in_progress
-                - finished
-            description: Current state of the game
+            format: uuid
+        players:
+          description: Players with EXP info
+          type: array
+          items:
+            $ref: "#/components/schemas/LobbyPlayer"
+        status:
+          $ref: "#/components/schemas/GameStatus"
+        started_at:
+          description: When the game was started (Unix timestamp in milliseconds)
+          type: integer
+          format: int64
+          example: 1712600000000
 
-        LobbyPlayer:
-            type: object
-            properties:
-                uid:
-                    description: Player's ID
-                    type: string
-                    format: uuid
-                exp:
-                    description: Player's total EXP
-                    type: integer
-                    format: int64
-                rating:
-                    description: Player's ELO rating
-                    type: integer
-                    format: int64
-                    example: 1000
+    CreateGameResponse:
+      type: object
+      properties:
+        game:
+          $ref: "#/components/schemas/GameSummary"
+        game_token:
+          description: Centrifugo subscription JWT for the game channel
+          type: string
 
-        GameSummary:
-            type: object
-            properties:
-                id:
-                    description: Game ID
-                    type: string
-                    format: uuid
-                    example: "144e8a2b-3c1d-4e5f-a6b7-8c9d0e1f2a3b"
-                player_ids:
-                    description: IDs of players participating in the game
-                    type: array
-                    items:
-                        type: string
-                        format: uuid
-                players:
-                    description: Players with EXP info
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/LobbyPlayer"
-                status:
-                    $ref: "#/components/schemas/GameStatus"
-                started_at:
-                    description: When the game was started (Unix timestamp in milliseconds)
-                    type: integer
-                    format: int64
-                    example: 1712600000000
+    ListGamesResponse:
+      type: object
+      properties:
+        games:
+          type: array
+          items:
+            $ref: "#/components/schemas/GameSummary"
 
-        CreateGameResponse:
-            type: object
-            properties:
-                game:
-                    $ref: "#/components/schemas/GameSummary"
-                game_token:
-                    description: Centrifugo subscription JWT for the game channel
-                    type: string
+    JoinGameResponse:
+      type: object
+      properties:
+        game:
+          $ref: "#/components/schemas/GameSummary"
+        game_token:
+          description: Centrifugo subscription JWT for the game channel
+          type: string
+        board:
+          description: |
+            Initial 5x5 board state. Each row is an array of 5 single-character strings
+            (empty string means empty cell). Included so the joining player can render
+            the board immediately without waiting for the Centrifugo game_state event.
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        current_turn_uid:
+          description: ID of the player whose turn it is first (the game creator)
+          type: string
 
-        ListGamesResponse:
-            type: object
-            properties:
-                games:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/GameSummary"
+    BoardCell:
+      description: >
+        A cell position on the 5×5 board, used in word_path.
+        The character at each cell is resolved server-side from the current board state;
+        clients do not need to send it. The new letter being placed is provided separately
+        in new_letter.char.
+      type: object
+      required:
+        - row
+        - col
+      properties:
+        row:
+          type: integer
+          minimum: 0
+          maximum: 4
+        col:
+          type: integer
+          minimum: 0
+          maximum: 4
 
-        JoinGameResponse:
-            type: object
-            properties:
-                game:
-                    $ref: "#/components/schemas/GameSummary"
-                game_token:
-                    description: Centrifugo subscription JWT for the game channel
-                    type: string
-                board:
-                    description: |
-                        Initial 5x5 board state. Each row is an array of 5 single-character strings
-                        (empty string means empty cell). Included so the joining player can render
-                        the board immediately without waiting for the Centrifugo game_state event.
-                    type: array
-                    items:
-                        type: array
-                        items:
-                            type: string
-                current_turn_uid:
-                    description: ID of the player whose turn it is first (the game creator)
-                    type: string
+    MoveRequest:
+      type: object
+      required:
+        - new_letter
+        - word_path
+      properties:
+        new_letter:
+          type: object
+          required:
+            - row
+            - col
+            - char
+          properties:
+            row:
+              type: integer
+              minimum: 0
+              maximum: 4
+            col:
+              type: integer
+              minimum: 0
+              maximum: 4
+            char:
+              type: string
+              maxLength: 1
+              description: Single Cyrillic letter to place
+        word_path:
+          type: array
+          minItems: 2
+          items:
+            $ref: "#/components/schemas/BoardCell"
 
-        BoardCell:
-            description: >
-                A cell position on the 5×5 board, used in word_path.
-                The character at each cell is resolved server-side from the current board state;
-                clients do not need to send it. The new letter being placed is provided separately
-                in new_letter.char.
-            type: object
-            required:
-                - row
-                - col
-            properties:
-                row:
-                    type: integer
-                    minimum: 0
-                    maximum: 4
-                col:
-                    type: integer
-                    minimum: 0
-                    maximum: 4
+    MoveResponse:
+      type: object
+      properties:
+        board:
+          description: Updated 5x5 board state
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+              maxLength: 1
+        current_turn_uid:
+          description: ID of the player whose turn it is now
+          type: string
+          format: uuid
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerGameState"
+        status:
+          $ref: "#/components/schemas/GameStatus"
+        move_number:
+          type: integer
 
-        MoveRequest:
-            type: object
-            required:
-                - new_letter
-                - word_path
-            properties:
-                new_letter:
-                    type: object
-                    required:
-                        - row
-                        - col
-                        - char
-                    properties:
-                        row:
-                            type: integer
-                            minimum: 0
-                            maximum: 4
-                        col:
-                            type: integer
-                            minimum: 0
-                            maximum: 4
-                        char:
-                            type: string
-                            maxLength: 1
-                            description: Single Cyrillic letter to place
-                word_path:
-                    type: array
-                    minItems: 2
-                    items:
-                        $ref: "#/components/schemas/BoardCell"
+    PlayerGameState:
+      type: object
+      properties:
+        uid:
+          description: Player's ID
+          type: string
+          format: uuid
+        exp:
+          description: Player's total EXP at the time of the event
+          type: integer
+          format: int64
+        rating:
+          description: Player's ELO rating at the time of the event
+          type: integer
+          format: int64
+          example: 1000
+        exp_gained:
+          description: EXP earned in this game (only present in game_over events)
+          type: integer
+        score:
+          description: Number of points scored in the current game
+          type: integer
+        words_count:
+          description: Number of words submitted by the player
+          type: integer
+        words:
+          description: List of words submitted by the player in this game
+          type: array
+          items:
+            type: string
 
-        MoveResponse:
-            type: object
-            properties:
-                board:
-                    description: Updated 5x5 board state
-                    type: array
-                    items:
-                        type: array
-                        items:
-                            type: string
-                            maxLength: 1
-                current_turn_uid:
-                    description: ID of the player whose turn it is now
-                    type: string
-                    format: uuid
-                players:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/PlayerGameState"
-                status:
-                    $ref: "#/components/schemas/GameStatus"
-                move_number:
-                    type: integer
+    EvGameCreated:
+      type: object
+      description: Published to the lobby channel when a new game is created
+      properties:
+        type:
+          type: string
+          enum: [game_created]
+        game:
+          $ref: "#/components/schemas/GameSummary"
 
-        PlayerGameState:
-            type: object
-            properties:
-                uid:
-                    description: Player's ID
-                    type: string
-                    format: uuid
-                exp:
-                    description: Player's total EXP at the time of the event
-                    type: integer
-                    format: int64
-                rating:
-                    description: Player's ELO rating at the time of the event
-                    type: integer
-                    format: int64
-                    example: 1000
-                exp_gained:
-                    description: EXP earned in this game (only present in game_over events)
-                    type: integer
-                score:
-                    description: Number of points scored in the current game
-                    type: integer
-                words_count:
-                    description: Number of words submitted by the player
-                    type: integer
-                words:
-                    description: List of words submitted by the player in this game
-                    type: array
-                    items:
-                        type: string
+    EvGameStarted:
+      type: object
+      description: Published to lobby and game:{id} channels when the second player joins
+      properties:
+        type:
+          type: string
+          enum: [game_started]
+        game:
+          $ref: "#/components/schemas/GameSummary"
 
-        EvGameCreated:
-            type: object
-            description: Published to the lobby channel when a new game is created
-            properties:
-                type:
-                    type: string
-                    enum: [game_created]
-                game:
-                    $ref: "#/components/schemas/GameSummary"
+    EvGameState:
+      type: object
+      description: |
+        Full game snapshot. Published to game:{id} at game start and after every move.
+        board is a 5x5 grid represented as an array of 5 rows, each row is an array of
+        5 single-character strings (empty string means the cell is empty).
+      properties:
+        type:
+          type: string
+          enum: [game_state]
+        game_id:
+          type: string
+          format: uuid
+        board:
+          type: array
+          minItems: 5
+          maxItems: 5
+          items:
+            type: array
+            minItems: 5
+            maxItems: 5
+            items:
+              type: string
+              maxLength: 1
+        current_turn_uid:
+          description: ID of the player whose turn it is
+          type: string
+          format: uuid
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerGameState"
+        status:
+          $ref: "#/components/schemas/GameStatus"
+        move_number:
+          description: Number of moves made so far (0 at game start)
+          type: integer
 
-        EvGameStarted:
-            type: object
-            description: Published to lobby and game:{id} channels when the second player joins
-            properties:
-                type:
-                    type: string
-                    enum: [game_started]
-                game:
-                    $ref: "#/components/schemas/GameSummary"
+    EvGameOver:
+      type: object
+      description: Published to game:{id} when the game ends
+      properties:
+        type:
+          type: string
+          enum: [game_over]
+        game_id:
+          type: string
+          format: uuid
+        winner_uid:
+          description: ID of the winner, absent if the game ended in a draw
+          type: string
+          format: uuid
+          nullable: true
+        players:
+          type: array
+          items:
+            $ref: "#/components/schemas/PlayerGameState"
 
-        EvGameState:
-            type: object
-            description: |
-                Full game snapshot. Published to game:{id} at game start and after every move.
-                board is a 5x5 grid represented as an array of 5 rows, each row is an array of
-                5 single-character strings (empty string means the cell is empty).
-            properties:
-                type:
-                    type: string
-                    enum: [game_state]
-                game_id:
-                    type: string
-                    format: uuid
-                board:
-                    type: array
-                    minItems: 5
-                    maxItems: 5
-                    items:
-                        type: array
-                        minItems: 5
-                        maxItems: 5
-                        items:
-                            type: string
-                            maxLength: 1
-                current_turn_uid:
-                    description: ID of the player whose turn it is
-                    type: string
-                    format: uuid
-                players:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/PlayerGameState"
-                status:
-                    $ref: "#/components/schemas/GameStatus"
-                move_number:
-                    description: Number of moves made so far (0 at game start)
-                    type: integer
+    EvEndProposal:
+      type: object
+      description: Published to game:{id} when the current player proposes to end the game
+      properties:
+        type:
+          type: string
+          enum: [end_proposal]
+        game_id:
+          type: string
+          format: uuid
+        proposer_uid:
+          description: ID of the player who proposed to end
+          type: string
+          format: uuid
 
-        EvGameOver:
-            type: object
-            description: Published to game:{id} when the game ends
-            properties:
-                type:
-                    type: string
-                    enum: [game_over]
-                game_id:
-                    type: string
-                    format: uuid
-                winner_uid:
-                    description: ID of the winner, absent if the game ended in a draw
-                    type: string
-                    format: uuid
-                    nullable: true
-                players:
-                    type: array
-                    items:
-                        $ref: "#/components/schemas/PlayerGameState"
+    EvEndProposalResult:
+      type: object
+      description: Published to game:{id} when the opponent responds to the end proposal
+      properties:
+        type:
+          type: string
+          enum: [end_proposal_result]
+        game_id:
+          type: string
+          format: uuid
+        accepted:
+          type: boolean
+        remaining_ms:
+          description: Remaining turn time in milliseconds (only present when accepted=false)
+          type: integer
+          format: int64
 
-        EvEndProposal:
-            type: object
-            description: Published to game:{id} when the current player proposes to end the game
-            properties:
-                type:
-                    type: string
-                    enum: [end_proposal]
-                game_id:
-                    type: string
-                    format: uuid
-                proposer_uid:
-                    description: ID of the player who proposed to end
-                    type: string
-                    format: uuid
+    PlayerState:
+      type: object
+      properties:
+        uid:
+          description: Player's ID in the system
+          type: string
+          format: uuid
+        nickname:
+          description: Generated nickname in the system
+          example: JohnSmith
+          type: string
+        exp:
+          description: Player's exp points in the system
+          example: 100
+          type: integer
+          format: int64
+        rating:
+          description: Player's ELO rating in the system
+          example: 1000
+          type: integer
+          format: int64
+        lives:
+          description: Player's lives count in the system
+          example: 3
+          type: integer
+          format: int64
+        flags:
+          description: Some Player's flags.
+          example: 10
+          type: integer
+          format: int64
+        game_id:
+          description: Game's ID (if game_id empty or absent then player in the lobby)
+          example: 144
+          type: string
+          format: uuid
 
-        EvEndProposalResult:
-            type: object
-            description: Published to game:{id} when the opponent responds to the end proposal
-            properties:
-                type:
-                    type: string
-                    enum: [end_proposal_result]
-                game_id:
-                    type: string
-                    format: uuid
-                accepted:
-                    type: boolean
-                remaining_ms:
-                    description: Remaining turn time in milliseconds (only present when accepted=false)
-                    type: integer
-                    format: int64
+    LeaderboardResponse:
+      type: object
+      properties:
+        period:
+          description: Leaderboard period
+          type: string
+          enum: [week, month]
+        sort:
+          description: Sort field
+          type: string
+          enum: [rating, exp]
+        generated_at:
+          description: Unix timestamp in milliseconds when the leaderboard was generated
+          type: integer
+          format: int64
+        players:
+          description: Leaderboard entries ordered by rank
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderboardEntry"
 
-        PlayerState:
-            type: object
-            properties:
-                uid:
-                    description: Player's ID in the system
-                    type: string
-                    format: uuid
-                nickname:
-                    description: Generated nickname in the system
-                    example: JohnSmith
-                    type: string
-                exp:
-                    description: Player's exp points in the system
-                    example: 100
-                    type: integer
-                    format: int64
-                rating:
-                    description: Player's ELO rating in the system
-                    example: 1000
-                    type: integer
-                    format: int64
-                lives:
-                    description: Player's lives count in the system
-                    example: 3
-                    type: integer
-                    format: int64
-                flags:
-                    description: Some Player's flags.
-                    example: 10
-                    type: integer
-                    format: int64
-                game_id:
-                    description: Game's ID (if game_id empty or absent then player in the lobby)
-                    example: 144
-                    type: string
-                    format: uuid
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          description: Position in the leaderboard (1-based)
+          type: integer
+          example: 1
+        uid:
+          description: Player's ID
+          type: string
+          format: uuid
+        nickname:
+          description: Player's generated nickname
+          type: string
+          example: JohnSmith
+        rating:
+          description: Player's ELO rating
+          type: integer
+          format: int64
+          example: 1200
+        exp:
+          description: Player's total EXP
+          type: integer
+          format: int64
+          example: 1500
 
-    headers:
-        X-Request-ID:
-            description: Monotonically increasing client sequence number.
-            schema:
-                type: integer
-                minimum: 1
-                format: int64
-        X-Server-Time:
-            description: Server Unix timestamp in milliseconds.
-            schema:
-                type: integer
-                format: int64
-        Retry-After:
-            description: Seconds until the rate-limited or cooled-down action may be retried.
-            schema:
-                type: integer
-        ETag:
-            description: Entity tag for conditional GET caching.
-            schema:
-                type: string
-        Cache-Control:
-            description: Cache directive.
-            schema:
-                type: string
-        X-RateLimit-Limit:
-            description: Maximum requests allowed in the current window.
-            schema:
-                type: integer
-        X-RateLimit-Remaining:
-            description: Requests remaining in the current window.
-            schema:
-                type: integer
-        X-RateLimit-Reset:
-            description: When the current rate-limit window resets (ISO 8601).
-            schema:
-                type: string
-                format: date-time
+  headers:
+    X-Request-ID:
+      description: Monotonically increasing client sequence number.
+      schema:
+        type: integer
+        minimum: 1
+        format: int64
+    X-Server-Time:
+      description: Server Unix timestamp in milliseconds.
+      schema:
+        type: integer
+        format: int64
+    Retry-After:
+      description: Seconds until the rate-limited or cooled-down action may be retried.
+      schema:
+        type: integer
+    ETag:
+      description: Entity tag for conditional GET caching.
+      schema:
+        type: string
+    Cache-Control:
+      description: Cache directive.
+      schema:
+        type: string
+    X-RateLimit-Limit:
+      description: Maximum requests allowed in the current window.
+      schema:
+        type: integer
+    X-RateLimit-Remaining:
+      description: Requests remaining in the current window.
+      schema:
+        type: integer
+    X-RateLimit-Reset:
+      description: When the current rate-limit window resets (ISO 8601).
+      schema:
+        type: string
+        format: date-time
 
-    parameters:
-        RequestIdHeader:
-            in: header
-            name: X-Request-ID
-            required: true
-            schema:
-                type: integer
-                format: int64
-                minimum: 1
+  parameters:
+    RequestIdHeader:
+      in: header
+      name: X-Request-ID
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
