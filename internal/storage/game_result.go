@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math"
 	"time"
+
+	"github.com/rustwizard/balda/internal/achievements"
 )
 
 // KFactor is the ELO sensitivity constant used for rating updates.
@@ -20,10 +22,11 @@ const (
 )
 
 type PlayerResult struct {
-	PlayerID   string
-	Score      int
-	WordsCount int
-	ExpGained  int
+	PlayerID       string
+	Score          int
+	WordsCount     int
+	ExpGained      int
+	BestWordLength int
 }
 
 type GameResult struct {
@@ -32,6 +35,12 @@ type GameResult struct {
 	FinishReason FinishReason
 	FinishedAt   time.Time
 	Players      []PlayerResult
+}
+
+// PlayerAchievementUnlock groups newly unlocked achievements for a player.
+type PlayerAchievementUnlock struct {
+	PlayerID string
+	Unlocked []achievements.Achievement
 }
 
 // ExpGained returns EXP delta for a player: win=10+score, draw=5+score, loss=score.
@@ -55,13 +64,21 @@ func EloDelta(rating, opponentRating int, score float64) int {
 }
 
 // SaveGameResult writes the game result and updates each player's EXP atomically.
+// It is a convenience wrapper that discards unlocked achievements.
 func (b *Balda) SaveGameResult(ctx context.Context, r GameResult) error {
+	_, err := b.SaveGameResultWithAchievements(ctx, r)
+	return err
+}
+
+// SaveGameResultWithAchievements writes the game result, updates player counters
+// and flags, and returns any achievements unlocked during this game.
+func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult) ([]PlayerAchievementUnlock, error) {
 	ctx, cancel := context.WithTimeout(ctx, b.t)
 	defer cancel()
 
 	tx, err := b.db.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("save game result: begin tx: %w", err)
+		return nil, fmt.Errorf("save game result: begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
@@ -78,7 +95,7 @@ func (b *Balda) SaveGameResult(ctx context.Context, r GameResult) error {
 		r.GameID, winnerID, string(r.FinishReason), r.FinishedAt,
 	).Scan(&resultID)
 	if err != nil {
-		return fmt.Errorf("save game result: insert game_results: %w", err)
+		return nil, fmt.Errorf("save game result: insert game_results: %w", err)
 	}
 
 	// Load current ratings to compute ELO updates. The game is expected to have
@@ -94,7 +111,7 @@ func (b *Balda) SaveGameResult(ctx context.Context, r GameResult) error {
 				DefaultRating, pid,
 			).Scan(&rating)
 			if err != nil {
-				return fmt.Errorf("save game result: load rating for %s: %w", pid, err)
+				return nil, fmt.Errorf("save game result: load rating for %s: %w", pid, err)
 			}
 			ratings[i] = rating
 		}
@@ -113,27 +130,73 @@ func (b *Balda) SaveGameResult(ctx context.Context, r GameResult) error {
 		ratingDeltas[p1.PlayerID] = EloDelta(ratings[1], ratings[0], score1)
 	}
 
+	var unlocks []PlayerAchievementUnlock
+
 	for _, p := range r.Players {
 		_, err = tx.Exec(ctx,
-			`INSERT INTO game_result_players (game_result_id, player_id, score, words_count, exp_gained)
-			 VALUES ($1, $2, $3, $4, $5)`,
-			resultID, p.PlayerID, p.Score, p.WordsCount, p.ExpGained,
+			`INSERT INTO game_result_players (game_result_id, player_id, score, words_count, exp_gained, best_word_length)
+			 VALUES ($1, $2, $3, $4, $5, $6)`,
+			resultID, p.PlayerID, p.Score, p.WordsCount, p.ExpGained, p.BestWordLength,
 		)
 		if err != nil {
-			return fmt.Errorf("save game result: insert game_result_players for %s: %w", p.PlayerID, err)
+			return nil, fmt.Errorf("save game result: insert game_result_players for %s: %w", p.PlayerID, err)
 		}
 
+		isWinner := r.WinnerID != "" && r.WinnerID == p.PlayerID
+
+		var oldTotal, oldStreak int
+		var oldFlags int64
+		err = tx.QueryRow(ctx,
+			`SELECT total_games, consecutive_wins, flags
+			 FROM player_state
+			 WHERE player_id = $1
+			 FOR UPDATE`,
+			p.PlayerID,
+		).Scan(&oldTotal, &oldStreak, &oldFlags)
+		if err != nil {
+			return nil, fmt.Errorf("save game result: load counters for %s: %w", p.PlayerID, err)
+		}
+
+		newTotal := oldTotal + 1
+		newStreak := 0
+		if isWinner {
+			newStreak = oldStreak + 1
+		}
+
+		newBits, newlyUnlocked := achievements.Calculate(oldFlags, achievements.PlayerGameStats{
+			TotalGames:      newTotal,
+			ConsecutiveWins: newStreak,
+			Score:           p.Score,
+			WordsCount:      p.WordsCount,
+			BestWordLength:  p.BestWordLength,
+			IsWinner:        isWinner,
+		})
+
 		_, err = tx.Exec(ctx,
-			`UPDATE player_state SET exp = exp + $1, rating = rating + $2, updated_at = now() WHERE player_id = $3`,
-			p.ExpGained, ratingDeltas[p.PlayerID], p.PlayerID,
+			`UPDATE player_state
+			 SET exp = exp + $1,
+			     rating = rating + $2,
+			     total_games = $3,
+			     consecutive_wins = $4,
+			     flags = flags | $5,
+			     updated_at = now()
+			 WHERE player_id = $6`,
+			p.ExpGained, ratingDeltas[p.PlayerID], newTotal, newStreak, newBits, p.PlayerID,
 		)
 		if err != nil {
-			return fmt.Errorf("save game result: update player_state for %s: %w", p.PlayerID, err)
+			return nil, fmt.Errorf("save game result: update player_state for %s: %w", p.PlayerID, err)
+		}
+
+		if len(newlyUnlocked) > 0 {
+			unlocks = append(unlocks, PlayerAchievementUnlock{
+				PlayerID: p.PlayerID,
+				Unlocked: newlyUnlocked,
+			})
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("save game result: commit: %w", err)
+		return nil, fmt.Errorf("save game result: commit: %w", err)
 	}
-	return nil
+	return unlocks, nil
 }

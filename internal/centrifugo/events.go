@@ -114,3 +114,13 @@ type EvEndProposalResult struct {
 	Accepted    bool   `json:"accepted"`
 	RemainingMs int64  `json:"remaining_ms,omitempty"`
 }
+
+// EvAchievementUnlocked is published to the game channel when a player unlocks
+// a new achievement.
+type EvAchievementUnlocked struct {
+	Type          string `json:"type"` // "achievement_unlocked"
+	GameID        string `json:"game_id"`
+	PlayerUID     string `json:"player_uid"`
+	AchievementID string `json:"achievement_id"`
+	Name          string `json:"name"`
+}

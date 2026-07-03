@@ -12,11 +12,13 @@ const DefaultRating = 1000
 
 // PlayerState holds the profile fields stored in player_state.
 type PlayerState struct {
-	Nickname string
-	Exp      int64
-	Rating   int64
-	Flags    int64
-	Lives    int64
+	Nickname        string
+	Exp             int64
+	Rating          int64
+	Flags           int64
+	Lives           int64
+	TotalGames      int64
+	ConsecutiveWins int64
 }
 
 // PlayerForGame holds the minimum player data needed to participate in a game.
@@ -33,10 +35,11 @@ func (b *Balda) GetPlayerState(ctx context.Context, playerID uuid.UUID) (PlayerS
 
 	var ps PlayerState
 	err := b.db.QueryRow(ctx,
-		`SELECT nickname, COALESCE(exp, 0), COALESCE(rating, $1), COALESCE(flags, 0), COALESCE(lives, 0)
+		`SELECT nickname, COALESCE(exp, 0), COALESCE(rating, $1), COALESCE(flags, 0), COALESCE(lives, 0),
+		        COALESCE(total_games, 0), COALESCE(consecutive_wins, 0)
 		 FROM player_state WHERE player_id = $2`,
 		DefaultRating, playerID,
-	).Scan(&ps.Nickname, &ps.Exp, &ps.Rating, &ps.Flags, &ps.Lives)
+	).Scan(&ps.Nickname, &ps.Exp, &ps.Rating, &ps.Flags, &ps.Lives, &ps.TotalGames, &ps.ConsecutiveWins)
 	if err != nil {
 		return PlayerState{}, fmt.Errorf("get player state: %w", err)
 	}

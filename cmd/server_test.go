@@ -17,19 +17,19 @@ type fakeGameResultSaver struct {
 	err   error
 }
 
-func (f *fakeGameResultSaver) SaveGameResult(_ context.Context, _ storage.GameResult) error {
+func (f *fakeGameResultSaver) SaveGameResultWithAchievements(_ context.Context, _ storage.GameResult) ([]storage.PlayerAchievementUnlock, error) {
 	f.calls++
 	if f.calls <= f.failN {
-		return f.err
+		return nil, f.err
 	}
-	return nil
+	return nil, nil
 }
 
 func TestMakeOnGameOverCallback_RetryExhausted(t *testing.T) {
 	saver := &fakeGameResultSaver{failN: 10, err: errors.New("transient failure")}
 	var pending sync.WaitGroup
 
-	cb := makeOnGameOverCallback(saver, &pending)
+	cb := makeOnGameOverCallback(saver, nil, &pending)
 
 	start := time.Now()
 	cb(storage.GameResult{GameID: "g1"})
@@ -44,7 +44,7 @@ func TestMakeOnGameOverCallback_SuccessOnFirstTry(t *testing.T) {
 	saver := &fakeGameResultSaver{failN: 0}
 	var pending sync.WaitGroup
 
-	cb := makeOnGameOverCallback(saver, &pending)
+	cb := makeOnGameOverCallback(saver, nil, &pending)
 
 	start := time.Now()
 	cb(storage.GameResult{GameID: "g2"})
@@ -59,7 +59,7 @@ func TestMakeOnGameOverCallback_SuccessOnRetry(t *testing.T) {
 	saver := &fakeGameResultSaver{failN: 1, err: errors.New("boom")}
 	var pending sync.WaitGroup
 
-	cb := makeOnGameOverCallback(saver, &pending)
+	cb := makeOnGameOverCallback(saver, nil, &pending)
 
 	start := time.Now()
 	cb(storage.GameResult{GameID: "g3"})

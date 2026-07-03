@@ -139,7 +139,7 @@ var serverCmd = &cobra.Command{
 			// game_over is still published to Centrifugo so the frontend can finish
 			// the game UI normally.
 			if !hasBotPlayer(players) {
-				coord.SetOnGameOver(makeOnGameOverCallback(s, &pendingResults))
+				coord.SetOnGameOver(makeOnGameOverCallback(s, cf, &pendingResults))
 			}
 
 			var notifiers []game.Notifier
@@ -294,25 +294,27 @@ func hasBotPlayer(players []*game.Player) bool {
 	return false
 }
 
-// gameResultSaver matches *storage.Storage so the callback can be unit-tested.
+// gameResultSaver matches *storage.Balda so the callback can be unit-tested.
 type gameResultSaver interface {
-	SaveGameResult(ctx context.Context, r storage.GameResult) error
+	SaveGameResultWithAchievements(ctx context.Context, r storage.GameResult) ([]storage.PlayerAchievementUnlock, error)
 }
 
 // makeOnGameOverCallback returns a callback that persists a game result with
-// retry and exponential backoff (100 ms, 200 ms). It accounts its work in
-// pending so the server can drain in-flight saves during graceful shutdown.
-func makeOnGameOverCallback(saver gameResultSaver, pending *sync.WaitGroup) func(storage.GameResult) {
+// retry and exponential backoff (100 ms, 200 ms), updates achievement counters,
+// and publishes achievement_unlocked events. It accounts its work in pending
+// so the server can drain in-flight saves during graceful shutdown.
+func makeOnGameOverCallback(saver gameResultSaver, cf *centrifugo.Client, pending *sync.WaitGroup) func(storage.GameResult) {
 	return func(r storage.GameResult) {
 		pending.Add(1)
 		defer pending.Done()
 
+		var unlocked []storage.PlayerAchievementUnlock
 		var err error
 		for i := 0; i < 3; i++ {
 			if i > 0 {
 				time.Sleep(time.Duration(i) * 100 * time.Millisecond)
 			}
-			err = saver.SaveGameResult(context.Background(), r)
+			unlocked, err = saver.SaveGameResultWithAchievements(context.Background(), r)
 			if err == nil {
 				break
 			}
@@ -327,6 +329,34 @@ func makeOnGameOverCallback(saver gameResultSaver, pending *sync.WaitGroup) func
 				slog.String("gameID", r.GameID),
 				slog.Any("error", err),
 			)
+			return
+		}
+
+		if cf == nil || len(unlocked) == 0 {
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+
+		for _, pu := range unlocked {
+			for _, a := range pu.Unlocked {
+				ev := centrifugo.EvAchievementUnlocked{
+					Type:          "achievement_unlocked",
+					GameID:        r.GameID,
+					PlayerUID:     pu.PlayerID,
+					AchievementID: a.ID,
+					Name:          a.Name,
+				}
+				if err := cf.Publish(ctx, centrifugo.ChannelGame(r.GameID), ev); err != nil {
+					slog.Error("publish achievement_unlocked",
+						slog.String("gameID", r.GameID),
+						slog.String("playerID", pu.PlayerID),
+						slog.String("achievement", a.ID),
+						slog.Any("error", err),
+					)
+				}
+			}
 		}
 	}
 }

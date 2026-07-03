@@ -61,6 +61,16 @@ func (UnimplementedHandler) GetLeaderboard(ctx context.Context, params GetLeader
 	return r, ht.ErrNotImplemented
 }
 
+// GetPlayerAchievements implements getPlayerAchievements operation.
+//
+// Returns the full list of achievements with their unlocked status for the currently authenticated
+// player.
+//
+// GET /player/achievements
+func (UnimplementedHandler) GetPlayerAchievements(ctx context.Context) (r GetPlayerAchievementsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetPlayerStateUID implements getPlayerStateUID operation.
 //
 // Get user state.

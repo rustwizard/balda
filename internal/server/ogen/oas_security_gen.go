@@ -34,17 +34,18 @@ func findAuthorization(h http.Header, prefix string) (string, bool) {
 
 // operationRolesBearerAuth is a private map storing roles per operation.
 var operationRolesBearerAuth = map[string][]string{
-	AcceptEndGameOperation:     []string{},
-	CreateGameOperation:        []string{},
-	CreateGameWithBotOperation: []string{},
-	JoinGameOperation:          []string{},
-	ListGamesOperation:         []string{},
-	LogoutOperation:            []string{},
-	MoveGameOperation:          []string{},
-	PingOperation:              []string{},
-	ProposeEndGameOperation:    []string{},
-	RejectEndGameOperation:     []string{},
-	SkipGameOperation:          []string{},
+	AcceptEndGameOperation:         []string{},
+	CreateGameOperation:            []string{},
+	CreateGameWithBotOperation:     []string{},
+	GetPlayerAchievementsOperation: []string{},
+	JoinGameOperation:              []string{},
+	ListGamesOperation:             []string{},
+	LogoutOperation:                []string{},
+	MoveGameOperation:              []string{},
+	PingOperation:                  []string{},
+	ProposeEndGameOperation:        []string{},
+	RejectEndGameOperation:         []string{},
+	SkipGameOperation:              []string{},
 }
 
 // GetRolesForBearerAuth returns the required roles for the given operation.
