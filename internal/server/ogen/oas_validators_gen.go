@@ -221,6 +221,28 @@ func (s *GameSummary) Validate() error {
 	return nil
 }
 
+func (s GetLeaderboardPeriod) Validate() error {
+	switch s {
+	case "week":
+		return nil
+	case "month":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s GetLeaderboardSort) Validate() error {
+	switch s {
+	case "rating":
+		return nil
+	case "exp":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
 func (s *JoinGameResponse) Validate() error {
 	if s == nil {
 		return validate.ErrNilPointer
@@ -274,6 +296,76 @@ func (s *JoinGameResponse) Validate() error {
 		return &validate.Error{Fields: failures}
 	}
 	return nil
+}
+
+func (s *LeaderboardResponse) Validate() error {
+	if s == nil {
+		return validate.ErrNilPointer
+	}
+
+	var failures []validate.FieldError
+	if err := func() error {
+		if value, ok := s.Period.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "period",
+			Error: err,
+		})
+	}
+	if err := func() error {
+		if value, ok := s.Sort.Get(); ok {
+			if err := func() error {
+				if err := value.Validate(); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}(); err != nil {
+		failures = append(failures, validate.FieldError{
+			Name:  "sort",
+			Error: err,
+		})
+	}
+	if len(failures) > 0 {
+		return &validate.Error{Fields: failures}
+	}
+	return nil
+}
+
+func (s LeaderboardResponsePeriod) Validate() error {
+	switch s {
+	case "week":
+		return nil
+	case "month":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
+}
+
+func (s LeaderboardResponseSort) Validate() error {
+	switch s {
+	case "rating":
+		return nil
+	case "exp":
+		return nil
+	default:
+		return errors.Errorf("invalid value: %v", s)
+	}
 }
 
 func (s *ListGamesResponse) Validate() error {

@@ -17,6 +17,7 @@ import (
 	"github.com/rustwizard/balda/internal/auth"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
+	"github.com/rustwizard/balda/internal/leaderboard"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
 	"github.com/rustwizard/balda/internal/presence"
@@ -62,6 +63,8 @@ type coreSetup struct {
 	svc     *service.Balda
 	pres    *presence.Service
 	lby     *lobby.Lobby
+	s       *storage.Balda
+	rdb     *redis.Client
 	cleanup func()
 }
 
@@ -126,12 +129,15 @@ func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 	})
 
 	s := storage.New(pool, 10*time.Second)
-	svc := service.New(lby, mm, s)
+	lb := leaderboard.NewService(s, rdb, 5*time.Minute)
+	svc := service.New(lby, mm, s, lb)
 
 	return &coreSetup{
 		svc:  svc,
 		pres: pres,
 		lby:  lby,
+		s:    s,
+		rdb:  rdb,
 		cleanup: func() {
 			pool.Close()
 			pgCleanup()

@@ -499,6 +499,96 @@ func (s *GameSummary) SetStartedAt(val OptInt64) {
 	s.StartedAt = val
 }
 
+type GetLeaderboardBadRequest ErrorResponse
+
+func (*GetLeaderboardBadRequest) getLeaderboardRes() {}
+
+type GetLeaderboardInternalServerError ErrorResponse
+
+func (*GetLeaderboardInternalServerError) getLeaderboardRes() {}
+
+type GetLeaderboardPeriod string
+
+const (
+	GetLeaderboardPeriodWeek  GetLeaderboardPeriod = "week"
+	GetLeaderboardPeriodMonth GetLeaderboardPeriod = "month"
+)
+
+// AllValues returns all GetLeaderboardPeriod values.
+func (GetLeaderboardPeriod) AllValues() []GetLeaderboardPeriod {
+	return []GetLeaderboardPeriod{
+		GetLeaderboardPeriodWeek,
+		GetLeaderboardPeriodMonth,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GetLeaderboardPeriod) MarshalText() ([]byte, error) {
+	switch s {
+	case GetLeaderboardPeriodWeek:
+		return []byte(s), nil
+	case GetLeaderboardPeriodMonth:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GetLeaderboardPeriod) UnmarshalText(data []byte) error {
+	switch GetLeaderboardPeriod(data) {
+	case GetLeaderboardPeriodWeek:
+		*s = GetLeaderboardPeriodWeek
+		return nil
+	case GetLeaderboardPeriodMonth:
+		*s = GetLeaderboardPeriodMonth
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type GetLeaderboardSort string
+
+const (
+	GetLeaderboardSortRating GetLeaderboardSort = "rating"
+	GetLeaderboardSortExp    GetLeaderboardSort = "exp"
+)
+
+// AllValues returns all GetLeaderboardSort values.
+func (GetLeaderboardSort) AllValues() []GetLeaderboardSort {
+	return []GetLeaderboardSort{
+		GetLeaderboardSortRating,
+		GetLeaderboardSortExp,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s GetLeaderboardSort) MarshalText() ([]byte, error) {
+	switch s {
+	case GetLeaderboardSortRating:
+		return []byte(s), nil
+	case GetLeaderboardSortExp:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *GetLeaderboardSort) UnmarshalText(data []byte) error {
+	switch GetLeaderboardSort(data) {
+	case GetLeaderboardSortRating:
+		*s = GetLeaderboardSortRating
+		return nil
+	case GetLeaderboardSortExp:
+		*s = GetLeaderboardSortExp
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 type JoinGameConflict ErrorResponse
 
 func (*JoinGameConflict) joinGameRes() {}
@@ -570,6 +660,208 @@ func (*JoinGameResponse) joinGameRes()          {}
 type JoinGameUnauthorized ErrorResponse
 
 func (*JoinGameUnauthorized) joinGameRes() {}
+
+// Ref: #/components/schemas/LeaderboardEntry
+type LeaderboardEntry struct {
+	// Position in the leaderboard (1-based).
+	Rank OptInt `json:"rank"`
+	// Player's ID.
+	UID OptUUID `json:"uid"`
+	// Player's generated nickname.
+	Nickname OptString `json:"nickname"`
+	// Player's ELO rating.
+	Rating OptInt64 `json:"rating"`
+	// Player's total EXP.
+	Exp OptInt64 `json:"exp"`
+}
+
+// GetRank returns the value of Rank.
+func (s *LeaderboardEntry) GetRank() OptInt {
+	return s.Rank
+}
+
+// GetUID returns the value of UID.
+func (s *LeaderboardEntry) GetUID() OptUUID {
+	return s.UID
+}
+
+// GetNickname returns the value of Nickname.
+func (s *LeaderboardEntry) GetNickname() OptString {
+	return s.Nickname
+}
+
+// GetRating returns the value of Rating.
+func (s *LeaderboardEntry) GetRating() OptInt64 {
+	return s.Rating
+}
+
+// GetExp returns the value of Exp.
+func (s *LeaderboardEntry) GetExp() OptInt64 {
+	return s.Exp
+}
+
+// SetRank sets the value of Rank.
+func (s *LeaderboardEntry) SetRank(val OptInt) {
+	s.Rank = val
+}
+
+// SetUID sets the value of UID.
+func (s *LeaderboardEntry) SetUID(val OptUUID) {
+	s.UID = val
+}
+
+// SetNickname sets the value of Nickname.
+func (s *LeaderboardEntry) SetNickname(val OptString) {
+	s.Nickname = val
+}
+
+// SetRating sets the value of Rating.
+func (s *LeaderboardEntry) SetRating(val OptInt64) {
+	s.Rating = val
+}
+
+// SetExp sets the value of Exp.
+func (s *LeaderboardEntry) SetExp(val OptInt64) {
+	s.Exp = val
+}
+
+// Ref: #/components/schemas/LeaderboardResponse
+type LeaderboardResponse struct {
+	// Leaderboard period.
+	Period OptLeaderboardResponsePeriod `json:"period"`
+	// Sort field.
+	Sort OptLeaderboardResponseSort `json:"sort"`
+	// Unix timestamp in milliseconds when the leaderboard was generated.
+	GeneratedAt OptInt64 `json:"generated_at"`
+	// Leaderboard entries ordered by rank.
+	Players []LeaderboardEntry `json:"players"`
+}
+
+// GetPeriod returns the value of Period.
+func (s *LeaderboardResponse) GetPeriod() OptLeaderboardResponsePeriod {
+	return s.Period
+}
+
+// GetSort returns the value of Sort.
+func (s *LeaderboardResponse) GetSort() OptLeaderboardResponseSort {
+	return s.Sort
+}
+
+// GetGeneratedAt returns the value of GeneratedAt.
+func (s *LeaderboardResponse) GetGeneratedAt() OptInt64 {
+	return s.GeneratedAt
+}
+
+// GetPlayers returns the value of Players.
+func (s *LeaderboardResponse) GetPlayers() []LeaderboardEntry {
+	return s.Players
+}
+
+// SetPeriod sets the value of Period.
+func (s *LeaderboardResponse) SetPeriod(val OptLeaderboardResponsePeriod) {
+	s.Period = val
+}
+
+// SetSort sets the value of Sort.
+func (s *LeaderboardResponse) SetSort(val OptLeaderboardResponseSort) {
+	s.Sort = val
+}
+
+// SetGeneratedAt sets the value of GeneratedAt.
+func (s *LeaderboardResponse) SetGeneratedAt(val OptInt64) {
+	s.GeneratedAt = val
+}
+
+// SetPlayers sets the value of Players.
+func (s *LeaderboardResponse) SetPlayers(val []LeaderboardEntry) {
+	s.Players = val
+}
+
+func (*LeaderboardResponse) getLeaderboardRes() {}
+
+// Leaderboard period.
+type LeaderboardResponsePeriod string
+
+const (
+	LeaderboardResponsePeriodWeek  LeaderboardResponsePeriod = "week"
+	LeaderboardResponsePeriodMonth LeaderboardResponsePeriod = "month"
+)
+
+// AllValues returns all LeaderboardResponsePeriod values.
+func (LeaderboardResponsePeriod) AllValues() []LeaderboardResponsePeriod {
+	return []LeaderboardResponsePeriod{
+		LeaderboardResponsePeriodWeek,
+		LeaderboardResponsePeriodMonth,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s LeaderboardResponsePeriod) MarshalText() ([]byte, error) {
+	switch s {
+	case LeaderboardResponsePeriodWeek:
+		return []byte(s), nil
+	case LeaderboardResponsePeriodMonth:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *LeaderboardResponsePeriod) UnmarshalText(data []byte) error {
+	switch LeaderboardResponsePeriod(data) {
+	case LeaderboardResponsePeriodWeek:
+		*s = LeaderboardResponsePeriodWeek
+		return nil
+	case LeaderboardResponsePeriodMonth:
+		*s = LeaderboardResponsePeriodMonth
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+// Sort field.
+type LeaderboardResponseSort string
+
+const (
+	LeaderboardResponseSortRating LeaderboardResponseSort = "rating"
+	LeaderboardResponseSortExp    LeaderboardResponseSort = "exp"
+)
+
+// AllValues returns all LeaderboardResponseSort values.
+func (LeaderboardResponseSort) AllValues() []LeaderboardResponseSort {
+	return []LeaderboardResponseSort{
+		LeaderboardResponseSortRating,
+		LeaderboardResponseSortExp,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s LeaderboardResponseSort) MarshalText() ([]byte, error) {
+	switch s {
+	case LeaderboardResponseSortRating:
+		return []byte(s), nil
+	case LeaderboardResponseSortExp:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *LeaderboardResponseSort) UnmarshalText(data []byte) error {
+	switch LeaderboardResponseSort(data) {
+	case LeaderboardResponseSortRating:
+		*s = LeaderboardResponseSortRating
+		return nil
+	case LeaderboardResponseSortExp:
+		*s = LeaderboardResponseSortExp
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
 
 // Ref: #/components/schemas/ListGamesResponse
 type ListGamesResponse struct {
@@ -937,6 +1229,52 @@ func (o OptGameSummary) Or(d GameSummary) GameSummary {
 	return d
 }
 
+// NewOptGetLeaderboardSort returns new OptGetLeaderboardSort with value set to v.
+func NewOptGetLeaderboardSort(v GetLeaderboardSort) OptGetLeaderboardSort {
+	return OptGetLeaderboardSort{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptGetLeaderboardSort is optional GetLeaderboardSort.
+type OptGetLeaderboardSort struct {
+	Value GetLeaderboardSort
+	Set   bool
+}
+
+// IsSet returns true if OptGetLeaderboardSort was set.
+func (o OptGetLeaderboardSort) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptGetLeaderboardSort) Reset() {
+	var v GetLeaderboardSort
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptGetLeaderboardSort) SetTo(v GetLeaderboardSort) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptGetLeaderboardSort) Get() (v GetLeaderboardSort, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptGetLeaderboardSort) Or(d GetLeaderboardSort) GetLeaderboardSort {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptInt returns new OptInt with value set to v.
 func NewOptInt(v int) OptInt {
 	return OptInt{
@@ -1023,6 +1361,98 @@ func (o OptInt64) Get() (v int64, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptInt64) Or(d int64) int64 {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptLeaderboardResponsePeriod returns new OptLeaderboardResponsePeriod with value set to v.
+func NewOptLeaderboardResponsePeriod(v LeaderboardResponsePeriod) OptLeaderboardResponsePeriod {
+	return OptLeaderboardResponsePeriod{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptLeaderboardResponsePeriod is optional LeaderboardResponsePeriod.
+type OptLeaderboardResponsePeriod struct {
+	Value LeaderboardResponsePeriod
+	Set   bool
+}
+
+// IsSet returns true if OptLeaderboardResponsePeriod was set.
+func (o OptLeaderboardResponsePeriod) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptLeaderboardResponsePeriod) Reset() {
+	var v LeaderboardResponsePeriod
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptLeaderboardResponsePeriod) SetTo(v LeaderboardResponsePeriod) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptLeaderboardResponsePeriod) Get() (v LeaderboardResponsePeriod, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptLeaderboardResponsePeriod) Or(d LeaderboardResponsePeriod) LeaderboardResponsePeriod {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptLeaderboardResponseSort returns new OptLeaderboardResponseSort with value set to v.
+func NewOptLeaderboardResponseSort(v LeaderboardResponseSort) OptLeaderboardResponseSort {
+	return OptLeaderboardResponseSort{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptLeaderboardResponseSort is optional LeaderboardResponseSort.
+type OptLeaderboardResponseSort struct {
+	Value LeaderboardResponseSort
+	Set   bool
+}
+
+// IsSet returns true if OptLeaderboardResponseSort was set.
+func (o OptLeaderboardResponseSort) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptLeaderboardResponseSort) Reset() {
+	var v LeaderboardResponseSort
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptLeaderboardResponseSort) SetTo(v LeaderboardResponseSort) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptLeaderboardResponseSort) Get() (v LeaderboardResponseSort, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptLeaderboardResponseSort) Or(d LeaderboardResponseSort) LeaderboardResponseSort {
 	if v, ok := o.Get(); ok {
 		return v
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/game/bot"
 	"github.com/rustwizard/balda/internal/gamecoord"
+	"github.com/rustwizard/balda/internal/leaderboard"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
 	"github.com/rustwizard/balda/internal/presence"
@@ -169,7 +170,9 @@ var serverCmd = &cobra.Command{
 			return err
 		})
 
-		svc := service.New(lby, mm, s)
+		lb := leaderboard.NewService(s, rdb, 5*time.Minute)
+
+		svc := service.New(lby, mm, s, lb)
 
 		h := handlers.New(svc, pres, cfg.Auth.JWTSecret, cf, cfg.Centrifugo.TokenHMACSecret)
 

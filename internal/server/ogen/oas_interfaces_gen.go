@@ -17,6 +17,10 @@ type CreateGameWithBotRes interface {
 	createGameWithBotRes()
 }
 
+type GetLeaderboardRes interface {
+	getLeaderboardRes()
+}
+
 type GetPlayerStateUIDRes interface {
 	getPlayerStateUIDRes()
 }

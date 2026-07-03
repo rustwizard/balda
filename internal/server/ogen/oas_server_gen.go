@@ -34,6 +34,13 @@ type Handler interface {
 	//
 	// POST /games/with-bot
 	CreateGameWithBot(ctx context.Context) (CreateGameWithBotRes, error)
+	// GetLeaderboard implements getLeaderboard operation.
+	//
+	// Returns the top players by current rating or total EXP who were active during the requested period.
+	// Results are cached for 5 minutes.
+	//
+	// GET /leaderboard
+	GetLeaderboard(ctx context.Context, params GetLeaderboardParams) (GetLeaderboardRes, error)
 	// GetPlayerStateUID implements getPlayerStateUID operation.
 	//
 	// Get user state.
