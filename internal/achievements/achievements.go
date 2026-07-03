@@ -1,24 +1,44 @@
 package achievements
 
-import "unicode/utf8"
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"sync"
+	"time"
+	"unicode/utf8"
+)
 
-// Achievement is a single achievement definition.
-type Achievement struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Unlocked    bool   `json:"unlocked"`
+// Definition describes a single achievement loaded from the database.
+type Definition struct {
+	ID            string
+	Name          string
+	Description   string
+	IconURL       string
+	ConditionType string
+	Operator      string
+	Threshold     int
+	BitPosition   int
 }
 
-// Bit flags for player_state.flags.
+// Achievement is the runtime view of an achievement with unlock status.
+type Achievement struct {
+	Definition
+	Unlocked bool
+}
+
+// Condition and operator constants used in achievement definitions.
 const (
-	FlagFirstGame int64 = 1 << iota
-	FlagFirstWin
-	FlagHighScorer50
-	FlagWordsmith10
-	FlagGiantWord
-	FlagWinningStreak3
-	FlagVeteran10
+	ConditionTotalGames      = "total_games"
+	ConditionConsecutiveWins = "consecutive_wins"
+	ConditionScore           = "score"
+	ConditionWordsCount      = "words_count"
+	ConditionBestWordLength  = "best_word_length"
+	ConditionWin             = "win"
+
+	OperatorGTE = "gte"
+	OperatorGT  = "gt"
+	OperatorEQ  = "eq"
 )
 
 // PlayerGameStats holds per-game data needed to evaluate achievements.
@@ -31,57 +51,149 @@ type PlayerGameStats struct {
 	IsWinner        bool
 }
 
-var registry = []Achievement{
-	{ID: "first_game", Name: "Дебютант", Description: "Сыграть первую партию"},
-	{ID: "first_win", Name: "Первая победа", Description: "Одержать первую победу"},
-	{ID: "high_scorer_50", Name: "Рекордсмен", Description: "Набрать 50+ очков за партию"},
-	{ID: "wordsmith_10", Name: "Словесный мастер", Description: "Составить 10+ слов за партию"},
-	{ID: "giant_word", Name: "Гигант", Description: "Составить слово из 10+ букв"},
-	{ID: "winning_streak_3", Name: "Победная серия", Description: "3 победы подряд"},
-	{ID: "veteran_10", Name: "Ветеран", Description: "Сыграть 10 партий"},
+// Unlock represents a newly unlocked achievement.
+type Unlock struct {
+	PlayerID string
+	Achievement
 }
 
-var flagByID = map[string]int64{
-	registry[0].ID: FlagFirstGame,
-	registry[1].ID: FlagFirstWin,
-	registry[2].ID: FlagHighScorer50,
-	registry[3].ID: FlagWordsmith10,
-	registry[4].ID: FlagGiantWord,
-	registry[5].ID: FlagWinningStreak3,
-	registry[6].ID: FlagVeteran10,
+// Service holds achievement definitions and evaluates them against player stats.
+// Definitions are loaded from persistent storage and can be reloaded at runtime.
+type Service struct {
+	loader func(ctx context.Context) ([]Definition, error)
+	mu     sync.RWMutex
+	defs   []Definition
+	byID   map[string]Definition
+	byBit  map[int]Definition
 }
 
-// Calculate evaluates achievements for a single player after a game.
-// It returns the updated bitmask and the list of newly unlocked achievements.
-func Calculate(oldFlags int64, s PlayerGameStats) (newFlags int64, unlocked []Achievement) {
-	flags := oldFlags
+// NewService creates a service that loads definitions via the provided loader.
+func NewService(loader func(ctx context.Context) ([]Definition, error)) *Service {
+	return &Service{
+		loader: loader,
+		byID:   make(map[string]Definition),
+		byBit:  make(map[int]Definition),
+	}
+}
 
-	check := func(bit int64, cond bool, a Achievement) {
-		if flags&bit == 0 && cond {
-			flags |= bit
-			unlocked = append(unlocked, a)
-		}
+// Load fetches definitions from storage and replaces the in-memory set.
+func (s *Service) Load(ctx context.Context) error {
+	defs, err := s.loader(ctx)
+	if err != nil {
+		return fmt.Errorf("achievements: load definitions: %w", err)
 	}
 
-	check(FlagFirstGame, s.TotalGames >= 1, registry[0])
-	check(FlagFirstWin, s.IsWinner, registry[1])
-	check(FlagHighScorer50, s.Score >= 50, registry[2])
-	check(FlagWordsmith10, s.WordsCount >= 10, registry[3])
-	check(FlagGiantWord, s.BestWordLength >= 10, registry[4])
-	check(FlagWinningStreak3, s.ConsecutiveWins >= 3, registry[5])
-	check(FlagVeteran10, s.TotalGames >= 10, registry[6])
+	byID := make(map[string]Definition, len(defs))
+	byBit := make(map[int]Definition, len(defs))
+	for _, d := range defs {
+		if d.BitPosition < 0 || d.BitPosition >= 64 {
+			return fmt.Errorf("achievements: invalid bit_position %d for %q", d.BitPosition, d.ID)
+		}
+		byID[d.ID] = d
+		byBit[d.BitPosition] = d
+	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.defs = defs
+	s.byID = byID
+	s.byBit = byBit
+	return nil
+}
+
+// Start periodically reloads definitions until ctx is canceled.
+func (s *Service) Start(ctx context.Context, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := s.Load(ctx); err != nil {
+				slog.Error("achievements: periodic reload failed", slog.Any("error", err))
+			}
+		}
+	}
+}
+
+// Reload is a synchronous convenience wrapper around Load.
+func (s *Service) Reload(ctx context.Context) error {
+	return s.Load(ctx)
+}
+
+func (s *Service) definitions() []Definition {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]Definition, len(s.defs))
+	copy(out, s.defs)
+	return out
+}
+
+// Calculate evaluates all currently known achievements for a single player.
+// It returns the updated bitmask and the list of newly unlocked achievements.
+func (s *Service) Calculate(oldFlags int64, stats PlayerGameStats) (newFlags int64, unlocked []Achievement) {
+	flags := oldFlags
+	for _, d := range s.definitions() {
+		bit := int64(1) << d.BitPosition
+		if flags&bit != 0 {
+			continue
+		}
+		if !matches(d, stats) {
+			continue
+		}
+		flags |= bit
+		unlocked = append(unlocked, Achievement{Definition: d, Unlocked: true})
+	}
 	return flags, unlocked
 }
 
-// List returns the full registry with Unlocked status for the given flags.
-func List(flags int64) []Achievement {
-	out := make([]Achievement, len(registry))
-	for i, a := range registry {
-		out[i] = a
-		out[i].Unlocked = flags&flagByID[a.ID] != 0
+// List returns all currently known achievements with their unlock status.
+func (s *Service) List(flags int64) []Achievement {
+	defs := s.definitions()
+	out := make([]Achievement, len(defs))
+	for i, d := range defs {
+		out[i] = Achievement{
+			Definition: d,
+			Unlocked:   flags&(int64(1)<<d.BitPosition) != 0,
+		}
 	}
 	return out
+}
+
+func matches(d Definition, stats PlayerGameStats) bool {
+	var value int
+	switch d.ConditionType {
+	case ConditionTotalGames:
+		value = stats.TotalGames
+	case ConditionConsecutiveWins:
+		value = stats.ConsecutiveWins
+	case ConditionScore:
+		value = stats.Score
+	case ConditionWordsCount:
+		value = stats.WordsCount
+	case ConditionBestWordLength:
+		value = stats.BestWordLength
+	case ConditionWin:
+		if stats.IsWinner && d.Threshold >= 1 {
+			return true
+		}
+		return false
+	default:
+		return false
+	}
+
+	switch d.Operator {
+	case OperatorGTE:
+		return value >= d.Threshold
+	case OperatorGT:
+		return value > d.Threshold
+	case OperatorEQ:
+		return value == d.Threshold
+	default:
+		return value >= d.Threshold
+	}
 }
 
 // WordLength returns the number of runes in a word.

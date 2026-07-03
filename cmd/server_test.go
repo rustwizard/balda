@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/rustwizard/balda/internal/achievements"
 	"github.com/rustwizard/balda/internal/storage"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +18,7 @@ type fakeGameResultSaver struct {
 	err   error
 }
 
-func (f *fakeGameResultSaver) SaveGameResultWithAchievements(_ context.Context, _ storage.GameResult) ([]storage.PlayerAchievementUnlock, error) {
+func (f *fakeGameResultSaver) SaveGameResultWithAchievements(_ context.Context, _ storage.GameResult, _ *achievements.Service) ([]storage.PlayerAchievementUnlock, error) {
 	f.calls++
 	if f.calls <= f.failN {
 		return nil, f.err
@@ -29,7 +30,7 @@ func TestMakeOnGameOverCallback_RetryExhausted(t *testing.T) {
 	saver := &fakeGameResultSaver{failN: 10, err: errors.New("transient failure")}
 	var pending sync.WaitGroup
 
-	cb := makeOnGameOverCallback(saver, nil, &pending)
+	cb := makeOnGameOverCallback(saver, nil, nil, &pending)
 
 	start := time.Now()
 	cb(storage.GameResult{GameID: "g1"})
@@ -44,7 +45,7 @@ func TestMakeOnGameOverCallback_SuccessOnFirstTry(t *testing.T) {
 	saver := &fakeGameResultSaver{failN: 0}
 	var pending sync.WaitGroup
 
-	cb := makeOnGameOverCallback(saver, nil, &pending)
+	cb := makeOnGameOverCallback(saver, nil, nil, &pending)
 
 	start := time.Now()
 	cb(storage.GameResult{GameID: "g2"})
@@ -59,7 +60,7 @@ func TestMakeOnGameOverCallback_SuccessOnRetry(t *testing.T) {
 	saver := &fakeGameResultSaver{failN: 1, err: errors.New("boom")}
 	var pending sync.WaitGroup
 
-	cb := makeOnGameOverCallback(saver, nil, &pending)
+	cb := makeOnGameOverCallback(saver, nil, nil, &pending)
 
 	start := time.Now()
 	cb(storage.GameResult{GameID: "g3"})

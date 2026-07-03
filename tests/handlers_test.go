@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/rustwizard/balda/internal/achievements"
 	"github.com/rustwizard/balda/internal/auth"
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
@@ -130,7 +131,9 @@ func setupCore(ctx context.Context, t *testing.T) *coreSetup {
 
 	s := storage.New(pool, 10*time.Second)
 	lb := leaderboard.NewService(s, rdb, 5*time.Minute)
-	svc := service.New(lby, mm, s, lb)
+	achSvc := achievements.NewService(s.LoadAchievementDefinitions)
+	require.NoError(t, achSvc.Load(ctx))
+	svc := service.New(lby, mm, s, lb, achSvc)
 
 	return &coreSetup{
 		svc:  svc,

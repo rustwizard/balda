@@ -66,13 +66,14 @@ func EloDelta(rating, opponentRating int, score float64) int {
 // SaveGameResult writes the game result and updates each player's EXP atomically.
 // It is a convenience wrapper that discards unlocked achievements.
 func (b *Balda) SaveGameResult(ctx context.Context, r GameResult) error {
-	_, err := b.SaveGameResultWithAchievements(ctx, r)
+	_, err := b.SaveGameResultWithAchievements(ctx, r, nil)
 	return err
 }
 
 // SaveGameResultWithAchievements writes the game result, updates player counters
 // and flags, and returns any achievements unlocked during this game.
-func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult) ([]PlayerAchievementUnlock, error) {
+// If achSvc is nil, achievements are not evaluated but counters are still updated.
+func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult, achSvc *achievements.Service) ([]PlayerAchievementUnlock, error) {
 	ctx, cancel := context.WithTimeout(ctx, b.t)
 	defer cancel()
 
@@ -163,14 +164,18 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 			newStreak = oldStreak + 1
 		}
 
-		newBits, newlyUnlocked := achievements.Calculate(oldFlags, achievements.PlayerGameStats{
-			TotalGames:      newTotal,
-			ConsecutiveWins: newStreak,
-			Score:           p.Score,
-			WordsCount:      p.WordsCount,
-			BestWordLength:  p.BestWordLength,
-			IsWinner:        isWinner,
-		})
+		newBits := oldFlags
+		var newlyUnlocked []achievements.Achievement
+		if achSvc != nil {
+			newBits, newlyUnlocked = achSvc.Calculate(oldFlags, achievements.PlayerGameStats{
+				TotalGames:      newTotal,
+				ConsecutiveWins: newStreak,
+				Score:           p.Score,
+				WordsCount:      p.WordsCount,
+				BestWordLength:  p.BestWordLength,
+				IsWinner:        isWinner,
+			})
+		}
 
 		_, err = tx.Exec(ctx,
 			`UPDATE player_state

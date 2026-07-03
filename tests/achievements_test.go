@@ -20,6 +20,9 @@ func TestSaveGameResultWithAchievements(t *testing.T) {
 	s, cleanup := initStorage(ctx, t)
 	defer cleanup()
 
+	achSvc := achievements.NewService(s.LoadAchievementDefinitions)
+	require.NoError(t, achSvc.Load(ctx))
+
 	p1 := seedPlayerWithRating(ctx, t, s, "ach.winner@example.org", 1000)
 	p2 := seedPlayerWithRating(ctx, t, s, "ach.loser@example.org", 1000)
 
@@ -47,7 +50,7 @@ func TestSaveGameResultWithAchievements(t *testing.T) {
 		},
 	}
 
-	unlocked, err := s.SaveGameResultWithAchievements(ctx, result)
+	unlocked, err := s.SaveGameResultWithAchievements(ctx, result, achSvc)
 	require.NoError(t, err)
 	require.Len(t, unlocked, 2)
 
@@ -67,8 +70,17 @@ func TestSaveGameResultWithAchievements(t *testing.T) {
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, ps.TotalGames)
 	assert.EqualValues(t, 1, ps.ConsecutiveWins)
-	assert.NotZero(t, ps.Flags&achievements.FlagFirstWin)
-	assert.NotZero(t, ps.Flags&achievements.FlagHighScorer50)
+
+	list := achSvc.List(ps.Flags)
+	unlockedMap := make(map[string]bool)
+	for _, a := range list {
+		unlockedMap[a.ID] = a.Unlocked
+	}
+	assert.True(t, unlockedMap["first_game"])
+	assert.True(t, unlockedMap["first_win"])
+	assert.True(t, unlockedMap["high_scorer_50"])
+	assert.True(t, unlockedMap["wordsmith_10"])
+	assert.True(t, unlockedMap["giant_word"])
 }
 
 func TestGetPlayerAchievementsHTTP(t *testing.T) {

@@ -24,10 +24,11 @@ type Balda struct {
 	mm  *matchmaking.Queue
 	s   *storage.Balda
 	lb  *leaderboard.Service
+	ach *achievements.Service
 }
 
-func New(lby *lobby.Lobby, mm *matchmaking.Queue, s *storage.Balda, lb *leaderboard.Service) *Balda {
-	return &Balda{lby: lby, mm: mm, s: s, lb: lb}
+func New(lby *lobby.Lobby, mm *matchmaking.Queue, s *storage.Balda, lb *leaderboard.Service, ach *achievements.Service) *Balda {
+	return &Balda{lby: lby, mm: mm, s: s, lb: lb, ach: ach}
 }
 
 func (s *Balda) GameSummary(playerID string) *lobby.GameSummary {
@@ -85,7 +86,7 @@ func (s *Balda) GetPlayerAchievements(ctx context.Context, playerID uuid.UUID) (
 	if err != nil {
 		return nil, fmt.Errorf("get player achievements: %w", err)
 	}
-	return achievements.List(ps.Flags), nil
+	return s.ach.List(ps.Flags), nil
 }
 
 // GetUserForToken returns the player UUID and role needed to mint an access token.
