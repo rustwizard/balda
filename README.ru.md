@@ -167,6 +167,7 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | POST | `/auth/logout` | Отозвать текущий refresh-токен (нужен Bearer) |
 | POST | `/session/ping` | Keepalive — обновляет игровое присутствие (нужен Bearer) |
 | GET | `/player/state/{uid}` | Получить профиль и состояние игрока |
+| GET | `/player/achievements` | Список достижений игрока со статусом разблокировки |
 | GET | `/games` | Список всех активных игр |
 | POST | `/games` | Создать новую игру в ожидании |
 | POST | `/games/{id}/join` | Присоединиться к игре в ожидании |
