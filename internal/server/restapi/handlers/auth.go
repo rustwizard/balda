@@ -78,7 +78,7 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 
 func (h *Handlers) buildActiveGame(uid int64, playerID string) *baldaapi.ActiveGame {
 	rec := h.svc.ActiveGameRecord(playerID)
-	if rec == nil || rec.Status != lobby.GameStatusInProgress {
+	if rec == nil || rec.Status == lobby.GameStatusFinished {
 		return nil
 	}
 
@@ -95,32 +95,60 @@ func (h *Handlers) buildActiveGame(uid int64, playerID string) *baldaapi.ActiveG
 		return nil
 	}
 
-	scores := rec.Game.PlayerScores()
-	players := make([]baldaapi.PlayerGameState, 0, len(scores))
-	for _, s := range scores {
-		pid, err := uuid.Parse(s.UID)
-		if err != nil {
-			continue
+	var players []baldaapi.PlayerGameState
+	if rec.Status == lobby.GameStatusInProgress {
+		scores := rec.Game.PlayerScores()
+		players = make([]baldaapi.PlayerGameState, 0, len(scores))
+		for _, s := range scores {
+			pid, err := uuid.Parse(s.UID)
+			if err != nil {
+				continue
+			}
+			players = append(players, baldaapi.PlayerGameState{
+				UID:        baldaapi.NewOptUUID(pid),
+				Exp:        baldaapi.NewOptInt64(int64(s.Exp)),
+				Rating:     baldaapi.NewOptInt64(int64(s.Rating)),
+				Score:      baldaapi.NewOptInt(s.Score),
+				WordsCount: baldaapi.NewOptInt(s.WordsCount),
+				Words:      s.Words,
+			})
 		}
-		players = append(players, baldaapi.PlayerGameState{
-			UID:        baldaapi.NewOptUUID(pid),
-			Exp:        baldaapi.NewOptInt64(int64(s.Exp)),
-			Rating:     baldaapi.NewOptInt64(int64(s.Rating)),
-			Score:      baldaapi.NewOptInt(s.Score),
-			WordsCount: baldaapi.NewOptInt(s.WordsCount),
-			Words:      s.Words,
-		})
+	} else {
+		players = make([]baldaapi.PlayerGameState, 0, len(rec.Players))
+		for _, p := range rec.Players {
+			pid, err := uuid.Parse(p.ID)
+			if err != nil {
+				continue
+			}
+			players = append(players, baldaapi.PlayerGameState{
+				UID:        baldaapi.NewOptUUID(pid),
+				Exp:        baldaapi.NewOptInt64(int64(p.Exp)),
+				Rating:     baldaapi.NewOptInt64(int64(p.Rating)),
+				Score:      baldaapi.NewOptInt(0),
+				WordsCount: baldaapi.NewOptInt(0),
+				Words:      []string{},
+			})
+		}
 	}
 
-	currentTurnUID, _ := uuid.Parse(rec.Game.CurrentPlayerID())
-
-	return &baldaapi.ActiveGame{
-		GameID:         baldaapi.NewOptUUID(gameID),
-		GameToken:      baldaapi.NewOptString(gameToken),
-		Board:          boardToSlice(rec.Game.BoardSnapshot()),
-		CurrentTurnUID: baldaapi.NewOptUUID(currentTurnUID),
-		MoveNumber:     baldaapi.NewOptInt(rec.Game.MoveNumber()),
-		Status:         baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress),
-		Players:        players,
+	status := baldaapi.GameStatusWaiting
+	if rec.Status == lobby.GameStatusInProgress {
+		status = baldaapi.GameStatusInProgress
 	}
+
+	ag := &baldaapi.ActiveGame{
+		GameID:    baldaapi.NewOptUUID(gameID),
+		GameToken: baldaapi.NewOptString(gameToken),
+		Status:    baldaapi.NewOptGameStatus(status),
+		Players:   players,
+	}
+
+	if rec.Status == lobby.GameStatusInProgress {
+		currentTurnUID, _ := uuid.Parse(rec.Game.CurrentPlayerID())
+		ag.Board = boardToSlice(rec.Game.BoardSnapshot())
+		ag.CurrentTurnUID = baldaapi.NewOptUUID(currentTurnUID)
+		ag.MoveNumber = baldaapi.NewOptInt(rec.Game.MoveNumber())
+	}
+
+	return ag
 }

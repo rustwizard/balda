@@ -1,5 +1,6 @@
 <script lang="ts">
   import { auth, signup, setTokens } from '../lib/api';
+  import { centrifugo } from '../lib/centrifugo';
   import { gameState } from '../stores/game.svelte';
   import type { AuthResponse, SignupResponse } from '../types';
 
@@ -34,7 +35,43 @@
         centrifugoToken: res.centrifugo_token || '',
         lobbyToken: res.lobby_token || '',
       });
-      gameState.setLobby();
+
+      // Restore an active game after reconnect (e.g. page refresh). The backend
+      // returns the game token and snapshot so the player can rejoin without
+      // being stuck in the lobby with a "player already in a game" conflict.
+      const activeGame = 'active_game' in res ? res.active_game : undefined;
+      if (activeGame?.game_id && activeGame.game_token) {
+        centrifugo.subscribe(`game:${activeGame.game_id}`, activeGame.game_token);
+        const playerIds = activeGame.players?.map((p) => p.uid) ?? [];
+        if (activeGame.status === 'waiting') {
+          gameState.setWaiting({
+            id: activeGame.game_id,
+            player_ids: playerIds,
+            status: 'waiting',
+            started_at: 0,
+          });
+        } else {
+          gameState.startGame({
+            id: activeGame.game_id,
+            player_ids: playerIds,
+            status: activeGame.status || 'in_progress',
+            started_at: 0,
+          });
+          if (activeGame.board && activeGame.current_turn_uid) {
+            gameState.applyGameState({
+              type: 'game_state',
+              game_id: activeGame.game_id,
+              board: activeGame.board,
+              current_turn_uid: activeGame.current_turn_uid,
+              players: activeGame.players ?? [],
+              status: activeGame.status || 'in_progress',
+              move_number: activeGame.move_number ?? 0,
+            });
+          }
+        }
+      } else {
+        gameState.setLobby();
+      }
     } catch (err: any) {
       error = err.message || 'Ошибка авторизации';
     } finally {
