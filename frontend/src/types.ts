@@ -43,6 +43,7 @@ export interface AuthResponse extends TokenPair {
     player: Player;
     centrifugo_token?: string;
     lobby_token?: string;
+    active_game?: ActiveGame;
 }
 
 export interface RefreshResponse extends TokenPair {}
@@ -55,6 +56,16 @@ export interface GameSummary {
     players?: LobbyPlayer[];
     status: GameStatus;
     started_at: number;
+}
+
+export interface ActiveGame {
+    game_id: string;
+    game_token?: string;
+    board?: string[][];
+    current_turn_uid?: string;
+    move_number?: number;
+    status?: GameStatus;
+    players?: PlayerGameState[];
 }
 
 export interface CreateGameResponse {
