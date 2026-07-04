@@ -174,6 +174,7 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 | POST | `/auth/logout` | Revoke the current refresh token (Bearer required) |
 | POST | `/session/ping` | Keepalive — refreshes game presence (Bearer required) |
 | GET | `/player/state/{uid}` | Get player profile and state |
+| GET | `/player/achievements` | Get the player's achievement list with unlock status |
 | GET | `/games` | List all currently active games |
 | POST | `/games` | Create a new waiting game |
 | POST | `/games/{id}/join` | Join an existing waiting game |

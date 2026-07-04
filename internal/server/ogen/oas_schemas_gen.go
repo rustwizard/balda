@@ -28,6 +28,135 @@ type AcceptEndGameUnauthorized ErrorResponse
 
 func (*AcceptEndGameUnauthorized) acceptEndGameRes() {}
 
+// Ref: #/components/schemas/Achievement
+type Achievement struct {
+	// Achievement identifier.
+	ID OptAchievementID `json:"id"`
+	// Achievement display name.
+	Name OptString `json:"name"`
+	// Achievement description.
+	Description OptString `json:"description"`
+	// Whether the achievement has been unlocked.
+	Unlocked OptBool `json:"unlocked"`
+}
+
+// GetID returns the value of ID.
+func (s *Achievement) GetID() OptAchievementID {
+	return s.ID
+}
+
+// GetName returns the value of Name.
+func (s *Achievement) GetName() OptString {
+	return s.Name
+}
+
+// GetDescription returns the value of Description.
+func (s *Achievement) GetDescription() OptString {
+	return s.Description
+}
+
+// GetUnlocked returns the value of Unlocked.
+func (s *Achievement) GetUnlocked() OptBool {
+	return s.Unlocked
+}
+
+// SetID sets the value of ID.
+func (s *Achievement) SetID(val OptAchievementID) {
+	s.ID = val
+}
+
+// SetName sets the value of Name.
+func (s *Achievement) SetName(val OptString) {
+	s.Name = val
+}
+
+// SetDescription sets the value of Description.
+func (s *Achievement) SetDescription(val OptString) {
+	s.Description = val
+}
+
+// SetUnlocked sets the value of Unlocked.
+func (s *Achievement) SetUnlocked(val OptBool) {
+	s.Unlocked = val
+}
+
+// Achievement identifier.
+type AchievementID string
+
+const (
+	AchievementIDFirstGame      AchievementID = "first_game"
+	AchievementIDFirstWin       AchievementID = "first_win"
+	AchievementIDHighScorer50   AchievementID = "high_scorer_50"
+	AchievementIDWordsmith10    AchievementID = "wordsmith_10"
+	AchievementIDGiantWord      AchievementID = "giant_word"
+	AchievementIDWinningStreak3 AchievementID = "winning_streak_3"
+	AchievementIDVeteran10      AchievementID = "veteran_10"
+)
+
+// AllValues returns all AchievementID values.
+func (AchievementID) AllValues() []AchievementID {
+	return []AchievementID{
+		AchievementIDFirstGame,
+		AchievementIDFirstWin,
+		AchievementIDHighScorer50,
+		AchievementIDWordsmith10,
+		AchievementIDGiantWord,
+		AchievementIDWinningStreak3,
+		AchievementIDVeteran10,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s AchievementID) MarshalText() ([]byte, error) {
+	switch s {
+	case AchievementIDFirstGame:
+		return []byte(s), nil
+	case AchievementIDFirstWin:
+		return []byte(s), nil
+	case AchievementIDHighScorer50:
+		return []byte(s), nil
+	case AchievementIDWordsmith10:
+		return []byte(s), nil
+	case AchievementIDGiantWord:
+		return []byte(s), nil
+	case AchievementIDWinningStreak3:
+		return []byte(s), nil
+	case AchievementIDVeteran10:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *AchievementID) UnmarshalText(data []byte) error {
+	switch AchievementID(data) {
+	case AchievementIDFirstGame:
+		*s = AchievementIDFirstGame
+		return nil
+	case AchievementIDFirstWin:
+		*s = AchievementIDFirstWin
+		return nil
+	case AchievementIDHighScorer50:
+		*s = AchievementIDHighScorer50
+		return nil
+	case AchievementIDWordsmith10:
+		*s = AchievementIDWordsmith10
+		return nil
+	case AchievementIDGiantWord:
+		*s = AchievementIDGiantWord
+		return nil
+	case AchievementIDWinningStreak3:
+		*s = AchievementIDWinningStreak3
+		return nil
+	case AchievementIDVeteran10:
+		*s = AchievementIDVeteran10
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
 // Ref: #/components/schemas/ActiveGame
 type ActiveGame struct {
 	// ID of the active game.
@@ -589,6 +718,14 @@ func (s *GetLeaderboardSort) UnmarshalText(data []byte) error {
 	}
 }
 
+type GetPlayerAchievementsInternalServerError ErrorResponse
+
+func (*GetPlayerAchievementsInternalServerError) getPlayerAchievementsRes() {}
+
+type GetPlayerAchievementsUnauthorized ErrorResponse
+
+func (*GetPlayerAchievementsUnauthorized) getPlayerAchievementsRes() {}
+
 type JoinGameConflict ErrorResponse
 
 func (*JoinGameConflict) joinGameRes() {}
@@ -1091,6 +1228,52 @@ func (s *MoveResponse) SetMoveNumber(val OptInt) {
 
 func (*MoveResponse) moveGameRes() {}
 
+// NewOptAchievementID returns new OptAchievementID with value set to v.
+func NewOptAchievementID(v AchievementID) OptAchievementID {
+	return OptAchievementID{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptAchievementID is optional AchievementID.
+type OptAchievementID struct {
+	Value AchievementID
+	Set   bool
+}
+
+// IsSet returns true if OptAchievementID was set.
+func (o OptAchievementID) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptAchievementID) Reset() {
+	var v AchievementID
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptAchievementID) SetTo(v AchievementID) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptAchievementID) Get() (v AchievementID, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptAchievementID) Or(d AchievementID) AchievementID {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
 // NewOptActiveGame returns new OptActiveGame with value set to v.
 func NewOptActiveGame(v ActiveGame) OptActiveGame {
 	return OptActiveGame{
@@ -1131,6 +1314,52 @@ func (o OptActiveGame) Get() (v ActiveGame, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptActiveGame) Or(d ActiveGame) ActiveGame {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptBool returns new OptBool with value set to v.
+func NewOptBool(v bool) OptBool {
+	return OptBool{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptBool is optional bool.
+type OptBool struct {
+	Value bool
+	Set   bool
+}
+
+// IsSet returns true if OptBool was set.
+func (o OptBool) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptBool) Reset() {
+	var v bool
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptBool) SetTo(v bool) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptBool) Get() (v bool, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptBool) Or(d bool) bool {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -1734,6 +1963,24 @@ func (s *Player) SetExp(val OptInt64) {
 func (s *Player) SetRating(val OptInt64) {
 	s.Rating = val
 }
+
+// Ref: #/components/schemas/PlayerAchievementsResponse
+type PlayerAchievementsResponse struct {
+	// Full list of achievements with unlocked status.
+	Achievements []Achievement `json:"achievements"`
+}
+
+// GetAchievements returns the value of Achievements.
+func (s *PlayerAchievementsResponse) GetAchievements() []Achievement {
+	return s.Achievements
+}
+
+// SetAchievements sets the value of Achievements.
+func (s *PlayerAchievementsResponse) SetAchievements(val []Achievement) {
+	s.Achievements = val
+}
+
+func (*PlayerAchievementsResponse) getPlayerAchievementsRes() {}
 
 // Ref: #/components/schemas/PlayerGameState
 type PlayerGameState struct {

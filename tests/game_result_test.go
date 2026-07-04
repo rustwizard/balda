@@ -73,8 +73,8 @@ func seedPlayerWithRating(ctx context.Context, t *testing.T, s *storage.Balda, e
 	require.NoError(t, err)
 
 	_, err = s.Pool().Exec(ctx,
-		`INSERT INTO player_state (user_id, player_id, exp, rating, flags, lives) VALUES ($1, $2, 0, $3, 0, 5)`,
-		userID, playerID, rating,
+		`INSERT INTO player_state (user_id, player_id, nickname, exp, rating, flags, lives) VALUES ($1, $2, $3, 0, $4, 0, 5)`,
+		userID, playerID, email, rating,
 	)
 	require.NoError(t, err)
 	return playerID

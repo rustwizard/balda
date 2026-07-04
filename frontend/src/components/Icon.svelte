@@ -1,12 +1,12 @@
 <script lang="ts">
-  type IconName = 'timer' | 'star' | 'skip' | 'send' | 'user' | 'crown' | 'volume' | 'volume-off';
-  
+  type IconName = 'timer' | 'star' | 'skip' | 'send' | 'user' | 'crown' | 'volume' | 'volume-off' | 'trophy';
+
   interface Props {
     name: IconName;
     size?: number;
     class?: string;
   }
-  
+
   let { name, size = 20, class: className = '' }: Props = $props();
 </script>
 
@@ -34,5 +34,12 @@
     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
     <line x1="23" y1="9" x2="17" y2="15"/>
     <line x1="17" y1="9" x2="23" y2="15"/>
+  {:else if name === 'trophy'}
+    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
+    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
+    <path d="M4 22h16"/>
+    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/>
+    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/>
+    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
   {/if}
 </svg>

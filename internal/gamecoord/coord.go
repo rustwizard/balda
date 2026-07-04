@@ -10,6 +10,7 @@ import (
 	"context"
 	"log/slog"
 	"time"
+	"unicode/utf8"
 
 	"github.com/rustwizard/balda/internal/centrifugo"
 	"github.com/rustwizard/balda/internal/game"
@@ -208,6 +209,16 @@ func (c *Coordinator) publishEndProposalResult(accepted bool, remainingMs int64)
 	}
 }
 
+func bestWordLength(words []string) int {
+	maxLen := 0
+	for _, w := range words {
+		if n := utf8.RuneCountInString(w); n > maxLen {
+			maxLen = n
+		}
+	}
+	return maxLen
+}
+
 func (c *Coordinator) dispatchGameResult(winnerUID string, reason storage.FinishReason, scores []game.PlayerState) {
 	if c.onGameOver == nil {
 		return
@@ -217,10 +228,11 @@ func (c *Coordinator) dispatchGameResult(winnerUID string, reason storage.Finish
 	for i, s := range scores {
 		isWinner := s.UID == winnerUID
 		players[i] = storage.PlayerResult{
-			PlayerID:   s.UID,
-			Score:      s.Score,
-			WordsCount: s.WordsCount,
-			ExpGained:  storage.ExpGained(s.Score, isWinner, isDraw),
+			PlayerID:       s.UID,
+			Score:          s.Score,
+			WordsCount:     s.WordsCount,
+			ExpGained:      storage.ExpGained(s.Score, isWinner, isDraw),
+			BestWordLength: bestWordLength(s.Words),
 		}
 	}
 	result := storage.GameResult{

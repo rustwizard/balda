@@ -21,6 +21,10 @@ type GetLeaderboardRes interface {
 	getLeaderboardRes()
 }
 
+type GetPlayerAchievementsRes interface {
+	getPlayerAchievementsRes()
+}
+
 type GetPlayerStateUIDRes interface {
 	getPlayerStateUIDRes()
 }

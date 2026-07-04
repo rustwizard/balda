@@ -41,6 +41,13 @@ type Handler interface {
 	//
 	// GET /leaderboard
 	GetLeaderboard(ctx context.Context, params GetLeaderboardParams) (GetLeaderboardRes, error)
+	// GetPlayerAchievements implements getPlayerAchievements operation.
+	//
+	// Returns the full list of achievements with their unlocked status for the currently authenticated
+	// player.
+	//
+	// GET /player/achievements
+	GetPlayerAchievements(ctx context.Context) (GetPlayerAchievementsRes, error)
 	// GetPlayerStateUID implements getPlayerStateUID operation.
 	//
 	// Get user state.

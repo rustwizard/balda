@@ -505,6 +505,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /player/achievements:
+    get:
+      operationId: getPlayerAchievements
+      summary: Get player achievements
+      description: |
+        Returns the full list of achievements with their unlocked status
+        for the currently authenticated player.
+      tags:
+        - Player
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Player achievements
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerAchievementsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /player/state/{uid}:
     get:
       operationId: getPlayerStateUID
@@ -1099,6 +1122,62 @@ components:
           description: Remaining turn time in milliseconds (only present when accepted=false)
           type: integer
           format: int64
+
+    EvAchievementUnlocked:
+      type: object
+      description: Published to game:{id} when a player unlocks a new achievement
+      properties:
+        type:
+          type: string
+          enum: [achievement_unlocked]
+        game_id:
+          type: string
+          format: uuid
+        player_uid:
+          description: ID of the player who unlocked the achievement
+          type: string
+          format: uuid
+        achievement_id:
+          description: Achievement identifier
+          type: string
+        name:
+          description: Display name of the unlocked achievement
+          type: string
+
+    PlayerAchievementsResponse:
+      type: object
+      properties:
+        achievements:
+          description: Full list of achievements with unlocked status
+          type: array
+          items:
+            $ref: "#/components/schemas/Achievement"
+
+    Achievement:
+      type: object
+      properties:
+        id:
+          description: Achievement identifier
+          type: string
+          enum:
+            [
+              first_game,
+              first_win,
+              high_scorer_50,
+              wordsmith_10,
+              giant_word,
+              winning_streak_3,
+              veteran_10,
+            ]
+        name:
+          description: Achievement display name
+          type: string
+        description:
+          description: Achievement description
+          type: string
+        unlocked:
+          description: Whether the achievement has been unlocked
+          type: boolean
 
     PlayerState:
       type: object

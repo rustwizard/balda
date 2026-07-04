@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/rustwizard/balda/internal/achievements"
 	"github.com/rustwizard/balda/internal/game"
 	"github.com/rustwizard/balda/internal/leaderboard"
 	"github.com/rustwizard/balda/internal/lobby"
@@ -23,10 +24,11 @@ type Balda struct {
 	mm  *matchmaking.Queue
 	s   *storage.Balda
 	lb  *leaderboard.Service
+	ach *achievements.Service
 }
 
-func New(lby *lobby.Lobby, mm *matchmaking.Queue, s *storage.Balda, lb *leaderboard.Service) *Balda {
-	return &Balda{lby: lby, mm: mm, s: s, lb: lb}
+func New(lby *lobby.Lobby, mm *matchmaking.Queue, s *storage.Balda, lb *leaderboard.Service, ach *achievements.Service) *Balda {
+	return &Balda{lby: lby, mm: mm, s: s, lb: lb, ach: ach}
 }
 
 func (s *Balda) GameSummary(playerID string) *lobby.GameSummary {
@@ -76,6 +78,15 @@ func (s *Balda) GetPlayerState(ctx context.Context, playerID uuid.UUID) (storage
 // GetLeaderboard returns the leaderboard for the requested period and sort order.
 func (s *Balda) GetLeaderboard(ctx context.Context, req leaderboard.Request) ([]leaderboard.Entry, time.Time, error) {
 	return s.lb.GetLeaderboard(ctx, req)
+}
+
+// GetPlayerAchievements returns the full list of achievements for the player.
+func (s *Balda) GetPlayerAchievements(ctx context.Context, playerID uuid.UUID) ([]achievements.Achievement, error) {
+	ps, err := s.s.GetPlayerState(ctx, playerID)
+	if err != nil {
+		return nil, fmt.Errorf("get player achievements: %w", err)
+	}
+	return s.ach.List(ps.Flags), nil
 }
 
 // GetUserForToken returns the player UUID and role needed to mint an access token.

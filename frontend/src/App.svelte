@@ -3,7 +3,9 @@
   import Lobby from './components/Lobby.svelte';
   import WaitingScreen from './components/WaitingScreen.svelte';
   import GameScreen from './components/GameScreen.svelte';
+  import AchievementToastStack from './components/AchievementToastStack.svelte';
   import { gameState } from './stores/game.svelte';
+  import { achievements } from './stores/achievements.svelte';
   import { centrifugo } from './lib/centrifugo';
   import { ping, setOnAuthExpired } from './lib/api';
   import type { CentrifugoEvent } from './types';
@@ -13,6 +15,7 @@
     centrifugo.disconnect();
     connected = false;
     gameState.resetToAuth();
+    achievements.reset();
   });
 
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -56,6 +59,14 @@
     }
   });
 
+  // Reload achievements each time the player returns to the lobby so the UI
+  // reflects the latest unlocks without waiting for a new event.
+  $effect(() => {
+    if (gameState.phase === 'lobby') {
+      achievements.load();
+    }
+  });
+
   // Handle Centrifugo events
   centrifugo.onEvent((ev: CentrifugoEvent) => {
     console.log('[app] centrifugo event', ev.type, ev);
@@ -95,6 +106,9 @@
         break;
       case 'game_created':
         break;
+      case 'achievement_unlocked':
+        achievements.handleUnlock(ev, gameState.playerUid);
+        break;
     }
   });
 </script>
@@ -110,3 +124,5 @@
     <GameScreen />
   {/if}
 </main>
+
+<AchievementToastStack />
