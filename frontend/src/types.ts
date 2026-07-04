@@ -182,6 +182,34 @@ export interface EvEndProposal {
     proposer_uid: string;
 }
 
+export type AchievementID =
+    | "first_game"
+    | "first_win"
+    | "high_scorer_50"
+    | "wordsmith_10"
+    | "giant_word"
+    | "winning_streak_3"
+    | "veteran_10";
+
+export interface Achievement {
+    id: AchievementID;
+    name: string;
+    description: string;
+    unlocked: boolean;
+}
+
+export interface PlayerAchievementsResponse {
+    achievements: Achievement[];
+}
+
+export interface EvAchievementUnlocked {
+    type: "achievement_unlocked";
+    game_id: string;
+    player_uid: string;
+    achievement_id: AchievementID;
+    name: string;
+}
+
 export type CentrifugoEvent =
     | EvGameState
     | EvGameOver
@@ -191,4 +219,5 @@ export type CentrifugoEvent =
     | EvSkipWarn
     | EvLobbyUpdate
     | EvEndProposalResult
-    | EvEndProposal;
+    | EvEndProposal
+    | EvAchievementUnlocked;

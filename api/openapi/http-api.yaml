@@ -1123,6 +1123,27 @@ components:
           type: integer
           format: int64
 
+    EvAchievementUnlocked:
+      type: object
+      description: Published to game:{id} when a player unlocks a new achievement
+      properties:
+        type:
+          type: string
+          enum: [achievement_unlocked]
+        game_id:
+          type: string
+          format: uuid
+        player_uid:
+          description: ID of the player who unlocked the achievement
+          type: string
+          format: uuid
+        achievement_id:
+          description: Achievement identifier
+          type: string
+        name:
+          description: Display name of the unlocked achievement
+          type: string
+
     PlayerAchievementsResponse:
       type: object
       properties:

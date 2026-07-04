@@ -2,10 +2,13 @@
   import { createGame, createGameWithBot, joinGame, listGames } from '../lib/api';
   import { centrifugo } from '../lib/centrifugo';
   import { gameState } from '../stores/game.svelte';
+  import { achievements } from '../stores/achievements.svelte';
+  import AchievementsModal from './AchievementsModal.svelte';
 
   let subscribed = $state(false);
   let error = $state('');
   let loading = $state(false);
+  let showAchievements = $state(false);
 
   async function create() {
     loading = true;
@@ -99,10 +102,19 @@
 <div class="mx-auto w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
   <div class="mb-4 flex items-center justify-between">
     <h2 class="text-center text-2xl font-bold text-stone-800">Лобби</h2>
-    <div class="text-sm font-medium text-stone-600">
-      {gameState.nickname}
-      <span class="ml-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{gameState.exp} XP</span>
-      <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">{gameState.rating} ELO</span>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        onclick={() => (showAchievements = true)}
+        class="rounded-lg bg-yellow-100 px-2 py-1 text-sm font-semibold text-yellow-700 hover:bg-yellow-200"
+      >
+        🏆 {achievements.unlockedCount}/{achievements.totalCount}
+      </button>
+      <div class="text-sm font-medium text-stone-600">
+        {gameState.nickname}
+        <span class="ml-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{gameState.exp} XP</span>
+        <span class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">{gameState.rating} ELO</span>
+      </div>
     </div>
   </div>
 
@@ -154,3 +166,7 @@
     {/if}
   </div>
 </div>
+
+{#if showAchievements}
+  <AchievementsModal onClose={() => (showAchievements = false)} />
+{/if}
