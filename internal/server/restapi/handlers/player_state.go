@@ -6,15 +6,32 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/rustwizard/balda/internal/auth"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 )
 
 // GetPlayerStateUID implements baldaapi.Handler.
 func (h *Handlers) GetPlayerStateUID(ctx context.Context, params baldaapi.GetPlayerStateUIDParams) (baldaapi.GetPlayerStateUIDRes, error) {
+	claims, ok := auth.FromContext(ctx)
+	if !ok {
+		return &baldaapi.GetPlayerStateUIDUnauthorized{
+			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
+			Message: baldaapi.NewOptString("unauthorized"),
+			Type:    baldaapi.NewOptString("Unauthorized"),
+		}, nil
+	}
+	if claims.PlayerID != params.UID {
+		return &baldaapi.GetPlayerStateUIDForbidden{
+			Status:  baldaapi.NewOptInt(http.StatusForbidden),
+			Message: baldaapi.NewOptString("cannot view another player's state"),
+			Type:    baldaapi.NewOptString("Forbidden"),
+		}, nil
+	}
+
 	ps, err := h.svc.GetPlayerState(ctx, params.UID)
 	if err != nil {
 		slog.Error("player state: fetch from db", slog.Any("error", err))
-		return &baldaapi.ErrorResponse{
+		return &baldaapi.GetPlayerStateUIDBadRequest{
 			Message: baldaapi.NewOptString(""),
 			Status:  baldaapi.NewOptInt(http.StatusBadRequest),
 			Type:    baldaapi.NewOptString("PlayerState Error"),
@@ -36,7 +53,7 @@ func (h *Handlers) GetPlayerStateUID(ctx context.Context, params baldaapi.GetPla
 	gameID, err := uuid.Parse(gs.ID)
 	if err != nil {
 		slog.Error("player state: parse game id", slog.Any("error", err))
-		return &baldaapi.ErrorResponse{
+		return &baldaapi.GetPlayerStateUIDBadRequest{
 			Message: baldaapi.NewOptString(""),
 			Status:  baldaapi.NewOptInt(http.StatusBadRequest),
 			Type:    baldaapi.NewOptString("PlayerState Error"),

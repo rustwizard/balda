@@ -38,6 +38,7 @@ var operationRolesBearerAuth = map[string][]string{
 	CreateGameOperation:            []string{},
 	CreateGameWithBotOperation:     []string{},
 	GetPlayerAchievementsOperation: []string{},
+	GetPlayerStateUIDOperation:     []string{},
 	JoinGameOperation:              []string{},
 	ListGamesOperation:             []string{},
 	LogoutOperation:                []string{},

@@ -532,6 +532,8 @@ paths:
     get:
       operationId: getPlayerStateUID
       summary: Get user state
+      security:
+        - BearerAuth: []
       parameters:
         - name: uid
           in: path
@@ -554,6 +556,10 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
 components:
   securitySchemes:
