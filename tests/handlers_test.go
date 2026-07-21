@@ -406,18 +406,7 @@ func TestGetUsersStateUIDHandler(t *testing.T) {
 	h, cleanup := setupHandlers(t)
 	defer cleanup()
 
-	ctx := context.Background()
-
-	// Seed a user and capture their UID.
-	signupRes, err := h.Signup(ctx, &baldaapi.SignupRequest{
-		Firstname: "State",
-		Lastname:  "User",
-		Email:     "state.user@example.org",
-		Password:  "pass123",
-	})
-	require.NoError(t, err)
-
-	uid := signupRes.(*baldaapi.SignupResponse).User.Value.UID.Value
+	ctx, uid := signupCtx(t, h, "state.user@example.org")
 
 	t.Run("existing user returns state with initial values", func(t *testing.T) {
 		res, err := h.GetPlayerStateUID(ctx, baldaapi.GetPlayerStateUIDParams{UID: uid})
@@ -435,13 +424,33 @@ func TestGetUsersStateUIDHandler(t *testing.T) {
 	})
 
 	t.Run("non-existent user returns 400", func(t *testing.T) {
-		uid := uuid.New()
-		res, err := h.GetPlayerStateUID(ctx, baldaapi.GetPlayerStateUIDParams{UID: uid})
+		fakeUID := uuid.New()
+		fakeCtx := auth.WithClaims(context.Background(), &auth.Claims{PlayerID: fakeUID})
+		res, err := h.GetPlayerStateUID(fakeCtx, baldaapi.GetPlayerStateUIDParams{UID: fakeUID})
 		require.NoError(t, err)
 
-		errResp, isErr := res.(*baldaapi.ErrorResponse)
-		require.True(t, isErr, "expected *ErrorResponse, got %T", res)
+		errResp, isErr := res.(*baldaapi.GetPlayerStateUIDBadRequest)
+		require.True(t, isErr, "expected *GetPlayerStateUIDBadRequest, got %T", res)
 		assert.Equal(t, http.StatusBadRequest, errResp.Status.Value)
+	})
+
+	t.Run("unauthenticated request returns 401", func(t *testing.T) {
+		res, err := h.GetPlayerStateUID(context.Background(), baldaapi.GetPlayerStateUIDParams{UID: uid})
+		require.NoError(t, err)
+
+		unauth, isUnauthorized := res.(*baldaapi.GetPlayerStateUIDUnauthorized)
+		require.True(t, isUnauthorized, "expected *GetPlayerStateUIDUnauthorized, got %T", res)
+		assert.Equal(t, http.StatusUnauthorized, unauth.Status.Value)
+	})
+
+	t.Run("another player's state returns 403", func(t *testing.T) {
+		_, otherUID := signupCtx(t, h, "state.other@example.org")
+		res, err := h.GetPlayerStateUID(ctx, baldaapi.GetPlayerStateUIDParams{UID: otherUID})
+		require.NoError(t, err)
+
+		forbidden, isForbidden := res.(*baldaapi.GetPlayerStateUIDForbidden)
+		require.True(t, isForbidden, "expected *GetPlayerStateUIDForbidden, got %T", res)
+		assert.Equal(t, http.StatusForbidden, forbidden.Status.Value)
 	})
 }
 
@@ -462,30 +471,19 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 	ctx := context.Background()
 
 	// Seed two users so we can form a valid game.
-	res1, err := h.Signup(ctx, &baldaapi.SignupRequest{
-		Firstname: "Player", Lastname: "One",
-		Email: "gps.one@example.org", Password: "pass",
-	})
-	require.NoError(t, err)
-	uid1 := res1.(*baldaapi.SignupResponse).User.Value.UID.Value
-
-	res2, err := h.Signup(ctx, &baldaapi.SignupRequest{
-		Firstname: "Player", Lastname: "Two",
-		Email: "gps.two@example.org", Password: "pass",
-	})
-	require.NoError(t, err)
-	uid2 := res2.(*baldaapi.SignupResponse).User.Value.UID.Value
+	ctx1, uid1 := signupCtx(t, h, "gps.one@example.org")
+	ctx2, uid2 := signupCtx(t, h, "gps.two@example.org")
 
 	// Start a game in the lobby so both players are in an active game.
 	players := []*game.Player{
 		{ID: uid1.String(), Exp: 100, Type: game.PlayerTypeHuman},
 		{ID: uid2.String(), Exp: 200, Type: game.PlayerTypeHuman},
 	}
-	_, err = lby.StartGame(ctx, players, &game.NoopNotifier{})
+	_, err := lby.StartGame(ctx, players, &game.NoopNotifier{})
 	require.NoError(t, err)
 
 	t.Run("player in active game has GameID set", func(t *testing.T) {
-		res, err := h.GetPlayerStateUID(ctx, baldaapi.GetPlayerStateUIDParams{UID: uid1})
+		res, err := h.GetPlayerStateUID(ctx1, baldaapi.GetPlayerStateUIDParams{UID: uid1})
 		require.NoError(t, err)
 
 		state, isOK := res.(*baldaapi.PlayerState)
@@ -497,7 +495,7 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 	})
 
 	t.Run("second player in same game also has GameID set", func(t *testing.T) {
-		res, err := h.GetPlayerStateUID(ctx, baldaapi.GetPlayerStateUIDParams{UID: uid2})
+		res, err := h.GetPlayerStateUID(ctx2, baldaapi.GetPlayerStateUIDParams{UID: uid2})
 		require.NoError(t, err)
 
 		state, isOK := res.(*baldaapi.PlayerState)
@@ -507,9 +505,9 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 	})
 
 	t.Run("both players share the same GameID", func(t *testing.T) {
-		res1, err := h.GetPlayerStateUID(ctx, baldaapi.GetPlayerStateUIDParams{UID: uid1})
+		res1, err := h.GetPlayerStateUID(ctx1, baldaapi.GetPlayerStateUIDParams{UID: uid1})
 		require.NoError(t, err)
-		res2, err := h.GetPlayerStateUID(ctx, baldaapi.GetPlayerStateUIDParams{UID: uid2})
+		res2, err := h.GetPlayerStateUID(ctx2, baldaapi.GetPlayerStateUIDParams{UID: uid2})
 		require.NoError(t, err)
 
 		state1 := res1.(*baldaapi.PlayerState)
@@ -519,14 +517,9 @@ func TestGetPlayerStateUID_GameID(t *testing.T) {
 	})
 
 	t.Run("player not in any game has no GameID", func(t *testing.T) {
-		res3, err := h.Signup(ctx, &baldaapi.SignupRequest{
-			Firstname: "Player", Lastname: "Three",
-			Email: "gps.three@example.org", Password: "pass",
-		})
-		require.NoError(t, err)
-		uid3 := res3.(*baldaapi.SignupResponse).User.Value.UID.Value
+		ctx3, uid3 := signupCtx(t, h, "gps.three@example.org")
 
-		res, err := h.GetPlayerStateUID(ctx, baldaapi.GetPlayerStateUIDParams{UID: uid3})
+		res, err := h.GetPlayerStateUID(ctx3, baldaapi.GetPlayerStateUIDParams{UID: uid3})
 		require.NoError(t, err)
 
 		state, isOK := res.(*baldaapi.PlayerState)

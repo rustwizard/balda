@@ -506,14 +506,13 @@ func (s *ErrorResponse) SetType(val OptString) {
 	s.Type = val
 }
 
-func (*ErrorResponse) authRes()              {}
-func (*ErrorResponse) createGameRes()        {}
-func (*ErrorResponse) getPlayerStateUIDRes() {}
-func (*ErrorResponse) listGamesRes()         {}
-func (*ErrorResponse) logoutRes()            {}
-func (*ErrorResponse) pingRes()              {}
-func (*ErrorResponse) refreshTokenRes()      {}
-func (*ErrorResponse) signupRes()            {}
+func (*ErrorResponse) authRes()         {}
+func (*ErrorResponse) createGameRes()   {}
+func (*ErrorResponse) listGamesRes()    {}
+func (*ErrorResponse) logoutRes()       {}
+func (*ErrorResponse) pingRes()         {}
+func (*ErrorResponse) refreshTokenRes() {}
+func (*ErrorResponse) signupRes()       {}
 
 // Current state of the game.
 // Ref: #/components/schemas/GameStatus
@@ -725,6 +724,18 @@ func (*GetPlayerAchievementsInternalServerError) getPlayerAchievementsRes() {}
 type GetPlayerAchievementsUnauthorized ErrorResponse
 
 func (*GetPlayerAchievementsUnauthorized) getPlayerAchievementsRes() {}
+
+type GetPlayerStateUIDBadRequest ErrorResponse
+
+func (*GetPlayerStateUIDBadRequest) getPlayerStateUIDRes() {}
+
+type GetPlayerStateUIDForbidden ErrorResponse
+
+func (*GetPlayerStateUIDForbidden) getPlayerStateUIDRes() {}
+
+type GetPlayerStateUIDUnauthorized ErrorResponse
+
+func (*GetPlayerStateUIDUnauthorized) getPlayerStateUIDRes() {}
 
 type JoinGameConflict ErrorResponse
 
