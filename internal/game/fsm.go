@@ -82,27 +82,28 @@ const (
 └─────────────────────┴────────────────────┴─────────────────────┘
 */
 
-// transition table: (state, event) -> (nextState, action)
+// transition table: (state, event) -> action. The action runs under g.mu and
+// returns the next state, so a state-dependent decision (e.g. kick only after
+// the third consecutive skip) is committed atomically with the action itself.
 type transition struct {
-	next   GameState
-	action func(g *Game)
+	action func(g *Game) GameState
 }
 
 var fsmTable = map[GameState]map[TurnEvent]transition{
 	StateWaitingForMove: {
-		EventMoveSubmitted: {StateWaitingForMove, (*Game).onMoveAccepted},
-		EventTurnSkipped:   {StateWaitingForMove, (*Game).onSkip},
-		EventTurnTimeout:   {StatePlayerTimedOut, (*Game).onTurnTimeout},
-		EventKick:          {StateGameOver, (*Game).onKick},
-		EventGameFinished:  {StateGameOver, (*Game).onGameFinished},
-		EventEndProposed:   {StateEndProposed, (*Game).onEndProposed},
+		EventMoveSubmitted: {(*Game).onMoveAccepted},
+		EventTurnSkipped:   {(*Game).onSkip},
+		EventTurnTimeout:   {(*Game).onTurnTimeout},
+		EventKick:          {(*Game).onKick},
+		EventGameFinished:  {(*Game).onGameFinished},
+		EventEndProposed:   {(*Game).onEndProposed},
 	},
 	StatePlayerTimedOut: {
-		EventAckTimeout: {StateWaitingForMove, (*Game).onTimeoutAck},
-		EventKick:       {StateGameOver, (*Game).onKick},
+		EventAckTimeout: {(*Game).onTimeoutAck},
+		EventKick:       {(*Game).onKick},
 	},
 	StateEndProposed: {
-		EventEndAccepted: {StateGameOver, (*Game).onEndAccepted},
-		EventEndRejected: {StateWaitingForMove, (*Game).onEndRejected},
+		EventEndAccepted: {(*Game).onEndAccepted},
+		EventEndRejected: {(*Game).onEndRejected},
 	},
 }

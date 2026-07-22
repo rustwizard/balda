@@ -169,11 +169,17 @@ func NewGame(players []*Player, n Notifier, opts ...Option) (*Game, error) {
 }
 
 func (g *Game) Run(ctx context.Context) {
+	g.mu.Lock()
 	g.startTurn()
+	g.mu.Unlock()
 	for {
 		select {
 		case <-ctx.Done():
 			g.shutdown()
+			return
+		case <-g.done:
+			// shutdown was triggered outside Run (e.g. a synchronous
+			// transition to StateGameOver in SubmitWord/Skip/AcceptEnd).
 			return
 		case ev, ok := <-g.eventCh:
 			if !ok {
@@ -192,6 +198,10 @@ func (g *Game) Run(ctx context.Context) {
 	}
 }
 
+// dispatch applies the transition for ev in the current state. The action
+// returns the next state; callers hold g.mu, so validation and the state
+// transition are atomic — an action can never be validated against a stale
+// state and then applied to a changed game.
 func (g *Game) dispatch(ev TurnEvent) {
 	t, ok := fsmTable[g.state][ev]
 	if !ok {
@@ -201,22 +211,22 @@ func (g *Game) dispatch(ev TurnEvent) {
 		)
 		return
 	}
-	t.action(g)      // action runs first; may queue follow-up events
-	g.state = t.next // then commit the state
+	g.state = t.action(g)
 }
 
 // --- WaitingForMove actions ---
 
-func (g *Game) onMoveAccepted() {
+func (g *Game) onMoveAccepted() GameState {
 	p := g.currentPlayer()
 	p.ConsecutiveTimeouts = 0
 	p.ConsecutiveSkips = 0
 	g.consecutiveSkipsTotal = 0
 	g.cancelTimer()
 	g.advanceTurn()
+	return StateWaitingForMove
 }
 
-func (g *Game) onSkip() {
+func (g *Game) onSkip() GameState {
 	p := g.currentPlayer()
 	p.ConsecutiveTimeouts = 0
 	p.ConsecutiveSkips++
@@ -225,17 +235,18 @@ func (g *Game) onSkip() {
 	g.notifier.NotifySkip(p.ID, p.ConsecutiveSkips, willEnd)
 	g.cancelTimer()
 	if willEnd {
-		g.eventCh <- EventKick
-		return
+		// Kick inline: queueing EventKick would let the kick target change
+		// (e.g. via a move squeezed in before the event is processed).
+		return g.onKick()
 	}
 	if g.consecutiveSkipsTotal >= len(g.players) {
-		g.eventCh <- EventGameFinished
-		return
+		return g.onGameFinished()
 	}
 	g.advanceTurn()
+	return StateWaitingForMove
 }
 
-func (g *Game) onTurnTimeout() {
+func (g *Game) onTurnTimeout() GameState {
 	p := g.currentPlayer()
 	p.ConsecutiveTimeouts++
 
@@ -245,34 +256,36 @@ func (g *Game) onTurnTimeout() {
 	g.notifier.NotifyTimeout(p.ID, p.ConsecutiveTimeouts, willKick)
 
 	if willKick {
-		// Auto-queue the kick; coordinator can also send it explicitly.
-		// Sending into buffered channel from within the run loop is safe.
-		g.eventCh <- EventKick
+		// Kick inline, while the timed-out player is still the current one.
+		return g.onKick()
 	}
 	// If not kicking, we wait for an external EventAckTimeout before advancing.
+	return StatePlayerTimedOut
 }
 
 // --- PlayerTimedOut actions ---
 
-func (g *Game) onTimeoutAck() {
+func (g *Game) onTimeoutAck() GameState {
 	// Player acknowledged the timeout notification; resume play.
 	g.advanceTurn()
+	return StateWaitingForMove
 }
 
-func (g *Game) onKick() {
+func (g *Game) onKick() GameState {
 	p := g.currentPlayer()
 	p.Kicked = true
 	g.notifier.NotifyKick(p.ID)
-	// StateGameOver committed by dispatch; shutdown follows in Run.
+	return StateGameOver
 }
 
-func (g *Game) onGameFinished() {
+func (g *Game) onGameFinished() GameState {
 	g.notifier.NotifyGameFinished()
+	return StateGameOver
 }
 
 // --- EndProposed actions ---
 
-func (g *Game) onEndProposed() {
+func (g *Game) onEndProposed() GameState {
 	g.cancelTimer()
 	elapsed := time.Since(g.turn.StartedAt)
 	d := g.turnDuration
@@ -287,13 +300,15 @@ func (g *Game) onEndProposed() {
 	}
 	g.pausedTurnRemaining = remaining
 	g.notifier.NotifyEndProposed(g.currentPlayer().ID)
+	return StateEndProposed
 }
 
-func (g *Game) onEndAccepted() {
+func (g *Game) onEndAccepted() GameState {
 	g.notifier.NotifyEndAccepted()
+	return StateGameOver
 }
 
-func (g *Game) onEndRejected() {
+func (g *Game) onEndRejected() GameState {
 	remaining := g.pausedTurnRemaining
 	g.pausedTurnRemaining = 0
 	p := g.currentPlayer()
@@ -308,6 +323,7 @@ func (g *Game) onEndRejected() {
 		}),
 	}
 	g.notifier.NotifyEndRejected(remaining)
+	return StateWaitingForMove
 }
 
 func (g *Game) currentPlayer() *Player { return g.players[g.current] }
@@ -351,7 +367,9 @@ func (g *Game) cancelTimer() {
 // board and records the word formed by the given sequence of board letters.
 // The sequence must include the new letter, be connected (adjacent cells),
 // be present in the dictionary, and not have been played before.
-// On success the turn passes to the next player.
+// The turn passes to the next player synchronously, before SubmitWord
+// returns: validation and the state transition are atomic under g.mu, so a
+// concurrent second move is rejected with ErrNotYourTurn.
 func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) error {
 	g.mu.Lock()
 
@@ -416,16 +434,15 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 	p.Words = append(p.Words, wordStr)
 	p.Score += len(word)
 
-	boardFull := g.board.IsFull()
-	g.mu.Unlock()
-
 	ev := EventMoveSubmitted
-	if boardFull {
+	if g.board.IsFull() {
 		ev = EventGameFinished
 	}
-	select {
-	case g.eventCh <- ev:
-	case <-g.done:
+	g.dispatch(ev)
+	terminal := g.state == StateGameOver
+	g.mu.Unlock()
+	if terminal {
+		g.shutdown()
 	}
 	return nil
 }
@@ -541,6 +558,9 @@ func (g *Game) MoveNumber() int {
 }
 
 // Skip signals that playerID passes their turn without placing a letter.
+// The transition is applied synchronously: when Skip returns, the turn has
+// already passed (or the game has ended), so a concurrent Skip or move by the
+// same player is rejected.
 func (g *Game) Skip(playerID string) error {
 	g.mu.Lock()
 	if g.state != StateWaitingForMove {
@@ -551,10 +571,11 @@ func (g *Game) Skip(playerID string) error {
 		g.mu.Unlock()
 		return ErrNotYourTurn
 	}
+	g.dispatch(EventTurnSkipped)
+	terminal := g.state == StateGameOver
 	g.mu.Unlock()
-	select {
-	case g.eventCh <- EventTurnSkipped:
-	case <-g.done:
+	if terminal {
+		g.shutdown()
 	}
 	return nil
 }
@@ -587,6 +608,7 @@ func (g *Game) shutdown() {
 
 // ProposeEnd signals that playerID wants to end the game (e.g. no valid moves).
 // Only the current player may call this when the game is in WaitingForMove state.
+// The transition to StateEndProposed is applied synchronously.
 func (g *Game) ProposeEnd(playerID string) error {
 	g.mu.Lock()
 	if g.state != StateWaitingForMove {
@@ -597,15 +619,13 @@ func (g *Game) ProposeEnd(playerID string) error {
 		g.mu.Unlock()
 		return ErrNotYourTurn
 	}
+	g.dispatch(EventEndProposed)
 	g.mu.Unlock()
-	select {
-	case g.eventCh <- EventEndProposed:
-	case <-g.done:
-	}
 	return nil
 }
 
 // AcceptEnd signals that playerID (the opponent) accepts the end-game proposal.
+// The game ends synchronously, before AcceptEnd returns.
 func (g *Game) AcceptEnd(playerID string) error {
 	g.mu.Lock()
 	if g.state != StateEndProposed {
@@ -616,15 +636,14 @@ func (g *Game) AcceptEnd(playerID string) error {
 		g.mu.Unlock()
 		return ErrNotOpponent
 	}
+	g.dispatch(EventEndAccepted)
 	g.mu.Unlock()
-	select {
-	case g.eventCh <- EventEndAccepted:
-	case <-g.done:
-	}
+	g.shutdown()
 	return nil
 }
 
 // RejectEnd signals that playerID (the opponent) rejects the end-game proposal.
+// The game resumes with the remaining turn time, synchronously.
 func (g *Game) RejectEnd(playerID string) error {
 	g.mu.Lock()
 	if g.state != StateEndProposed {
@@ -635,11 +654,8 @@ func (g *Game) RejectEnd(playerID string) error {
 		g.mu.Unlock()
 		return ErrNotOpponent
 	}
+	g.dispatch(EventEndRejected)
 	g.mu.Unlock()
-	select {
-	case g.eventCh <- EventEndRejected:
-	case <-g.done:
-	}
 	return nil
 }
 
