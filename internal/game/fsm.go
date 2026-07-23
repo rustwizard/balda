@@ -82,6 +82,15 @@ const (
 └─────────────────────┴────────────────────┴─────────────────────┘
 */
 
+// fsmEvent is an FSM event traveling through eventCh. turnSeq tags
+// timer-generated timeouts with the turn they belong to, so a timeout that
+// fires just before a turn change can be discarded as stale; it is 0 for
+// events that are valid regardless of the current turn.
+type fsmEvent struct {
+	ev      TurnEvent
+	turnSeq uint64
+}
+
 // transition table: (state, event) -> action. The action runs under g.mu and
 // returns the next state, so a state-dependent decision (e.g. kick only after
 // the third consecutive skip) is committed atomically with the action itself.

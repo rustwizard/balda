@@ -94,7 +94,8 @@ type Game struct {
 	board                 *LettersTable
 	current               int
 	turn                  *Turn
-	eventCh               chan TurnEvent
+	turnSeq               uint64 // incremented on every new turn; tags timeout events
+	eventCh               chan fsmEvent
 	done                  chan struct{}
 	notifier              Notifier
 	online                OnlineChecker // nil disables accelerated offline timeout
@@ -181,12 +182,19 @@ func (g *Game) Run(ctx context.Context) {
 			// shutdown was triggered outside Run (e.g. a synchronous
 			// transition to StateGameOver in SubmitWord/Skip/AcceptEnd).
 			return
-		case ev, ok := <-g.eventCh:
+		case e, ok := <-g.eventCh:
 			if !ok {
 				return
 			}
 			g.mu.Lock()
-			g.dispatch(ev)
+			if e.ev == EventTurnTimeout && e.turnSeq != g.turnSeq {
+				// Stale timeout from a turn that has already ended (its timer
+				// fired just as the turn was changing). Discard it: applying
+				// it now would penalize the wrong player.
+				g.mu.Unlock()
+				continue
+			}
+			g.dispatch(e.ev)
 			terminal := g.state == StateGameOver
 			g.mu.Unlock()
 
@@ -311,17 +319,7 @@ func (g *Game) onEndAccepted() GameState {
 func (g *Game) onEndRejected() GameState {
 	remaining := g.pausedTurnRemaining
 	g.pausedTurnRemaining = 0
-	p := g.currentPlayer()
-	g.turn = &Turn{
-		PlayerID:  p.ID,
-		StartedAt: time.Now(),
-		timer: time.AfterFunc(remaining, func() {
-			select {
-			case g.eventCh <- EventTurnTimeout:
-			case <-g.done:
-			}
-		}),
-	}
+	g.armTurnTimer(remaining)
 	g.notifier.NotifyEndRejected(remaining)
 	return StateWaitingForMove
 }
@@ -344,17 +342,28 @@ func (g *Game) startTurn() {
 	if g.online != nil && p.Type == PlayerTypeHuman && OfflineGraceDuration < d && !g.online.IsOnline(p.ID) {
 		d = OfflineGraceDuration
 	}
+	g.armTurnTimer(d)
+	g.notifier.NotifyTurnStart(p.ID)
+}
+
+// armTurnTimer starts a new turn with a fresh timer. The new turn gets the
+// next sequence number, and the timeout event is tagged with it, so a timeout
+// queued by a previous turn's timer is discarded as stale instead of
+// penalizing the player whose turn is current when it is processed.
+func (g *Game) armTurnTimer(d time.Duration) {
+	g.turnSeq++
+	seq := g.turnSeq
+	p := g.currentPlayer()
 	g.turn = &Turn{
 		PlayerID:  p.ID,
 		StartedAt: time.Now(),
 		timer: time.AfterFunc(d, func() {
 			select {
-			case g.eventCh <- EventTurnTimeout:
+			case g.eventCh <- fsmEvent{ev: EventTurnTimeout, turnSeq: seq}:
 			case <-g.done:
 			}
 		}),
 	}
-	g.notifier.NotifyTurnStart(p.ID)
 }
 
 func (g *Game) cancelTimer() {
@@ -461,7 +470,7 @@ func NewGameWithWord(players []*Player, initWord string, n Notifier, opts ...Opt
 	}
 	g := &Game{
 		players:  players,
-		eventCh:  make(chan TurnEvent, 4),
+		eventCh:  make(chan fsmEvent, 4),
 		done:     make(chan struct{}),
 		board:    board,
 		notifier: n,
@@ -583,7 +592,7 @@ func (g *Game) Skip(playerID string) error {
 // AckTimeout acknowledges a timeout notification; the game resumes with the next player's turn.
 func (g *Game) AckTimeout() {
 	select {
-	case g.eventCh <- EventAckTimeout:
+	case g.eventCh <- fsmEvent{ev: EventAckTimeout}:
 	case <-g.done:
 	}
 }
@@ -591,7 +600,7 @@ func (g *Game) AckTimeout() {
 // Kick forcibly removes the current player and ends the game.
 func (g *Game) Kick() {
 	select {
-	case g.eventCh <- EventKick:
+	case g.eventCh <- fsmEvent{ev: EventKick}:
 	case <-g.done:
 	}
 }
