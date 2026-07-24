@@ -19,9 +19,10 @@ import (
 
 // Coordinator implements game.Notifier and bridges game events to Centrifugo.
 //
-// nextReason and firstTurn are only written/read from the game's Run goroutine
-// (NotifyTimeout and NotifyTurnStart are both called under g.mu from Run), so
-// no additional synchronization is needed.
+// nextReason and firstTurn are only written/read from notifier callbacks, which
+// the game always invokes while holding g.mu (from the Run goroutine or from a
+// synchronous SubmitWord/Skip/AcceptEnd call), so no additional synchronization
+// is needed.
 type Coordinator struct {
 	gameID     string
 	g          *game.Game
