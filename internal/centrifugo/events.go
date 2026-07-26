@@ -97,6 +97,10 @@ type EvGameOver struct {
 	WinnerUID string        `json:"winner_uid,omitempty"`
 	Players   []PlayerState `json:"players"`
 	Reason    string        `json:"reason,omitempty"`
+	// Board is the final board snapshot: on a natural finish the last move
+	// never triggers a game_state event, so without it clients would not see
+	// the final letter.
+	Board [5][5]string `json:"board"`
 }
 
 // EvEndProposal is published when the current player proposes to end the game.

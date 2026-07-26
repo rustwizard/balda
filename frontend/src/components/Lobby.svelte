@@ -4,11 +4,13 @@
   import { gameState } from '../stores/game.svelte';
   import { achievements } from '../stores/achievements.svelte';
   import AchievementsModal from './AchievementsModal.svelte';
+  import StatsModal from './StatsModal.svelte';
 
   let subscribed = $state(false);
   let error = $state('');
   let loading = $state(false);
   let showAchievements = $state(false);
+  let showStats = $state(false);
 
   async function create() {
     loading = true;
@@ -110,6 +112,14 @@
       >
         🏆 {achievements.unlockedCount}/{achievements.totalCount}
       </button>
+      <button
+        type="button"
+        onclick={() => (showStats = true)}
+        class="rounded-lg bg-blue-100 px-2 py-1 text-sm font-semibold text-blue-700 hover:bg-blue-200"
+        aria-label="Статистика"
+      >
+        📊
+      </button>
       <div class="text-sm font-medium text-stone-600">
         {gameState.nickname}
         <span class="ml-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">{gameState.exp} XP</span>
@@ -169,4 +179,8 @@
 
 {#if showAchievements}
   <AchievementsModal onClose={() => (showAchievements = false)} />
+{/if}
+
+{#if showStats}
+  <StatsModal onClose={() => (showStats = false)} />
 {/if}

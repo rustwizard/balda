@@ -89,6 +89,11 @@ func (s *Balda) GetPlayerAchievements(ctx context.Context, playerID uuid.UUID) (
 	return s.ach.List(ps.Flags), nil
 }
 
+// GetPlayerStats returns lifetime aggregated statistics for the player.
+func (s *Balda) GetPlayerStats(ctx context.Context, playerID uuid.UUID) (storage.PlayerStats, error) {
+	return s.s.GetPlayerStats(ctx, playerID)
+}
+
 // GetUserForToken returns the player UUID and role needed to mint an access token.
 func (s *Balda) GetUserForToken(ctx context.Context, uid int64) (storage.UserForToken, error) {
 	return s.s.GetUserForToken(ctx, uid)

@@ -561,6 +561,30 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /player/stats:
+    get:
+      operationId: getPlayerStats
+      summary: Get player statistics
+      description: |
+        Returns lifetime aggregated statistics for the currently
+        authenticated player: games played, wins/losses/draws, win rate,
+        average word length, best word and favorite letter.
+      tags:
+        - Player
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Player statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlayerStatsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1158,6 +1182,48 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Achievement"
+
+    PlayerStatsResponse:
+      type: object
+      properties:
+        games_played:
+          description: Total number of finished games
+          example: 42
+          type: integer
+          format: int64
+        wins:
+          description: Number of games won
+          example: 20
+          type: integer
+          format: int64
+        losses:
+          description: Number of games lost
+          example: 18
+          type: integer
+          format: int64
+        draws:
+          description: Number of games ended in a draw
+          example: 4
+          type: integer
+          format: int64
+        win_rate:
+          description: Win rate as a fraction (0..1)
+          example: 0.476
+          type: number
+          format: double
+        avg_word_length:
+          description: Average length of submitted words in letters
+          example: 4.35
+          type: number
+          format: double
+        best_word:
+          description: Longest word ever submitted (empty if no games with recorded words)
+          example: автостоп
+          type: string
+        favorite_letter:
+          description: Most frequently used letter across all submitted words (empty if none)
+          example: а
+          type: string
 
     Achievement:
       type: object

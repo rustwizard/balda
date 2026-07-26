@@ -121,6 +121,7 @@ export interface EvGameOver {
     winner_uid?: string | null;
     players: PlayerGameState[];
     reason?: "kick" | "game_finished" | "accept_end";
+    board?: string[][];
 }
 
 export interface EvGameCreated {
@@ -211,6 +212,17 @@ export interface Achievement {
 
 export interface PlayerAchievementsResponse {
     achievements: Achievement[];
+}
+
+export interface PlayerStats {
+    games_played: number;
+    wins: number;
+    losses: number;
+    draws: number;
+    win_rate: number;
+    avg_word_length: number;
+    best_word: string;
+    favorite_letter: string;
 }
 
 export interface EvAchievementUnlocked {

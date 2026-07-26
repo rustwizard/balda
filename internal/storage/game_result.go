@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"time"
@@ -27,6 +28,7 @@ type PlayerResult struct {
 	WordsCount     int
 	ExpGained      int
 	BestWordLength int
+	Words          []string
 }
 
 type GameResult struct {
@@ -134,10 +136,18 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 	var unlocks []PlayerAchievementUnlock
 
 	for _, p := range r.Players {
+		wordsJSON, err := json.Marshal(p.Words)
+		if err != nil {
+			return nil, fmt.Errorf("save game result: marshal words for %s: %w", p.PlayerID, err)
+		}
+		if p.Words == nil {
+			wordsJSON = []byte("[]")
+		}
+
 		_, err = tx.Exec(ctx,
-			`INSERT INTO game_result_players (game_result_id, player_id, score, words_count, exp_gained, best_word_length)
-			 VALUES ($1, $2, $3, $4, $5, $6)`,
-			resultID, p.PlayerID, p.Score, p.WordsCount, p.ExpGained, p.BestWordLength,
+			`INSERT INTO game_result_players (game_result_id, player_id, score, words_count, exp_gained, best_word_length, words)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+			resultID, p.PlayerID, p.Score, p.WordsCount, p.ExpGained, p.BestWordLength, wordsJSON,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("save game result: insert game_result_players for %s: %w", p.PlayerID, err)

@@ -80,6 +80,16 @@ func (UnimplementedHandler) GetPlayerStateUID(ctx context.Context, params GetPla
 	return r, ht.ErrNotImplemented
 }
 
+// GetPlayerStats implements getPlayerStats operation.
+//
+// Returns lifetime aggregated statistics for the currently authenticated player: games played,
+// wins/losses/draws, win rate, average word length, best word and favorite letter.
+//
+// GET /player/stats
+func (UnimplementedHandler) GetPlayerStats(ctx context.Context) (r GetPlayerStatsRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // JoinGame implements joinGame operation.
 //
 // Adds the authenticated player to the specified waiting game. When the second player joins (quorum of

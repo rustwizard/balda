@@ -100,7 +100,67 @@ func TestFindWinnerByScore(t *testing.T) {
 	}
 }
 
-// TestPublishGameOver_PersistsBeforePublish verifies that onGameOver is invoked
+// TestPublishGameOver_IncludesBoard verifies that the game_over event carries
+// the final board snapshot: on a natural finish the last move never triggers a
+// game_state event, so the board is the only way clients learn the final letter.
+func TestPublishGameOver_IncludesBoard(t *testing.T) {
+	boardCh := make(chan [5][5]string, 1)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var payload struct {
+			Data struct {
+				Type  string       `json:"type"`
+				Board [5][5]string `json:"board"`
+			} `json:"data"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Errorf("decode publish request: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if payload.Data.Type == "game_over" {
+			boardCh <- payload.Data.Board
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	cf := centrifugo.NewClient(ts.URL, "test-key")
+
+	p1 := &game.Player{ID: "p1", Score: 10, Exp: 100, Type: game.PlayerTypeHuman}
+	p2 := &game.Player{ID: "p2", Score: 5, Exp: 200, Type: game.PlayerTypeHuman}
+
+	coord := New("game-1", []*game.Player{p1, p2}, cf)
+	coord.SetOnGameOver(func(_ storage.GameResult) {})
+
+	g, err := game.NewGameWithWord([]*game.Player{p1, p2}, "масло", coord)
+	require.NoError(t, err)
+	coord.SetGame(g)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go g.Run(ctx)
+
+	time.Sleep(50 * time.Millisecond)
+	g.Kick()
+
+	select {
+	case <-g.Done():
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for game to finish")
+	}
+
+	want := g.BoardSnapshot()
+	select {
+	case board := <-boardCh:
+		assert.Equal(t, want, board)
+		// Sanity: the initial word sits in the middle row.
+		assert.Equal(t, [5]string{"м", "а", "с", "л", "о"}, board[2])
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for Centrifugo publish")
+	}
+}
+
 // before the Centrifugo Publish call when a game ends via kick. This guarantees
 // the database is the source of truth by the time clients see the game_over event.
 func TestPublishGameOver_PersistsBeforePublish(t *testing.T) {

@@ -1692,6 +1692,82 @@ func (s *GetPlayerStateUIDUnauthorized) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes GetPlayerStatsInternalServerError as json.
+func (s *GetPlayerStatsInternalServerError) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetPlayerStatsInternalServerError from json.
+func (s *GetPlayerStatsInternalServerError) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetPlayerStatsInternalServerError to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetPlayerStatsInternalServerError(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetPlayerStatsInternalServerError) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetPlayerStatsInternalServerError) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode encodes GetPlayerStatsUnauthorized as json.
+func (s *GetPlayerStatsUnauthorized) Encode(e *jx.Encoder) {
+	unwrapped := (*ErrorResponse)(s)
+
+	unwrapped.Encode(e)
+}
+
+// Decode decodes GetPlayerStatsUnauthorized from json.
+func (s *GetPlayerStatsUnauthorized) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode GetPlayerStatsUnauthorized to nil")
+	}
+	var unwrapped ErrorResponse
+	if err := func() error {
+		if err := unwrapped.Decode(d); err != nil {
+			return err
+		}
+		return nil
+	}(); err != nil {
+		return errors.Wrap(err, "alias")
+	}
+	*s = GetPlayerStatsUnauthorized(unwrapped)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *GetPlayerStatsUnauthorized) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *GetPlayerStatsUnauthorized) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes JoinGameConflict as json.
 func (s *JoinGameConflict) Encode(e *jx.Encoder) {
 	unwrapped := (*ErrorResponse)(s)
@@ -3300,6 +3376,41 @@ func (s *OptBool) UnmarshalJSON(data []byte) error {
 	return s.Decode(d)
 }
 
+// Encode encodes float64 as json.
+func (o OptFloat64) Encode(e *jx.Encoder) {
+	if !o.Set {
+		return
+	}
+	e.Float64(float64(o.Value))
+}
+
+// Decode decodes float64 from json.
+func (o *OptFloat64) Decode(d *jx.Decoder) error {
+	if o == nil {
+		return errors.New("invalid: unable to decode OptFloat64 to nil")
+	}
+	o.Set = true
+	v, err := d.Float64()
+	if err != nil {
+		return err
+	}
+	o.Value = float64(v)
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s OptFloat64) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *OptFloat64) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
 // Encode encodes GameStatus as json.
 func (o OptGameStatus) Encode(e *jx.Encoder) {
 	if !o.Set {
@@ -4182,6 +4293,188 @@ func (s *PlayerState) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON implements stdjson.Unmarshaler.
 func (s *PlayerState) UnmarshalJSON(data []byte) error {
+	d := jx.DecodeBytes(data)
+	return s.Decode(d)
+}
+
+// Encode implements json.Marshaler.
+func (s *PlayerStatsResponse) Encode(e *jx.Encoder) {
+	e.ObjStart()
+	s.encodeFields(e)
+	e.ObjEnd()
+}
+
+// encodeFields encodes fields.
+func (s *PlayerStatsResponse) encodeFields(e *jx.Encoder) {
+	{
+		if s.GamesPlayed.Set {
+			e.FieldStart("games_played")
+			s.GamesPlayed.Encode(e)
+		}
+	}
+	{
+		if s.Wins.Set {
+			e.FieldStart("wins")
+			s.Wins.Encode(e)
+		}
+	}
+	{
+		if s.Losses.Set {
+			e.FieldStart("losses")
+			s.Losses.Encode(e)
+		}
+	}
+	{
+		if s.Draws.Set {
+			e.FieldStart("draws")
+			s.Draws.Encode(e)
+		}
+	}
+	{
+		if s.WinRate.Set {
+			e.FieldStart("win_rate")
+			s.WinRate.Encode(e)
+		}
+	}
+	{
+		if s.AvgWordLength.Set {
+			e.FieldStart("avg_word_length")
+			s.AvgWordLength.Encode(e)
+		}
+	}
+	{
+		if s.BestWord.Set {
+			e.FieldStart("best_word")
+			s.BestWord.Encode(e)
+		}
+	}
+	{
+		if s.FavoriteLetter.Set {
+			e.FieldStart("favorite_letter")
+			s.FavoriteLetter.Encode(e)
+		}
+	}
+}
+
+var jsonFieldsNameOfPlayerStatsResponse = [8]string{
+	0: "games_played",
+	1: "wins",
+	2: "losses",
+	3: "draws",
+	4: "win_rate",
+	5: "avg_word_length",
+	6: "best_word",
+	7: "favorite_letter",
+}
+
+// Decode decodes PlayerStatsResponse from json.
+func (s *PlayerStatsResponse) Decode(d *jx.Decoder) error {
+	if s == nil {
+		return errors.New("invalid: unable to decode PlayerStatsResponse to nil")
+	}
+
+	if err := d.ObjBytes(func(d *jx.Decoder, k []byte) error {
+		switch string(k) {
+		case "games_played":
+			if err := func() error {
+				s.GamesPlayed.Reset()
+				if err := s.GamesPlayed.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"games_played\"")
+			}
+		case "wins":
+			if err := func() error {
+				s.Wins.Reset()
+				if err := s.Wins.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"wins\"")
+			}
+		case "losses":
+			if err := func() error {
+				s.Losses.Reset()
+				if err := s.Losses.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"losses\"")
+			}
+		case "draws":
+			if err := func() error {
+				s.Draws.Reset()
+				if err := s.Draws.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"draws\"")
+			}
+		case "win_rate":
+			if err := func() error {
+				s.WinRate.Reset()
+				if err := s.WinRate.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"win_rate\"")
+			}
+		case "avg_word_length":
+			if err := func() error {
+				s.AvgWordLength.Reset()
+				if err := s.AvgWordLength.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"avg_word_length\"")
+			}
+		case "best_word":
+			if err := func() error {
+				s.BestWord.Reset()
+				if err := s.BestWord.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"best_word\"")
+			}
+		case "favorite_letter":
+			if err := func() error {
+				s.FavoriteLetter.Reset()
+				if err := s.FavoriteLetter.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"favorite_letter\"")
+			}
+		default:
+			return d.Skip()
+		}
+		return nil
+	}); err != nil {
+		return errors.Wrap(err, "decode PlayerStatsResponse")
+	}
+
+	return nil
+}
+
+// MarshalJSON implements stdjson.Marshaler.
+func (s *PlayerStatsResponse) MarshalJSON() ([]byte, error) {
+	e := jx.Encoder{}
+	s.Encode(&e)
+	return e.Bytes(), nil
+}
+
+// UnmarshalJSON implements stdjson.Unmarshaler.
+func (s *PlayerStatsResponse) UnmarshalJSON(data []byte) error {
 	d := jx.DecodeBytes(data)
 	return s.Decode(d)
 }

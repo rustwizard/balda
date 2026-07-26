@@ -203,6 +203,7 @@ func (c *Coordinator) publishEndProposalResult(accepted bool, remainingMs int64)
 			WinnerUID: winnerUID,
 			Players:   players,
 			Reason:    "accept_end",
+			Board:     c.g.BoardSnapshot(),
 		}
 		if err := c.cf.Publish(ctx, centrifugo.ChannelGame(c.gameID), gameOverEv); err != nil {
 			slog.Error("gamecoord: publish game_over (accept_end)", slog.String("gameID", c.gameID), slog.Any("error", err))
@@ -234,6 +235,7 @@ func (c *Coordinator) dispatchGameResult(winnerUID string, reason storage.Finish
 			WordsCount:     s.WordsCount,
 			ExpGained:      storage.ExpGained(s.Score, isWinner, isDraw),
 			BestWordLength: bestWordLength(s.Words),
+			Words:          s.Words,
 		}
 	}
 	result := storage.GameResult{
@@ -328,6 +330,7 @@ func (c *Coordinator) publishNaturalGameOver() {
 		WinnerUID: winnerUID,
 		Players:   players,
 		Reason:    "game_finished",
+		Board:     c.g.BoardSnapshot(),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
@@ -362,6 +365,7 @@ func (c *Coordinator) publishGameOver(kickedPlayerID string) {
 		WinnerUID: winnerUID,
 		Players:   players,
 		Reason:    "kick",
+		Board:     c.g.BoardSnapshot(),
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)

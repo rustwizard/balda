@@ -11,6 +11,7 @@ import type {
   MoveRequest,
   MoveResponse,
   PlayerAchievementsResponse,
+  PlayerStats,
 } from '../types';
 
 const API_BASE = '/balda/api/v1';
@@ -169,4 +170,8 @@ export function rejectEnd(gameId: string): Promise<void> {
 
 export function getPlayerAchievements(): Promise<PlayerAchievementsResponse> {
   return apiFetch('/player/achievements', { method: 'GET' });
+}
+
+export function getPlayerStats(): Promise<PlayerStats> {
+  return apiFetch('/player/stats', { method: 'GET' });
 }
