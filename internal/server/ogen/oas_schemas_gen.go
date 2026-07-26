@@ -737,6 +737,14 @@ type GetPlayerStateUIDUnauthorized ErrorResponse
 
 func (*GetPlayerStateUIDUnauthorized) getPlayerStateUIDRes() {}
 
+type GetPlayerStatsInternalServerError ErrorResponse
+
+func (*GetPlayerStatsInternalServerError) getPlayerStatsRes() {}
+
+type GetPlayerStatsUnauthorized ErrorResponse
+
+func (*GetPlayerStatsUnauthorized) getPlayerStatsRes() {}
+
 type JoinGameConflict ErrorResponse
 
 func (*JoinGameConflict) joinGameRes() {}
@@ -1371,6 +1379,52 @@ func (o OptBool) Get() (v bool, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptBool) Or(d bool) bool {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptFloat64 returns new OptFloat64 with value set to v.
+func NewOptFloat64(v float64) OptFloat64 {
+	return OptFloat64{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptFloat64 is optional float64.
+type OptFloat64 struct {
+	Value float64
+	Set   bool
+}
+
+// IsSet returns true if OptFloat64 was set.
+func (o OptFloat64) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptFloat64) Reset() {
+	var v float64
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptFloat64) SetTo(v float64) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptFloat64) Get() (v float64, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptFloat64) Or(d float64) float64 {
 	if v, ok := o.Get(); ok {
 		return v
 	}
@@ -2170,6 +2224,108 @@ func (s *PlayerState) SetGameID(val OptUUID) {
 }
 
 func (*PlayerState) getPlayerStateUIDRes() {}
+
+// Ref: #/components/schemas/PlayerStatsResponse
+type PlayerStatsResponse struct {
+	// Total number of finished games.
+	GamesPlayed OptInt64 `json:"games_played"`
+	// Number of games won.
+	Wins OptInt64 `json:"wins"`
+	// Number of games lost.
+	Losses OptInt64 `json:"losses"`
+	// Number of games ended in a draw.
+	Draws OptInt64 `json:"draws"`
+	// Win rate as a fraction (0..1).
+	WinRate OptFloat64 `json:"win_rate"`
+	// Average length of submitted words in letters.
+	AvgWordLength OptFloat64 `json:"avg_word_length"`
+	// Longest word ever submitted (empty if no games with recorded words).
+	BestWord OptString `json:"best_word"`
+	// Most frequently used letter across all submitted words (empty if none).
+	FavoriteLetter OptString `json:"favorite_letter"`
+}
+
+// GetGamesPlayed returns the value of GamesPlayed.
+func (s *PlayerStatsResponse) GetGamesPlayed() OptInt64 {
+	return s.GamesPlayed
+}
+
+// GetWins returns the value of Wins.
+func (s *PlayerStatsResponse) GetWins() OptInt64 {
+	return s.Wins
+}
+
+// GetLosses returns the value of Losses.
+func (s *PlayerStatsResponse) GetLosses() OptInt64 {
+	return s.Losses
+}
+
+// GetDraws returns the value of Draws.
+func (s *PlayerStatsResponse) GetDraws() OptInt64 {
+	return s.Draws
+}
+
+// GetWinRate returns the value of WinRate.
+func (s *PlayerStatsResponse) GetWinRate() OptFloat64 {
+	return s.WinRate
+}
+
+// GetAvgWordLength returns the value of AvgWordLength.
+func (s *PlayerStatsResponse) GetAvgWordLength() OptFloat64 {
+	return s.AvgWordLength
+}
+
+// GetBestWord returns the value of BestWord.
+func (s *PlayerStatsResponse) GetBestWord() OptString {
+	return s.BestWord
+}
+
+// GetFavoriteLetter returns the value of FavoriteLetter.
+func (s *PlayerStatsResponse) GetFavoriteLetter() OptString {
+	return s.FavoriteLetter
+}
+
+// SetGamesPlayed sets the value of GamesPlayed.
+func (s *PlayerStatsResponse) SetGamesPlayed(val OptInt64) {
+	s.GamesPlayed = val
+}
+
+// SetWins sets the value of Wins.
+func (s *PlayerStatsResponse) SetWins(val OptInt64) {
+	s.Wins = val
+}
+
+// SetLosses sets the value of Losses.
+func (s *PlayerStatsResponse) SetLosses(val OptInt64) {
+	s.Losses = val
+}
+
+// SetDraws sets the value of Draws.
+func (s *PlayerStatsResponse) SetDraws(val OptInt64) {
+	s.Draws = val
+}
+
+// SetWinRate sets the value of WinRate.
+func (s *PlayerStatsResponse) SetWinRate(val OptFloat64) {
+	s.WinRate = val
+}
+
+// SetAvgWordLength sets the value of AvgWordLength.
+func (s *PlayerStatsResponse) SetAvgWordLength(val OptFloat64) {
+	s.AvgWordLength = val
+}
+
+// SetBestWord sets the value of BestWord.
+func (s *PlayerStatsResponse) SetBestWord(val OptString) {
+	s.BestWord = val
+}
+
+// SetFavoriteLetter sets the value of FavoriteLetter.
+func (s *PlayerStatsResponse) SetFavoriteLetter(val OptString) {
+	s.FavoriteLetter = val
+}
+
+func (*PlayerStatsResponse) getPlayerStatsRes() {}
 
 type ProposeEndGameConflict ErrorResponse
 

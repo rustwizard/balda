@@ -234,6 +234,7 @@ func (c *Coordinator) dispatchGameResult(winnerUID string, reason storage.Finish
 			WordsCount:     s.WordsCount,
 			ExpGained:      storage.ExpGained(s.Score, isWinner, isDraw),
 			BestWordLength: bestWordLength(s.Words),
+			Words:          s.Words,
 		}
 	}
 	result := storage.GameResult{

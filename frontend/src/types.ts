@@ -213,6 +213,17 @@ export interface PlayerAchievementsResponse {
     achievements: Achievement[];
 }
 
+export interface PlayerStats {
+    games_played: number;
+    wins: number;
+    losses: number;
+    draws: number;
+    win_rate: number;
+    avg_word_length: number;
+    best_word: string;
+    favorite_letter: string;
+}
+
 export interface EvAchievementUnlocked {
     type: "achievement_unlocked";
     game_id: string;

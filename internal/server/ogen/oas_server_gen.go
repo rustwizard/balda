@@ -54,6 +54,13 @@ type Handler interface {
 	//
 	// GET /player/state/{uid}
 	GetPlayerStateUID(ctx context.Context, params GetPlayerStateUIDParams) (GetPlayerStateUIDRes, error)
+	// GetPlayerStats implements getPlayerStats operation.
+	//
+	// Returns lifetime aggregated statistics for the currently authenticated player: games played,
+	// wins/losses/draws, win rate, average word length, best word and favorite letter.
+	//
+	// GET /player/stats
+	GetPlayerStats(ctx context.Context) (GetPlayerStatsRes, error)
 	// JoinGame implements joinGame operation.
 	//
 	// Adds the authenticated player to the specified waiting game. When the second player joins (quorum of

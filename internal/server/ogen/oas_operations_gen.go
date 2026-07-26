@@ -13,6 +13,7 @@ const (
 	GetLeaderboardOperation        OperationName = "GetLeaderboard"
 	GetPlayerAchievementsOperation OperationName = "GetPlayerAchievements"
 	GetPlayerStateUIDOperation     OperationName = "GetPlayerStateUID"
+	GetPlayerStatsOperation        OperationName = "GetPlayerStats"
 	JoinGameOperation              OperationName = "JoinGame"
 	ListGamesOperation             OperationName = "ListGames"
 	LogoutOperation                OperationName = "Logout"

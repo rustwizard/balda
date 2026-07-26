@@ -29,6 +29,10 @@ type GetPlayerStateUIDRes interface {
 	getPlayerStateUIDRes()
 }
 
+type GetPlayerStatsRes interface {
+	getPlayerStatsRes()
+}
+
 type JoinGameRes interface {
 	joinGameRes()
 }

@@ -338,11 +338,21 @@ Centrifugo уже есть — достаточно добавить канал 
 **Предложение:** добавить таблицу `game_moves` (game_id, move_number, player_id, letter, word, coords)
 и эндпоинт `GET /games/{id}/replay`. Запись хода в `SubmitWord`.
 
-### 34. Статистика игрока (P3)
+### 34. ✅ Статистика игрока (P3)
 **Затрагивает:** `internal/storage/`, REST API, фронт
 
-Средняя длина слова, лучшее слово, винрейт, любимая буква. Аггрегировать из `game_result_players`
-или добавить материализованную статистику в `player_state`.
+Средняя длина слова, лучшее слово, винрейт, любимая буква. Аггрегируется на лету из
+`game_result_players` (без материализованной статистики в `player_state`).
+
+**Сделано:**
+- Миграция `010_game_result_words.up.sql`: колонка `words jsonb` в `game_result_players`;
+  `storage.SaveGameResult` сохраняет слова игрока (из `game.PlayerState.Words`).
+- `storage.GetPlayerStats`: игры/победы/поражения/ничьи, винрейт, средняя длина слова
+  (из `SUM(score)/SUM(words_count)` — работает и для старых игр без `words`), лучшее
+  слово и любимая буква (по сохранённым словам; `ё` приравнена к `е`).
+- Эндпоинт `GET /player/stats` (BearerAuth, по JWT-claims — как `/player/achievements`),
+  схема `PlayerStatsResponse`.
+- Фронт: `StatsModal.svelte` с метриками, кнопка 📊 в лобби рядом с достижениями.
 
 ### Механики доски
 
