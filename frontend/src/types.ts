@@ -121,6 +121,7 @@ export interface EvGameOver {
     winner_uid?: string | null;
     players: PlayerGameState[];
     reason?: "kick" | "game_finished" | "accept_end";
+    board?: string[][];
 }
 
 export interface EvGameCreated {

@@ -199,6 +199,9 @@ export function createGameState() {
         winnerUid = ev.winner_uid;
         finishReason = ev.reason;
         players = ev.players.map(mergePlayerState);
+        // The final move never triggers a game_state event, so the last
+        // letter only arrives inside game_over.
+        if (ev.board) board = ev.board;
     }
 
     function applyEndProposal(ev: EvEndProposal) {
