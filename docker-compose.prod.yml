@@ -52,6 +52,8 @@ services:
       # Email/password registration is for local testing only; prod users
       # will authenticate via Telegram. Login for existing accounts stays on.
       AUTH_EMAIL_SIGNUP_ENABLED: "false"
+      # Telegram Mini App auth (optional; endpoint answers 503 when empty).
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       PG_HOST: pg
       PG_USER: balda
       PG_DATABASE: balda

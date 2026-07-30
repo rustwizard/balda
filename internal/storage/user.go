@@ -86,6 +86,74 @@ func (b *Balda) GetUserForToken(ctx context.Context, uid int64) (UserForToken, e
 	return u, nil
 }
 
+// GetUserByTelegramID returns the user's identity for the given Telegram user ID.
+// Returns ErrInvalidCredentials when no user is linked to that Telegram account.
+func (b *Balda) GetUserByTelegramID(ctx context.Context, telegramID int64) (UserAuth, error) {
+	ctx, cancel := context.WithTimeout(ctx, b.t)
+	defer cancel()
+
+	var u UserAuth
+	err := b.db.QueryRow(ctx, `
+		SELECT u.user_id, u.first_name, u.last_name, ps.player_id, COALESCE(ps.exp, 0), COALESCE(ps.rating, $1), u.role
+		FROM users u
+		JOIN player_state ps ON ps.user_id = u.user_id
+		WHERE u.telegram_id = $2
+	`, DefaultRating, telegramID).Scan(&u.UID, &u.Firstname, &u.Lastname, &u.PlayerID, &u.Exp, &u.Rating, &u.Role)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return UserAuth{}, ErrInvalidCredentials
+	}
+	if err != nil {
+		return UserAuth{}, fmt.Errorf("get user by telegram id: %w", err)
+	}
+	return u, nil
+}
+
+// CreateTelegramUser inserts a new user registered via Telegram Mini App auth
+// together with their player_state in a single transaction. The user has no
+// email and no usable password: password login is unavailable for them.
+func (b *Balda) CreateTelegramUser(ctx context.Context, firstname, lastname, nickname string, telegramID int64) (UserCreated, error) {
+	ctx, cancel := context.WithTimeout(ctx, b.t)
+	defer cancel()
+
+	tx, err := b.db.Begin(ctx)
+	if err != nil {
+		return UserCreated{}, fmt.Errorf("create telegram user: begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck
+
+	// A random unguessable password hash: the account must not be loginable
+	// via email/password.
+	hash, err := bcrypt.GenerateFromPassword([]byte(uuid.NewString()), bcryptCost)
+	if err != nil {
+		return UserCreated{}, fmt.Errorf("create telegram user: hash password: %w", err)
+	}
+
+	var created UserCreated
+	err = tx.QueryRow(ctx,
+		`INSERT INTO users(first_name, last_name, email, hash_password, telegram_id, confirmed)
+		 VALUES($1, $2, NULL, $3, $4, true) RETURNING user_id, role`,
+		firstname, lastname, string(hash), telegramID,
+	).Scan(&created.UID, &created.Role)
+	if err != nil {
+		return UserCreated{}, fmt.Errorf("create telegram user: insert users: %w", err)
+	}
+
+	err = tx.QueryRow(ctx,
+		`INSERT INTO player_state(user_id, nickname, exp, rating, flags, lives, total_games, consecutive_wins)
+		 VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING player_id`,
+		created.UID, nickname, 0, DefaultRating, 0, 5, 0, 0,
+	).Scan(&created.PlayerID)
+	created.Rating = DefaultRating
+	if err != nil {
+		return UserCreated{}, fmt.Errorf("create telegram user: insert player_state: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return UserCreated{}, fmt.Errorf("create telegram user: commit: %w", err)
+	}
+	return created, nil
+}
+
 // CreateUser inserts a new user and their player_state in a single transaction.
 func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, password, nickname string) (UserCreated, error) {
 	ctx, cancel := context.WithTimeout(ctx, b.t)

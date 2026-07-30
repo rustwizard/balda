@@ -32,6 +32,16 @@ func (UnimplementedHandler) Auth(ctx context.Context, req *AuthRequest) (r AuthR
 	return r, ht.ErrNotImplemented
 }
 
+// AuthTelegram implements authTelegram operation.
+//
+// Validates the signed init data produced by the Telegram WebView against the bot token, then logs in
+// an existing user or creates a new one linked to their Telegram account.
+//
+// POST /auth/telegram
+func (UnimplementedHandler) AuthTelegram(ctx context.Context, req *TelegramAuthRequest) (r AuthTelegramRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // CreateGame implements createGame operation.
 //
 // Create a new game.

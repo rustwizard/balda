@@ -14,50 +14,53 @@ var (
 	rn5AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
-	rn18AllowedHeaders = map[string]string{
+	rn20AllowedHeaders = map[string]string{
 		"POST": "Authorization,Content-Type",
 	}
-	rn23AllowedHeaders = map[string]string{
+	rn24AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 	rn6AllowedHeaders = map[string]string{
+		"POST": "Content-Type",
+	}
+	rn7AllowedHeaders = map[string]string{
 		"GET":  "Authorization",
 		"POST": "Authorization",
 	}
-	rn7AllowedHeaders = map[string]string{
+	rn8AllowedHeaders = map[string]string{
 		"POST": "Authorization",
 	}
 	rn3AllowedHeaders = map[string]string{
 		"POST": "Authorization",
 	}
-	rn17AllowedHeaders = map[string]string{
+	rn18AllowedHeaders = map[string]string{
 		"POST": "Authorization",
-	}
-	rn19AllowedHeaders = map[string]string{
-		"POST": "Authorization,Content-Type",
 	}
 	rn21AllowedHeaders = map[string]string{
+		"POST": "Authorization,Content-Type",
+	}
+	rn23AllowedHeaders = map[string]string{
 		"POST": "Authorization",
 	}
-	rn24AllowedHeaders = map[string]string{
+	rn25AllowedHeaders = map[string]string{
 		"POST": "Authorization",
 	}
-	rn27AllowedHeaders = map[string]string{
+	rn28AllowedHeaders = map[string]string{
 		"POST": "Authorization",
 	}
-	rn10AllowedHeaders = map[string]string{
+	rn11AllowedHeaders = map[string]string{
 		"GET": "Authorization",
 	}
-	rn13AllowedHeaders = map[string]string{
+	rn14AllowedHeaders = map[string]string{
 		"GET": "Authorization",
 	}
-	rn15AllowedHeaders = map[string]string{
+	rn16AllowedHeaders = map[string]string{
 		"GET": "Authorization",
 	}
-	rn20AllowedHeaders = map[string]string{
+	rn22AllowedHeaders = map[string]string{
 		"POST": "Authorization,X-Request-Id",
 	}
-	rn26AllowedHeaders = map[string]string{
+	rn27AllowedHeaders = map[string]string{
 		"POST": "Content-Type",
 	}
 )
@@ -165,7 +168,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn18AllowedHeaders,
+									allowedHeaders: rn20AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -190,7 +193,32 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn23AllowedHeaders,
+									allowedHeaders: rn24AllowedHeaders,
+									acceptPost:     "application/json",
+									acceptPatch:    "",
+								})
+							}
+
+							return
+						}
+
+					case 't': // Prefix: "telegram"
+
+						if l := len("telegram"); len(elem) >= l && elem[0:l] == "telegram" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch r.Method {
+							case "POST":
+								s.handleAuthTelegramRequest([0]string{}, elemIsEscaped, w, r)
+							default:
+								s.notAllowed(w, r, notAllowedParams{
+									allowedMethods: "POST",
+									allowedHeaders: rn6AllowedHeaders,
 									acceptPost:     "application/json",
 									acceptPatch:    "",
 								})
@@ -245,7 +273,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					default:
 						s.notAllowed(w, r, notAllowedParams{
 							allowedMethods: "GET,POST",
-							allowedHeaders: rn6AllowedHeaders,
+							allowedHeaders: rn7AllowedHeaders,
 							acceptPost:     "",
 							acceptPatch:    "",
 						})
@@ -282,7 +310,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "POST",
-									allowedHeaders: rn7AllowedHeaders,
+									allowedHeaders: rn8AllowedHeaders,
 									acceptPost:     "",
 									acceptPatch:    "",
 								})
@@ -363,7 +391,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn17AllowedHeaders,
+										allowedHeaders: rn18AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -390,7 +418,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn19AllowedHeaders,
+										allowedHeaders: rn21AllowedHeaders,
 										acceptPost:     "application/json",
 										acceptPatch:    "",
 									})
@@ -417,7 +445,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn21AllowedHeaders,
+										allowedHeaders: rn23AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -444,7 +472,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn24AllowedHeaders,
+										allowedHeaders: rn25AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -471,7 +499,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 								default:
 									s.notAllowed(w, r, notAllowedParams{
 										allowedMethods: "POST",
-										allowedHeaders: rn27AllowedHeaders,
+										allowedHeaders: rn28AllowedHeaders,
 										acceptPost:     "",
 										acceptPatch:    "",
 									})
@@ -539,7 +567,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "GET",
-								allowedHeaders: rn10AllowedHeaders,
+								allowedHeaders: rn11AllowedHeaders,
 								acceptPost:     "",
 								acceptPatch:    "",
 							})
@@ -587,7 +615,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "GET",
-									allowedHeaders: rn13AllowedHeaders,
+									allowedHeaders: rn14AllowedHeaders,
 									acceptPost:     "",
 									acceptPatch:    "",
 								})
@@ -612,7 +640,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 							default:
 								s.notAllowed(w, r, notAllowedParams{
 									allowedMethods: "GET",
-									allowedHeaders: rn15AllowedHeaders,
+									allowedHeaders: rn16AllowedHeaders,
 									acceptPost:     "",
 									acceptPatch:    "",
 								})
@@ -653,7 +681,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn20AllowedHeaders,
+								allowedHeaders: rn22AllowedHeaders,
 								acceptPost:     "",
 								acceptPatch:    "",
 							})
@@ -678,7 +706,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						default:
 							s.notAllowed(w, r, notAllowedParams{
 								allowedMethods: "POST",
-								allowedHeaders: rn26AllowedHeaders,
+								allowedHeaders: rn27AllowedHeaders,
 								acceptPost:     "application/json",
 								acceptPatch:    "",
 							})
@@ -867,6 +895,31 @@ func (s *Server) FindPath(method string, u *url.URL) (r Route, _ bool) {
 								r.operationID = "refreshToken"
 								r.operationGroup = ""
 								r.pathPattern = "/auth/refresh"
+								r.args = args
+								r.count = 0
+								return r, true
+							default:
+								return
+							}
+						}
+
+					case 't': // Prefix: "telegram"
+
+						if l := len("telegram"); len(elem) >= l && elem[0:l] == "telegram" {
+							elem = elem[l:]
+						} else {
+							break
+						}
+
+						if len(elem) == 0 {
+							// Leaf node.
+							switch method {
+							case "POST":
+								r.name = AuthTelegramOperation
+								r.summary = "Authenticate via Telegram Mini App init data"
+								r.operationID = "authTelegram"
+								r.operationGroup = ""
+								r.pathPattern = "/auth/telegram"
 								r.args = args
 								r.count = 0
 								return r, true

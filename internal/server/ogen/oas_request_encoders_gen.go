@@ -24,6 +24,20 @@ func encodeAuthRequest(
 	return nil
 }
 
+func encodeAuthTelegramRequest(
+	req *TelegramAuthRequest,
+	r *http.Request,
+) error {
+	const contentType = "application/json"
+	e := new(jx.Encoder)
+	{
+		req.Encode(e)
+	}
+	encoded := e.Bytes()
+	ht.SetBody(r, bytes.NewReader(encoded), contentType)
+	return nil
+}
+
 func encodeLogoutRequest(
 	req OptLogoutRequest,
 	r *http.Request,

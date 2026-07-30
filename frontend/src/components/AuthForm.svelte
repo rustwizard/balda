@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { auth, signup, setTokens, getConfig } from '../lib/api';
+  import { auth, signup, setTokens, getConfig, authTelegram } from '../lib/api';
   import { centrifugo } from '../lib/centrifugo';
   import { gameState } from '../stores/game.svelte';
+  import { isMiniApp, getTelegramInitData, initMiniApp } from '../lib/telegram';
   import type { AuthResponse, SignupResponse } from '../types';
 
   let isSignup = $state(false);
@@ -12,6 +13,59 @@
   let lastname = $state('');
   let error = $state('');
   let loading = $state(false);
+  let telegramError = $state('');
+
+  const miniApp = isMiniApp();
+
+  function applyAuthResponse(res: AuthResponse | SignupResponse) {
+    const player = 'player' in res ? res.player : res.user;
+    setTokens(res.access_token || '', res.refresh_token || '');
+    gameState.setAuth({
+      playerUid: player.uid,
+      nickname: player.firstname,
+      exp: player.exp ?? 0,
+      rating: player.rating ?? 0,
+      centrifugoToken: res.centrifugo_token || '',
+      lobbyToken: res.lobby_token || '',
+    });
+
+    // Restore an active game after reconnect (e.g. page refresh). The backend
+    // returns the game token and snapshot so the player can rejoin without
+    // being stuck in the lobby with a "player already in a game" conflict.
+    const activeGame = 'active_game' in res ? res.active_game : undefined;
+    if (activeGame?.game_id && activeGame.game_token) {
+      centrifugo.subscribe(`game:${activeGame.game_id}`, activeGame.game_token);
+      const playerIds = activeGame.players?.map((p) => p.uid) ?? [];
+      if (activeGame.status === 'waiting') {
+        gameState.setWaiting({
+          id: activeGame.game_id,
+          player_ids: playerIds,
+          status: 'waiting',
+          started_at: 0,
+        });
+      } else {
+        gameState.startGame({
+          id: activeGame.game_id,
+          player_ids: playerIds,
+          status: activeGame.status || 'in_progress',
+          started_at: 0,
+        });
+        if (activeGame.board && activeGame.current_turn_uid) {
+          gameState.applyGameState({
+            type: 'game_state',
+            game_id: activeGame.game_id,
+            board: activeGame.board,
+            current_turn_uid: activeGame.current_turn_uid,
+            players: activeGame.players ?? [],
+            status: activeGame.status || 'in_progress',
+            move_number: activeGame.move_number ?? 0,
+          });
+        }
+      }
+    } else {
+      gameState.setLobby();
+    }
+  }
 
   // Registration may be disabled by the server (prod: Telegram-only sign-up,
   // email stays for local testing). Login remains available either way.
@@ -19,6 +73,19 @@
     getConfig()
       .then((cfg) => (signupEnabled = cfg.email_signup_enabled))
       .catch(() => {});
+  });
+
+  // Inside the Telegram WebView there is no form at all: the signed init data
+  // is exchanged for our session right away.
+  $effect(() => {
+    const initData = getTelegramInitData();
+    if (!initData) return;
+    initMiniApp();
+    authTelegram(initData)
+      .then(applyAuthResponse)
+      .catch((e) => {
+        telegramError = e instanceof Error ? e.message : 'Ошибка входа через Telegram';
+      });
   });
 
   async function handleSubmit(e: Event) {
@@ -33,54 +100,7 @@
       } else {
         res = await auth({ email, password });
       }
-
-      const player = 'player' in res ? res.player : res.user;
-      setTokens(res.access_token || '', res.refresh_token || '');
-      gameState.setAuth({
-        playerUid: player.uid,
-        nickname: player.firstname,
-        exp: player.exp ?? 0,
-        rating: player.rating ?? 0,
-        centrifugoToken: res.centrifugo_token || '',
-        lobbyToken: res.lobby_token || '',
-      });
-
-      // Restore an active game after reconnect (e.g. page refresh). The backend
-      // returns the game token and snapshot so the player can rejoin without
-      // being stuck in the lobby with a "player already in a game" conflict.
-      const activeGame = 'active_game' in res ? res.active_game : undefined;
-      if (activeGame?.game_id && activeGame.game_token) {
-        centrifugo.subscribe(`game:${activeGame.game_id}`, activeGame.game_token);
-        const playerIds = activeGame.players?.map((p) => p.uid) ?? [];
-        if (activeGame.status === 'waiting') {
-          gameState.setWaiting({
-            id: activeGame.game_id,
-            player_ids: playerIds,
-            status: 'waiting',
-            started_at: 0,
-          });
-        } else {
-          gameState.startGame({
-            id: activeGame.game_id,
-            player_ids: playerIds,
-            status: activeGame.status || 'in_progress',
-            started_at: 0,
-          });
-          if (activeGame.board && activeGame.current_turn_uid) {
-            gameState.applyGameState({
-              type: 'game_state',
-              game_id: activeGame.game_id,
-              board: activeGame.board,
-              current_turn_uid: activeGame.current_turn_uid,
-              players: activeGame.players ?? [],
-              status: activeGame.status || 'in_progress',
-              move_number: activeGame.move_number ?? 0,
-            });
-          }
-        }
-      } else {
-        gameState.setLobby();
-      }
+      applyAuthResponse(res);
     } catch (err: any) {
       error = err.message || 'Ошибка авторизации';
     } finally {
@@ -90,65 +110,74 @@
 </script>
 
 <div class="mx-auto w-full max-w-sm rounded-2xl bg-white p-6 shadow-lg">
-  <h2 class="mb-4 text-center text-2xl font-bold text-stone-800">
-    {isSignup ? 'Регистрация' : 'Вход в игру'}
-  </h2>
+  {#if miniApp}
+    <h2 class="mb-4 text-center text-2xl font-bold text-stone-800">Балда</h2>
+    {#if telegramError}
+      <div class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{telegramError}</div>
+    {:else}
+      <div class="py-8 text-center text-stone-500">Входим через Telegram…</div>
+    {/if}
+  {:else}
+    <h2 class="mb-4 text-center text-2xl font-bold text-stone-800">
+      {isSignup ? 'Регистрация' : 'Вход в игру'}
+    </h2>
 
-  <form onsubmit={handleSubmit} class="flex flex-col gap-3">
-    {#if isSignup}
+    <form onsubmit={handleSubmit} class="flex flex-col gap-3">
+      {#if isSignup}
+        <input
+          type="text"
+          placeholder="Имя"
+          bind:value={firstname}
+          required
+          class="rounded-xl border border-stone-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+        />
+        <input
+          type="text"
+          placeholder="Фамилия"
+          bind:value={lastname}
+          required
+          class="rounded-xl border border-stone-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+        />
+      {/if}
       <input
-        type="text"
-        placeholder="Имя"
-        bind:value={firstname}
+        type="email"
+        placeholder="Email"
+        bind:value={email}
         required
         class="rounded-xl border border-stone-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
       />
       <input
-        type="text"
-        placeholder="Фамилия"
-        bind:value={lastname}
+        type="password"
+        placeholder="Пароль"
+        bind:value={password}
         required
         class="rounded-xl border border-stone-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
       />
-    {/if}
-    <input
-      type="email"
-      placeholder="Email"
-      bind:value={email}
-      required
-      class="rounded-xl border border-stone-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-    />
-    <input
-      type="password"
-      placeholder="Пароль"
-      bind:value={password}
-      required
-      class="rounded-xl border border-stone-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-    />
 
-    {#if error}
-      <div class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
-    {/if}
+      {#if error}
+        <div class="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
+      {/if}
+
+      <button
+        type="submit"
+        disabled={loading}
+        class="mt-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
+      >
+        {loading ? 'Загрузка...' : isSignup ? 'Зарегистрироваться' : 'Войти'}
+      </button>
+    </form>
 
     <button
-      type="submit"
-      disabled={loading}
-      class="mt-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
+      type="button"
+      onclick={() => (isSignup = !isSignup)}
+      class="mt-4 w-full text-center text-sm text-stone-500 hover:text-stone-700 {signupEnabled ? '' : 'hidden'}"
     >
-      {loading ? 'Загрузка...' : isSignup ? 'Зарегистрироваться' : 'Войти'}
+      {isSignup ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
     </button>
-  </form>
-
-  <button
-    type="button"
-    onclick={() => (isSignup = !isSignup)}
-    class="mt-4 w-full text-center text-sm text-stone-500 hover:text-stone-700 {signupEnabled ? '' : 'hidden'}"
-  >
-    {isSignup ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
-  </button>
-  {#if !signupEnabled}
-    <div class="mt-4 text-center text-sm text-stone-400">
-      Регистрация по email закрыта — скоро вход через Telegram
-    </div>
+    {#if !signupEnabled}
+      <div class="mt-4 text-center text-sm text-stone-400">
+        Регистрация по email закрыта — откройте игру в Telegram
+      </div>
+    {/if}
   {/if}
 </div>

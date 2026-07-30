@@ -84,18 +84,21 @@ docker compose -f docker-compose.prod.yml logs --tail 200 centrifugo
 
 ## Telegram Mini App (следующий шаг после прода)
 
-1. `@BotFather` → `/newbot` — получить токен бота.
-2. `/newapp` (или «Bot Settings → Mini Apps») — указать `https://$DOMAIN`
-   как URL мини-аппа.
-3. Бот без логики уже работает как «лаунчер»: кнопка открывает игру.
-4. Авторизация пока остаётся email/пароль внутри игры. Бесшовный вход через
-   Telegram `initData` — отдельная задача (нужен эндпоинт проверки подписи
-   initData → выдача нашего JWT).
+1. `@BotFather` → `/newbot` — получить токен бота (вида `123456:ABC-...`).
+2. Вписать токен в `.env` (`TELEGRAM_BOT_TOKEN`) и перезапустить:
+   `docker compose -f docker-compose.prod.yml up -d`.
+   Без токена `/auth/telegram` отвечает 503, остальное работает как раньше.
+3. `/newapp` (или «Bot Settings → Mini Apps») — указать `https://$DOMAIN`
+   как URL мини-аппа, выбрать короткое имя ссылки (вида `t.me/<bot>/<app>`).
+4. Пользователь открывает Mini App → фронт обменивает подписанный `initData`
+   на нашу сессию через `POST /auth/telegram` — без форм и паролей; первый
+   визит создаёт пользователя (привязка по `telegram_id`).
+5. Menu button бота (Bot Settings → Menu Button) — «Играть» с тем же URL.
 
 Регистрация по email в проде выключена (`AUTH_EMAIL_SIGNUP_ENABLED: "false"`
 в `docker-compose.prod.yml`) — это локально-тестовый способ входа. Логин
-существующих аккаунтов при этом работает. После появления Telegram-входа
-фронт переключится на него; флаг отдаётся клиенту через `GET /config`.
+существующих аккаунтов при этом работает. Флаг отдаётся клиенту через
+`GET /config`.
 
 ## Чего в этом контуре сознательно нет
 

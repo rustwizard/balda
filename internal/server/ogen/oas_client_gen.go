@@ -42,6 +42,13 @@ type Invoker interface {
 	//
 	// POST /auth
 	Auth(ctx context.Context, request *AuthRequest) (AuthRes, error)
+	// AuthTelegram invokes authTelegram operation.
+	//
+	// Validates the signed init data produced by the Telegram WebView against the bot token, then logs in
+	// an existing user or creates a new one linked to their Telegram account.
+	//
+	// POST /auth/telegram
+	AuthTelegram(ctx context.Context, request *TelegramAuthRequest) (AuthTelegramRes, error)
 	// CreateGame invokes createGame operation.
 	//
 	// Create a new game.
@@ -407,6 +414,90 @@ func (c *Client) sendAuth(ctx context.Context, request *AuthRequest) (res AuthRe
 
 	stage = "DecodeResponse"
 	result, err := decodeAuthResponse(resp)
+	if err != nil {
+		return res, errors.Wrap(err, "decode response")
+	}
+
+	return result, nil
+}
+
+// AuthTelegram invokes authTelegram operation.
+//
+// Validates the signed init data produced by the Telegram WebView against the bot token, then logs in
+// an existing user or creates a new one linked to their Telegram account.
+//
+// POST /auth/telegram
+func (c *Client) AuthTelegram(ctx context.Context, request *TelegramAuthRequest) (AuthTelegramRes, error) {
+	res, err := c.sendAuthTelegram(ctx, request)
+	return res, err
+}
+
+func (c *Client) sendAuthTelegram(ctx context.Context, request *TelegramAuthRequest) (res AuthTelegramRes, err error) {
+	otelAttrs := []attribute.KeyValue{
+		otelogen.OperationID("authTelegram"),
+		semconv.HTTPRequestMethodKey.String("POST"),
+		semconv.URLTemplateKey.String("/auth/telegram"),
+	}
+	otelAttrs = append(otelAttrs, c.cfg.Attributes...)
+
+	// Run stopwatch.
+	startTime := time.Now()
+	defer func() {
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedDuration := time.Since(startTime)
+		c.duration.Record(ctx, float64(elapsedDuration)/float64(time.Millisecond), metric.WithAttributes(otelAttrs...))
+	}()
+
+	// Increment request counter.
+	c.requests.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+
+	// Start a span for this request.
+	ctx, span := c.cfg.Tracer.Start(ctx, AuthTelegramOperation,
+		trace.WithAttributes(otelAttrs...),
+		clientSpanKind,
+	)
+	// Track stage for error reporting.
+	var stage string
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, stage)
+			c.errors.Add(ctx, 1, metric.WithAttributes(otelAttrs...))
+		}
+		span.End()
+	}()
+
+	stage = "BuildURL"
+	u := uri.Clone(c.requestURL(ctx))
+	var pathParts [1]string
+	pathParts[0] = "/auth/telegram"
+	uri.AddPathParts(u, pathParts[:]...)
+
+	stage = "EncodeRequest"
+	r, err := ht.NewRequest(ctx, "POST", u)
+	if err != nil {
+		return res, errors.Wrap(err, "create request")
+	}
+	if err := encodeAuthTelegramRequest(request, r); err != nil {
+		return res, errors.Wrap(err, "encode request")
+	}
+
+	stage = "SendRequest"
+	resp, err := c.cfg.Client.Do(r)
+	if err != nil {
+		return res, errors.Wrap(err, "do request")
+	}
+	body := resp.Body
+	defer func() {
+		// Drain the body to EOF before closing, so the underlying
+		// connection can be reused by the Transport regardless of the
+		// response status code. See https://github.com/ogen-go/ogen/issues/1670.
+		_, _ = io.Copy(io.Discard, body)
+		_ = body.Close()
+	}()
+
+	stage = "DecodeResponse"
+	result, err := decodeAuthTelegramResponse(resp)
 	if err != nil {
 		return res, errors.Wrap(err, "decode response")
 	}
