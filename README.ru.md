@@ -61,7 +61,10 @@ balda/
 ├── migrations/             # SQL-файлы миграций
 ├── tests/                  # Интеграционные тесты (testcontainers)
 ├── Makefile
-└── docker-compose.yml
+├── docker-compose.yml        # dev-стек
+├── docker-compose.prod.yml   # прод-стек (см. docs/deployment.md)
+├── Caddyfile                 # прод-вход с авто-HTTPS
+└── scripts/                  # эксплуатационные скрипты (бэкап Postgres)
 ```
 
 ## Архитектура
@@ -83,6 +86,15 @@ docker compose up
 Запускает PostgreSQL, Redis, Centrifugo, игровой сервер на порту `9666` и фронтенд на порту `8080`.
 
 Откройте `http://localhost:8080` для игры. Фронтенд также доступен с других устройств в локальной сети по адресу `http://<ip-хоста>:8080` (например, `http://192.168.1.42:8080`).
+
+### Деплой в прод
+
+Прод-установка на одной VPS (Caddy с авто-HTTPS, секреты через `.env`, закрытые внутренние порты, бэкапы Postgres) описана в [docs/deployment.md](docs/deployment.md). Коротко:
+
+```bash
+cp .env.prod.example .env  # заполнить DOMAIN и секреты
+docker compose -f docker-compose.prod.yml up --build -d
+```
 
 ### Разработка фронтенда
 

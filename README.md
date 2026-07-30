@@ -68,7 +68,10 @@ balda/
 ├── migrations/             # SQL migration files
 ├── tests/                  # Integration tests (testcontainers)
 ├── Makefile
-└── docker-compose.yml
+├── docker-compose.yml        # dev stack
+├── docker-compose.prod.yml   # prod stack (see docs/deployment.md)
+├── Caddyfile                 # prod entrypoint with auto-HTTPS
+└── scripts/                  # ops scripts (Postgres backup)
 ```
 
 ## Architecture
@@ -90,6 +93,15 @@ docker compose up
 Starts PostgreSQL, Redis, Centrifugo, the game server on port `9666`, and the frontend on port `8080`.
 
 Open `http://localhost:8080` to play. The frontend is also reachable from other devices on your local network via `http://<host-ip>:8080` (e.g. `http://192.168.1.42:8080`).
+
+### Production deployment
+
+For a single-VPS production setup (Caddy with auto-HTTPS, secrets via `.env`, closed internal ports, Postgres backups) see [docs/deployment.md](docs/deployment.md). Short version:
+
+```bash
+cp .env.prod.example .env  # fill in DOMAIN and secrets
+docker compose -f docker-compose.prod.yml up --build -d
+```
 
 ### Frontend development
 

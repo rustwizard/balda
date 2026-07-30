@@ -1,0 +1,10 @@
+{$DOMAIN} {
+	reverse_proxy frontend:80
+
+	# Security headers; the frontend is a same-origin SPA.
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
