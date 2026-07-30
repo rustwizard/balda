@@ -21,6 +21,13 @@ type Handler interface {
 	//
 	// POST /auth
 	Auth(ctx context.Context, req *AuthRequest) (AuthRes, error)
+	// AuthTelegram implements authTelegram operation.
+	//
+	// Validates the signed init data produced by the Telegram WebView against the bot token, then logs in
+	// an existing user or creates a new one linked to their Telegram account.
+	//
+	// POST /auth/telegram
+	AuthTelegram(ctx context.Context, req *TelegramAuthRequest) (AuthTelegramRes, error)
 	// CreateGame implements createGame operation.
 	//
 	// Create a new game.

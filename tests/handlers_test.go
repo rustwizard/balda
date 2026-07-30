@@ -154,7 +154,7 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true)
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true, "")
 	return h, core.cleanup
 }
 
@@ -163,7 +163,7 @@ func TestSignupDisabled(t *testing.T) {
 	core := setupCore(ctx, t)
 	defer core.cleanup()
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", false)
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", false, "")
 
 	res, err := h.Signup(ctx, &baldaapi.SignupRequest{
 		Firstname: "No",
@@ -485,7 +485,7 @@ func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true)
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true, "")
 	return h, core.lby, core.cleanup
 }
 

@@ -9,6 +9,10 @@ type AuthRes interface {
 	authRes()
 }
 
+type AuthTelegramRes interface {
+	authTelegramRes()
+}
+
 type CreateGameRes interface {
 	createGameRes()
 }

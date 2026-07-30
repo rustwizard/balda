@@ -23,10 +23,11 @@ type Handlers struct {
 	cf                        *centrifugo.Client
 	centrifugoTokenHMACSecret string
 	emailSignupEnabled        bool
+	telegramBotToken          string
 }
 
-func New(svc *service.Balda, pres *presence.Service, jwtSecret string, cf *centrifugo.Client, centrifugoTokenHMACSecret string, emailSignupEnabled bool) *Handlers {
-	return &Handlers{svc: svc, pres: pres, jwtSecret: jwtSecret, cf: cf, centrifugoTokenHMACSecret: centrifugoTokenHMACSecret, emailSignupEnabled: emailSignupEnabled}
+func New(svc *service.Balda, pres *presence.Service, jwtSecret string, cf *centrifugo.Client, centrifugoTokenHMACSecret string, emailSignupEnabled bool, telegramBotToken string) *Handlers {
+	return &Handlers{svc: svc, pres: pres, jwtSecret: jwtSecret, cf: cf, centrifugoTokenHMACSecret: centrifugoTokenHMACSecret, emailSignupEnabled: emailSignupEnabled, telegramBotToken: telegramBotToken}
 }
 
 // uidFromContext returns the authenticated user's id from the JWT claims placed

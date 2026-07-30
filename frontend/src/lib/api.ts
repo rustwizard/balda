@@ -108,6 +108,10 @@ export function auth(data: AuthRequest): Promise<AuthResponse> {
   return apiFetch('/auth', { method: 'POST', body: JSON.stringify(data) }, false);
 }
 
+export function authTelegram(initData: string): Promise<AuthResponse> {
+  return apiFetch('/auth/telegram', { method: 'POST', body: JSON.stringify({ init_data: initData }) }, false);
+}
+
 export function refresh(): Promise<RefreshResponse> {
   return apiFetch('/auth/refresh', {
     method: 'POST',

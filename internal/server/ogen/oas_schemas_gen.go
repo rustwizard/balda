@@ -369,7 +369,20 @@ func (s *AuthResponse) SetActiveGame(val OptActiveGame) {
 	s.ActiveGame = val
 }
 
-func (*AuthResponse) authRes() {}
+func (*AuthResponse) authRes()         {}
+func (*AuthResponse) authTelegramRes() {}
+
+type AuthTelegramInternalServerError ErrorResponse
+
+func (*AuthTelegramInternalServerError) authTelegramRes() {}
+
+type AuthTelegramServiceUnavailable ErrorResponse
+
+func (*AuthTelegramServiceUnavailable) authTelegramRes() {}
+
+type AuthTelegramUnauthorized ErrorResponse
+
+func (*AuthTelegramUnauthorized) authTelegramRes() {}
 
 type BearerAuth struct {
 	Token string
@@ -2616,3 +2629,19 @@ func (*SkipGameNotFound) skipGameRes() {}
 type SkipGameUnauthorized ErrorResponse
 
 func (*SkipGameUnauthorized) skipGameRes() {}
+
+// Ref: #/components/schemas/TelegramAuthRequest
+type TelegramAuthRequest struct {
+	// Raw init data string provided by the Telegram WebView (window.Telegram.WebApp.initData).
+	InitData string `json:"init_data"`
+}
+
+// GetInitData returns the value of InitData.
+func (s *TelegramAuthRequest) GetInitData() string {
+	return s.InitData
+}
+
+// SetInitData sets the value of InitData.
+func (s *TelegramAuthRequest) SetInitData(val string) {
+	s.InitData = val
+}

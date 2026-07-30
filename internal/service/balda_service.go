@@ -99,6 +99,16 @@ func (s *Balda) GetUserForToken(ctx context.Context, uid int64) (storage.UserFor
 	return s.s.GetUserForToken(ctx, uid)
 }
 
+// GetUserByTelegramID returns the user's identity for the given Telegram user ID.
+func (s *Balda) GetUserByTelegramID(ctx context.Context, telegramID int64) (storage.UserAuth, error) {
+	return s.s.GetUserByTelegramID(ctx, telegramID)
+}
+
+// CreateTelegramUser creates a new user registered via Telegram Mini App auth.
+func (s *Balda) CreateTelegramUser(ctx context.Context, firstname, lastname, nickname string, telegramID int64) (storage.UserCreated, error) {
+	return s.s.CreateTelegramUser(ctx, firstname, lastname, nickname, telegramID)
+}
+
 // SaveRefreshToken persists the HMAC hash of a refresh token for the user.
 func (s *Balda) SaveRefreshToken(ctx context.Context, uid int64, tokenHash string, expiresAt time.Time, userAgent, ipAddr string) error {
 	return s.s.SaveRefreshToken(ctx, uid, tokenHash, expiresAt, userAgent, ipAddr)

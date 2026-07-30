@@ -85,6 +85,12 @@ type AuthConfig struct {
 	EmailSignupEnabled bool
 }
 
+type TelegramConfig struct {
+	// BotToken validates Telegram Mini App init data. Empty means Telegram
+	// auth is not configured; the endpoint then answers 503.
+	BotToken string
+}
+
 type Config struct {
 	ServerAddr string
 	ServerPort int
@@ -93,6 +99,7 @@ type Config struct {
 	Presence   presence.Config
 	Auth       AuthConfig
 	Centrifugo CentrifugoConfig
+	Telegram   TelegramConfig
 }
 
 // serverCmd represents the server command
@@ -185,7 +192,7 @@ var serverCmd = &cobra.Command{
 
 		svc := service.New(lby, mm, s, lb, achSvc)
 
-		h := handlers.New(svc, pres, cfg.Auth.JWTSecret, cf, cfg.Centrifugo.TokenHMACSecret, cfg.Auth.EmailSignupEnabled)
+		h := handlers.New(svc, pres, cfg.Auth.JWTSecret, cf, cfg.Centrifugo.TokenHMACSecret, cfg.Auth.EmailSignupEnabled, cfg.Telegram.BotToken)
 
 		srv, err := baldaapi.NewServer(h, h,
 			baldaapi.WithPathPrefix("/balda/api/v1"),
@@ -272,6 +279,7 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	f.StringVar(&c.Pg.SSL, "pg.ssl", "disable", "postgres ssl")
 	f.StringVar(&c.Auth.JWTSecret, "auth.jwt_secret", "", "HMAC secret for signing JWT access tokens")
 	f.BoolVar(&c.Auth.EmailSignupEnabled, "auth.email_signup_enabled", true, "allow email/password registration (disable in prod)")
+	f.StringVar(&c.Telegram.BotToken, "telegram.bot_token", "", "telegram bot token for Mini App auth (init data validation)")
 	f.StringVar(&c.Centrifugo.APIURL, "centrifugo.api_url", "http://127.0.0.1:8000/api", "centrifugo api url")
 	f.StringVar(&c.Centrifugo.APIKey, "centrifugo.api_key", "", "centrifugo api key")
 	f.StringVar(&c.Centrifugo.TokenHMACSecret, "centrifugo.token_hmac_secret_key", "", "centrifugo token hmac secret")

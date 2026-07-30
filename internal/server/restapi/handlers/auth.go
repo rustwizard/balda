@@ -36,23 +36,34 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 		}, nil
 	}
 
+	resp, errResp := h.newAuthResponse(ctx, u)
+	if errResp != nil {
+		return errResp, nil
+	}
+	return resp, nil
+}
+
+// newAuthResponse builds a full AuthResponse (JWT pair, centrifugo tokens,
+// optional active game snapshot) for an already-identified user. It is shared
+// by the email/password and Telegram auth handlers.
+func (h *Handlers) newAuthResponse(ctx context.Context, u storage.UserAuth) (*baldaapi.AuthResponse, *baldaapi.ErrorResponse) {
 	access, refresh, err := h.issueTokens(ctx, u.UID, u.PlayerID, u.Role, "", "")
 	if err != nil {
 		slog.Error("auth: issue tokens", slog.Any("error", err))
-		return &baldaapi.ErrorResponse{
+		return nil, &baldaapi.ErrorResponse{
 			Message: baldaapi.NewOptString("internal error"),
 			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
 			Type:    baldaapi.NewOptString("InternalServerError"),
-		}, nil
+		}
 	}
 
 	cfToken, lobbyToken, err := h.generateCentrifugoTokens(u.UID)
 	if err != nil {
-		return &baldaapi.ErrorResponse{
+		return nil, &baldaapi.ErrorResponse{
 			Message: baldaapi.NewOptString("internal error"),
 			Status:  baldaapi.NewOptInt(http.StatusInternalServerError),
 			Type:    baldaapi.NewOptString("InternalServerError"),
-		}, nil
+		}
 	}
 
 	resp := &baldaapi.AuthResponse{
