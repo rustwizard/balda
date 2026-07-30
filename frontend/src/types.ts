@@ -225,6 +225,10 @@ export interface PlayerStats {
     favorite_letter: string;
 }
 
+export interface ClientConfig {
+    email_signup_enabled: boolean;
+}
+
 export interface EvAchievementUnlocked {
     type: "achievement_unlocked";
     game_id: string;

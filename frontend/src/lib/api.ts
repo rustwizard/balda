@@ -12,6 +12,7 @@ import type {
   MoveResponse,
   PlayerAchievementsResponse,
   PlayerStats,
+  ClientConfig,
 } from '../types';
 
 const API_BASE = '/balda/api/v1';
@@ -174,4 +175,8 @@ export function getPlayerAchievements(): Promise<PlayerAchievementsResponse> {
 
 export function getPlayerStats(): Promise<PlayerStats> {
   return apiFetch('/player/stats', { method: 'GET' });
+}
+
+export function getConfig(): Promise<ClientConfig> {
+  return apiFetch('/config', { method: 'GET' });
 }

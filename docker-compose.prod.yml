@@ -49,6 +49,9 @@ services:
       SERVER_ADDR: 0.0.0.0
       SERVER_PORT: 9666
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?set in .env}
+      # Email/password registration is for local testing only; prod users
+      # will authenticate via Telegram. Login for existing accounts stays on.
+      AUTH_EMAIL_SIGNUP_ENABLED: "false"
       PG_HOST: pg
       PG_USER: balda
       PG_DATABASE: balda

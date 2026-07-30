@@ -154,8 +154,33 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret")
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true)
 	return h, core.cleanup
+}
+
+func TestSignupDisabled(t *testing.T) {
+	ctx := context.Background()
+	core := setupCore(ctx, t)
+	defer core.cleanup()
+	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", false)
+
+	res, err := h.Signup(ctx, &baldaapi.SignupRequest{
+		Firstname: "No",
+		Lastname:  "Signup",
+		Email:     "no.signup@example.org",
+		Password:  "secret",
+	})
+	require.NoError(t, err)
+
+	errResp, isErr := res.(*baldaapi.ErrorResponse)
+	require.True(t, isErr, "expected *ErrorResponse, got %T", res)
+	assert.Equal(t, http.StatusForbidden, errResp.Status.Value)
+
+	// The public config endpoint reports the same flag.
+	cfg, err := h.GetConfig(ctx)
+	require.NoError(t, err)
+	assert.False(t, cfg.EmailSignupEnabled.Value)
 }
 
 func TestSignupHandler(t *testing.T) {
@@ -460,7 +485,7 @@ func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret")
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true)
 	return h, core.lby, core.cleanup
 }
 

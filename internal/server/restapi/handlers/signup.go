@@ -12,6 +12,14 @@ import (
 
 // Signup implements baldaapi.Handler.
 func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (baldaapi.SignupRes, error) {
+	if !h.emailSignupEnabled {
+		return &baldaapi.ErrorResponse{
+			Message: baldaapi.NewOptString("registration is disabled"),
+			Status:  baldaapi.NewOptInt(http.StatusForbidden),
+			Type:    baldaapi.NewOptString("Forbidden"),
+		}, nil
+	}
+
 	created, err := h.svc.CreateUser(ctx, req.Firstname, req.Lastname, req.Email, req.Password, flname.GenNickname())
 	if err != nil {
 		slog.Error("signup: create user", slog.Any("error", err))

@@ -92,6 +92,11 @@ docker compose -f docker-compose.prod.yml logs --tail 200 centrifugo
    Telegram `initData` — отдельная задача (нужен эндпоинт проверки подписи
    initData → выдача нашего JWT).
 
+Регистрация по email в проде выключена (`AUTH_EMAIL_SIGNUP_ENABLED: "false"`
+в `docker-compose.prod.yml`) — это локально-тестовый способ входа. Логин
+существующих аккаунтов при этом работает. После появления Telegram-входа
+фронт переключится на него; флаг отдаётся клиенту через `GET /config`.
+
 ## Чего в этом контуре сознательно нет
 
 - Мониторинга/алертов (Uptime Kuma или бесплатный uptimerobot.com наружу —

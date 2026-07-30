@@ -137,6 +137,23 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /config:
+    get:
+      operationId: getConfig
+      summary: Get public client configuration
+      description: |
+        Returns feature flags the client needs before authentication,
+        e.g. whether email/password registration is available.
+      tags:
+        - Config
+      responses:
+        "200":
+          description: Public client configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConfigResponse"
+
   /leaderboard:
     get:
       operationId: getLeaderboard
@@ -1224,6 +1241,14 @@ components:
           description: Most frequently used letter across all submitted words (empty if none)
           example: а
           type: string
+
+    ConfigResponse:
+      type: object
+      properties:
+        email_signup_enabled:
+          description: Whether email/password registration is available
+          example: false
+          type: boolean
 
     Achievement:
       type: object

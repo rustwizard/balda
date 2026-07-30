@@ -51,6 +51,16 @@ func (UnimplementedHandler) CreateGameWithBot(ctx context.Context) (r CreateGame
 	return r, ht.ErrNotImplemented
 }
 
+// GetConfig implements getConfig operation.
+//
+// Returns feature flags the client needs before authentication, e.g. whether email/password
+// registration is available.
+//
+// GET /config
+func (UnimplementedHandler) GetConfig(ctx context.Context) (r *ConfigResponse, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // GetLeaderboard implements getLeaderboard operation.
 //
 // Returns the top players by current rating or total EXP who were active during the requested period.

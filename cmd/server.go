@@ -79,6 +79,10 @@ type CentrifugoConfig struct {
 
 type AuthConfig struct {
 	JWTSecret string
+	// EmailSignupEnabled allows email/password registration. Disabled in
+	// prod: signup stays available for local testing while real users come
+	// through Telegram auth.
+	EmailSignupEnabled bool
 }
 
 type Config struct {
@@ -181,7 +185,7 @@ var serverCmd = &cobra.Command{
 
 		svc := service.New(lby, mm, s, lb, achSvc)
 
-		h := handlers.New(svc, pres, cfg.Auth.JWTSecret, cf, cfg.Centrifugo.TokenHMACSecret)
+		h := handlers.New(svc, pres, cfg.Auth.JWTSecret, cf, cfg.Centrifugo.TokenHMACSecret, cfg.Auth.EmailSignupEnabled)
 
 		srv, err := baldaapi.NewServer(h, h,
 			baldaapi.WithPathPrefix("/balda/api/v1"),
@@ -267,6 +271,7 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	f.IntVar(&c.Pg.MaxPoolSize, "pg.max_pool_size", 10, "postgres max pool size")
 	f.StringVar(&c.Pg.SSL, "pg.ssl", "disable", "postgres ssl")
 	f.StringVar(&c.Auth.JWTSecret, "auth.jwt_secret", "", "HMAC secret for signing JWT access tokens")
+	f.BoolVar(&c.Auth.EmailSignupEnabled, "auth.email_signup_enabled", true, "allow email/password registration (disable in prod)")
 	f.StringVar(&c.Centrifugo.APIURL, "centrifugo.api_url", "http://127.0.0.1:8000/api", "centrifugo api url")
 	f.StringVar(&c.Centrifugo.APIKey, "centrifugo.api_key", "", "centrifugo api key")
 	f.StringVar(&c.Centrifugo.TokenHMACSecret, "centrifugo.token_hmac_secret_key", "", "centrifugo token hmac secret")

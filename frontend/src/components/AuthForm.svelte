@@ -1,16 +1,25 @@
 <script lang="ts">
-  import { auth, signup, setTokens } from '../lib/api';
+  import { auth, signup, setTokens, getConfig } from '../lib/api';
   import { centrifugo } from '../lib/centrifugo';
   import { gameState } from '../stores/game.svelte';
   import type { AuthResponse, SignupResponse } from '../types';
 
   let isSignup = $state(false);
+  let signupEnabled = $state(true);
   let email = $state('');
   let password = $state('');
   let firstname = $state('');
   let lastname = $state('');
   let error = $state('');
   let loading = $state(false);
+
+  // Registration may be disabled by the server (prod: Telegram-only sign-up,
+  // email stays for local testing). Login remains available either way.
+  $effect(() => {
+    getConfig()
+      .then((cfg) => (signupEnabled = cfg.email_signup_enabled))
+      .catch(() => {});
+  });
 
   async function handleSubmit(e: Event) {
     e.preventDefault();
@@ -133,8 +142,13 @@
   <button
     type="button"
     onclick={() => (isSignup = !isSignup)}
-    class="mt-4 w-full text-center text-sm text-stone-500 hover:text-stone-700"
+    class="mt-4 w-full text-center text-sm text-stone-500 hover:text-stone-700 {signupEnabled ? '' : 'hidden'}"
   >
     {isSignup ? 'Уже есть аккаунт? Войти' : 'Нет аккаунта? Зарегистрироваться'}
   </button>
+  {#if !signupEnabled}
+    <div class="mt-4 text-center text-sm text-stone-400">
+      Регистрация по email закрыта — скоро вход через Telegram
+    </div>
+  {/if}
 </div>

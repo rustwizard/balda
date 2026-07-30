@@ -425,6 +425,22 @@ func (s *BoardCell) SetCol(val int) {
 	s.Col = val
 }
 
+// Ref: #/components/schemas/ConfigResponse
+type ConfigResponse struct {
+	// Whether email/password registration is available.
+	EmailSignupEnabled OptBool `json:"email_signup_enabled"`
+}
+
+// GetEmailSignupEnabled returns the value of EmailSignupEnabled.
+func (s *ConfigResponse) GetEmailSignupEnabled() OptBool {
+	return s.EmailSignupEnabled
+}
+
+// SetEmailSignupEnabled sets the value of EmailSignupEnabled.
+func (s *ConfigResponse) SetEmailSignupEnabled(val OptBool) {
+	s.EmailSignupEnabled = val
+}
+
 // Ref: #/components/schemas/CreateGameResponse
 type CreateGameResponse struct {
 	Game OptGameSummary `json:"game"`

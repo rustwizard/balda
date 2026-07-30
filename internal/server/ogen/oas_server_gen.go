@@ -34,6 +34,13 @@ type Handler interface {
 	//
 	// POST /games/with-bot
 	CreateGameWithBot(ctx context.Context) (CreateGameWithBotRes, error)
+	// GetConfig implements getConfig operation.
+	//
+	// Returns feature flags the client needs before authentication, e.g. whether email/password
+	// registration is available.
+	//
+	// GET /config
+	GetConfig(ctx context.Context) (*ConfigResponse, error)
 	// GetLeaderboard implements getLeaderboard operation.
 	//
 	// Returns the top players by current rating or total EXP who were active during the requested period.
