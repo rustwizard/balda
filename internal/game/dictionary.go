@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 
@@ -33,6 +35,8 @@ func NewDictionary() (*Dictionary, error) {
 	}
 	defer f.Close() //nolint:errcheck
 
+	raw := make(map[string]string, 56000)
+
 	dec := json.NewDecoder(f)
 	for {
 		var words map[string]interface{}
@@ -54,16 +58,80 @@ func NewDictionary() (*Dictionary, error) {
 			}
 
 			def := v.(map[string]interface{})
-			normK := normalizeWord(k)
-			dict.Definition[normK] = def["definition"].(string)
-
-			if utf8.RuneCountInString(normK) == 5 {
-				dict.FiveLetters = append(dict.FiveLetters, normK)
-			}
+			raw[normalizeWord(k)] = def["definition"].(string)
 		}
 	}
 
+	// Filter out entries that break the classic Balda rules or feel unfair
+	// to casual players (the bot plays by this dictionary too).
+	var droppedArchaic, droppedPluralAlias int
+	for w, def := range raw {
+		if isArchaic(def) {
+			droppedArchaic++
+			continue
+		}
+		if isPluralAlias(w, def, raw) {
+			droppedPluralAlias++
+			continue
+		}
+		dict.Definition[w] = def
+		if utf8.RuneCountInString(w) == 5 {
+			dict.FiveLetters = append(dict.FiveLetters, w)
+		}
+	}
+	slog.Info("game: dictionary loaded",
+		slog.Int("kept", len(dict.Definition)),
+		slog.Int("dropped_archaic", droppedArchaic),
+		slog.Int("dropped_plural_alias", droppedPluralAlias),
+	)
+
 	return dict, nil
+}
+
+// isArchaic reports whether the dictionary entry is marked obsolete (устар.).
+func isArchaic(def string) bool {
+	return strings.Contains(def, "устар.")
+}
+
+// isPluralAlias reports whether the entry is a plural form that merely
+// aliases another word ("мн. ... То же, что: ...") while its singular form
+// exists in the dictionary. Classic Balda allows singular nouns (plus
+// pluralia tantum), so such aliases are excluded. Plurals with their own
+// distinct meaning (руки "рабочая сила", коты "тёплая обувь") are kept,
+// because they are not cross-references.
+func isPluralAlias(word, def string, dict map[string]string) bool {
+	if !strings.HasPrefix(def, "мн.") {
+		return false
+	}
+	if !strings.Contains(strings.ToLower(def), "то же, что") {
+		return false
+	}
+	for _, c := range singularCandidates(word) {
+		if _, ok := dict[c]; ok {
+			return true
+		}
+	}
+	return false
+}
+
+// singularCandidates returns plausible singular forms of a plural word.
+func singularCandidates(w string) []string {
+	r := []rune(w)
+	if len(r) < 2 {
+		return nil
+	}
+	stem := string(r[:len(r)-1])
+	switch {
+	case strings.HasSuffix(w, "йцы") && len(r) >= 3: // нанайцы -> нанаец
+		return []string{string(r[:len(r)-3]) + "ец", stem}
+	case strings.HasSuffix(w, "цы"): // немцы -> немец
+		return []string{string(r[:len(r)-2]) + "ец", stem}
+	case strings.HasSuffix(w, "ы"), strings.HasSuffix(w, "и"): // гольды -> гольд
+		return []string{stem, stem + "ь", stem + "й"}
+	case strings.HasSuffix(w, "а"): // дома -> дом
+		return []string{stem, stem + "о"}
+	}
+	return nil
 }
 
 func (d *Dictionary) RandomFiveLetterWord() string {
