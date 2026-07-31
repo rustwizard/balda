@@ -5,9 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/rustwizard/balda/api/openapi"
@@ -152,13 +154,9 @@ var serverCmd = &cobra.Command{
 		// bot.Notifier.
 		lby := lobby.New(func(_ context.Context, gameID string, players []*game.Player, _ game.Notifier) (*game.Game, error) {
 			coord := gamecoord.New(gameID, players, cf)
-			// Bot games are intentionally not persisted: the bot is not a real
-			// player_state row, so there is no valid player_id for game_results.
-			// game_over is still published to Centrifugo so the frontend can finish
-			// the game UI normally.
-			if !hasBotPlayer(players) {
-				coord.SetOnGameOver(makeOnGameOverCallback(s, cf, achSvc, &pendingResults))
-			}
+			// Bot games are persisted too: only the human side is written
+			// (rating, EXP, stats) since the bot has no player_state row.
+			coord.SetOnGameOver(makeOnGameOverCallback(s, cf, achSvc, &pendingResults))
 
 			var notifiers []game.Notifier
 			notifiers = append(notifiers, coord)
@@ -183,10 +181,67 @@ var serverCmd = &cobra.Command{
 			}
 			return g, nil
 		})
+		// publishMatchFound tells matched players (via the lobby channel) which
+		// game to enter, with per-player subscription tokens and the board
+		// snapshot so the client does not race the first turn events.
+		publishMatchFound := func(rec *lobby.GameRecord, players []*game.Player, vsBot bool) {
+			ev := centrifugo.EvMatchFound{
+				Type:           "match_found",
+				GameID:         rec.ID,
+				VsBot:          vsBot,
+				Board:          rec.Game.BoardSnapshot(),
+				CurrentTurnUID: players[0].ID,
+				Players:        make([]centrifugo.MatchFoundPlayer, 0, len(players)),
+			}
+			for _, p := range players {
+				mp := centrifugo.MatchFoundPlayer{UID: p.ID, Exp: p.Exp, Rating: p.Rating}
+				if p.Type != game.PlayerTypeBot {
+					pid, err := uuid.Parse(p.ID)
+					if err != nil {
+						slog.Error("match_found: parse player id", slog.String("playerID", p.ID), slog.Any("error", err))
+						continue
+					}
+					uid, err := s.GetUIDByPlayerID(context.Background(), pid)
+					if err != nil {
+						slog.Error("match_found: load uid", slog.String("playerID", p.ID), slog.Any("error", err))
+						continue
+					}
+					token, err := centrifugo.GenerateSubscriptionToken(
+						strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), cfg.Centrifugo.TokenHMACSecret, 24*time.Hour,
+					)
+					if err != nil {
+						slog.Error("match_found: generate game token", slog.String("playerID", p.ID), slog.Any("error", err))
+						continue
+					}
+					mp.GameToken = token
+				}
+				ev.Players = append(ev.Players, mp)
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			if err := cf.Publish(ctx, centrifugo.ChannelLobby, ev); err != nil {
+				slog.Error("match_found: publish", slog.String("gameID", rec.ID), slog.Any("error", err))
+			}
+		}
+
 		mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-			_, err := lby.StartGame(cmd.Context(), players, &game.NoopNotifier{})
-			return err
-		})
+			rec, err := lby.StartGame(context.Background(), players, &game.NoopNotifier{})
+			if err != nil {
+				return err
+			}
+			publishMatchFound(rec, players, false)
+			return nil
+		}).WithExpireCallback(func(p *game.Player) error {
+			// No human opponent showed up in time: fall back to a bot game.
+			players := []*game.Player{p, {ID: bot.BotPlayerID, Rating: storage.DefaultRating, Type: game.PlayerTypeBot}}
+			rec, err := lby.StartGame(context.Background(), players, &game.NoopNotifier{})
+			if err != nil {
+				return err
+			}
+			publishMatchFound(rec, players, true)
+			return nil
+		}).WithOnlineChecker(presenceChecker{pres}.IsOnline)
+		go mm.Run(cmd.Context())
 
 		lb := leaderboard.NewService(s, rdb, 5*time.Minute)
 
@@ -292,7 +347,6 @@ func init() {
 	serverCmd.Flags().AddFlagSet(cfg.Presence.Flags("presence"))
 }
 
-// hasBotPlayer reports whether any player in the list is a bot.
 // presenceChecker adapts *presence.Service to game.OnlineChecker, bridging the
 // no-context FSM call to the ctx-based presence lookup with a short timeout.
 type presenceChecker struct {
@@ -303,15 +357,6 @@ func (c presenceChecker) IsOnline(playerID string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	return c.p.IsOnline(ctx, playerID)
-}
-
-func hasBotPlayer(players []*game.Player) bool {
-	for _, p := range players {
-		if p.Type == game.PlayerTypeBot {
-			return true
-		}
-	}
-	return false
 }
 
 // gameResultSaver matches *storage.Balda so the callback can be unit-tested.

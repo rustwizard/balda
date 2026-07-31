@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createGame, createGameWithBot, joinGame, listGames } from '../lib/api';
+  import { createGame, joinGame, listGames, joinMatchmaking, leaveMatchmaking } from '../lib/api';
   import { centrifugo } from '../lib/centrifugo';
   import { gameState } from '../stores/game.svelte';
   import { achievements } from '../stores/achievements.svelte';
@@ -11,6 +11,37 @@
   let loading = $state(false);
   let showAchievements = $state(false);
   let showStats = $state(false);
+  let searchSeconds = $state(0);
+  let searchTimer: ReturnType<typeof setInterval> | null = null;
+
+  async function quickMatch() {
+    error = '';
+    try {
+      await joinMatchmaking();
+      gameState.setSearching(true);
+      searchSeconds = 0;
+      searchTimer = setInterval(() => (searchSeconds += 1), 1000);
+    } catch (err: any) {
+      error = err.message;
+    }
+  }
+
+  async function cancelSearch() {
+    try {
+      await leaveMatchmaking();
+    } catch {
+      // Leaving is idempotent; ignore network hiccups.
+    }
+    stopSearch();
+  }
+
+  function stopSearch() {
+    gameState.setSearching(false);
+    if (searchTimer) {
+      clearInterval(searchTimer);
+      searchTimer = null;
+    }
+  }
 
   async function create() {
     loading = true;
@@ -58,36 +89,6 @@
     }
   }
 
-  async function createWithBot() {
-    loading = true;
-    error = '';
-    try {
-      const res = await createGameWithBot();
-      if (res.game_token) {
-        centrifugo.subscribe(`game:${res.game.id}`, res.game_token);
-      }
-      gameState.startGame(res.game);
-      if (res.board && res.current_turn_uid) {
-        const players = res.game.players?.length
-          ? res.game.players.map((p) => ({ uid: p.uid, rating: p.rating, score: 0, words_count: 0, words: [] }))
-          : res.game.player_ids.map((uid) => ({ uid, rating: 0, score: 0, words_count: 0, words: [] }));
-        gameState.applyGameState({
-          type: 'game_state',
-          game_id: res.game.id,
-          board: res.board,
-          current_turn_uid: res.current_turn_uid,
-          players,
-          status: 'in_progress',
-          move_number: 0,
-        });
-      }
-    } catch (err: any) {
-      error = err.message;
-    } finally {
-      loading = false;
-    }
-  }
-
   // Load initial game list and subscribe to lobby channel once
   $effect(() => {
     listGames()
@@ -98,6 +99,12 @@
       centrifugo.subscribe('lobby', gameState.lobbyToken);
       subscribed = true;
     }
+  });
+
+  // The search state is global (match_found can arrive any time); when it
+  // flips off, stop the local seconds counter too.
+  $effect(() => {
+    if (!gameState.searching) stopSearch();
   });
 </script>
 
@@ -128,21 +135,32 @@
     </div>
   </div>
 
-  <button
-    onclick={create}
-    disabled={loading}
-    class="mb-4 w-full rounded-xl bg-blue-600 px-4 py-3 font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
-  >
-    Создать игру
-  </button>
-
-  <button
-    onclick={createWithBot}
-    disabled={loading}
-    class="mb-4 w-full rounded-xl bg-purple-600 px-4 py-3 font-bold text-white transition hover:bg-purple-700 disabled:opacity-50"
-  >
-    🤖 Играть с ботом
-  </button>
+  {#if gameState.searching}
+    <div class="mb-4 rounded-xl bg-blue-50 p-4 text-center">
+      <div class="mb-1 text-lg font-bold text-blue-800">Ищем соперника…</div>
+      <div class="mb-3 text-sm text-blue-600">{searchSeconds} сек — не найдём живого, сыграешь с ботом</div>
+      <button
+        onclick={cancelSearch}
+        class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-stone-600 ring-1 ring-stone-200 hover:bg-stone-50"
+      >
+        Отмена
+      </button>
+    </div>
+  {:else}
+    <button
+      onclick={quickMatch}
+      class="mb-2 w-full rounded-xl bg-blue-600 px-4 py-3 text-lg font-bold text-white transition hover:bg-blue-700"
+    >
+      ▶ Играть
+    </button>
+    <button
+      onclick={create}
+      disabled={loading}
+      class="mb-4 w-full rounded-xl bg-stone-100 px-4 py-2 text-sm font-semibold text-stone-600 transition hover:bg-stone-200 disabled:opacity-50"
+    >
+      Создать приватную игру
+    </button>
+  {/if}
 
   {#if error}
     <div class="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>

@@ -1126,6 +1126,84 @@ func (s *LogoutRequest) SetRefreshToken(val OptString) {
 	s.RefreshToken = val
 }
 
+type MatchmakingJoinConflict ErrorResponse
+
+func (*MatchmakingJoinConflict) matchmakingJoinRes() {}
+
+type MatchmakingJoinInternalServerError ErrorResponse
+
+func (*MatchmakingJoinInternalServerError) matchmakingJoinRes() {}
+
+// Ref: #/components/schemas/MatchmakingJoinResponse
+type MatchmakingJoinResponse struct {
+	// Queue status after joining.
+	Status OptMatchmakingJoinResponseStatus `json:"status"`
+}
+
+// GetStatus returns the value of Status.
+func (s *MatchmakingJoinResponse) GetStatus() OptMatchmakingJoinResponseStatus {
+	return s.Status
+}
+
+// SetStatus sets the value of Status.
+func (s *MatchmakingJoinResponse) SetStatus(val OptMatchmakingJoinResponseStatus) {
+	s.Status = val
+}
+
+func (*MatchmakingJoinResponse) matchmakingJoinRes() {}
+
+// Queue status after joining.
+type MatchmakingJoinResponseStatus string
+
+const (
+	MatchmakingJoinResponseStatusQueued MatchmakingJoinResponseStatus = "queued"
+)
+
+// AllValues returns all MatchmakingJoinResponseStatus values.
+func (MatchmakingJoinResponseStatus) AllValues() []MatchmakingJoinResponseStatus {
+	return []MatchmakingJoinResponseStatus{
+		MatchmakingJoinResponseStatusQueued,
+	}
+}
+
+// MarshalText implements encoding.TextMarshaler.
+func (s MatchmakingJoinResponseStatus) MarshalText() ([]byte, error) {
+	switch s {
+	case MatchmakingJoinResponseStatusQueued:
+		return []byte(s), nil
+	default:
+		return nil, errors.Errorf("invalid value: %q", s)
+	}
+}
+
+// UnmarshalText implements encoding.TextUnmarshaler.
+func (s *MatchmakingJoinResponseStatus) UnmarshalText(data []byte) error {
+	switch MatchmakingJoinResponseStatus(data) {
+	case MatchmakingJoinResponseStatusQueued:
+		*s = MatchmakingJoinResponseStatusQueued
+		return nil
+	default:
+		return errors.Errorf("invalid value: %q", data)
+	}
+}
+
+type MatchmakingJoinUnauthorized ErrorResponse
+
+func (*MatchmakingJoinUnauthorized) matchmakingJoinRes() {}
+
+type MatchmakingLeaveInternalServerError ErrorResponse
+
+func (*MatchmakingLeaveInternalServerError) matchmakingLeaveRes() {}
+
+// MatchmakingLeaveNoContent is response for MatchmakingLeave operation.
+type MatchmakingLeaveNoContent struct{}
+
+func (*MatchmakingLeaveNoContent) matchmakingLeaveRes() {}
+
+type MatchmakingLeaveUnauthorized ErrorResponse
+
+func (*MatchmakingLeaveUnauthorized) matchmakingLeaveRes() {}
+
 type MoveGameBadRequest ErrorResponse
 
 func (*MoveGameBadRequest) moveGameRes() {}
@@ -1822,6 +1900,52 @@ func (o OptLogoutRequest) Get() (v LogoutRequest, ok bool) {
 
 // Or returns value if set, or given parameter if does not.
 func (o OptLogoutRequest) Or(d LogoutRequest) LogoutRequest {
+	if v, ok := o.Get(); ok {
+		return v
+	}
+	return d
+}
+
+// NewOptMatchmakingJoinResponseStatus returns new OptMatchmakingJoinResponseStatus with value set to v.
+func NewOptMatchmakingJoinResponseStatus(v MatchmakingJoinResponseStatus) OptMatchmakingJoinResponseStatus {
+	return OptMatchmakingJoinResponseStatus{
+		Value: v,
+		Set:   true,
+	}
+}
+
+// OptMatchmakingJoinResponseStatus is optional MatchmakingJoinResponseStatus.
+type OptMatchmakingJoinResponseStatus struct {
+	Value MatchmakingJoinResponseStatus
+	Set   bool
+}
+
+// IsSet returns true if OptMatchmakingJoinResponseStatus was set.
+func (o OptMatchmakingJoinResponseStatus) IsSet() bool { return o.Set }
+
+// Reset unsets value.
+func (o *OptMatchmakingJoinResponseStatus) Reset() {
+	var v MatchmakingJoinResponseStatus
+	o.Value = v
+	o.Set = false
+}
+
+// SetTo sets value to v.
+func (o *OptMatchmakingJoinResponseStatus) SetTo(v MatchmakingJoinResponseStatus) {
+	o.Set = true
+	o.Value = v
+}
+
+// Get returns value and boolean that denotes whether value was set.
+func (o OptMatchmakingJoinResponseStatus) Get() (v MatchmakingJoinResponseStatus, ok bool) {
+	if !o.Set {
+		return v, false
+	}
+	return o.Value, true
+}
+
+// Or returns value if set, or given parameter if does not.
+func (o OptMatchmakingJoinResponseStatus) Or(d MatchmakingJoinResponseStatus) MatchmakingJoinResponseStatus {
 	if v, ok := o.Get(); ok {
 		return v
 	}

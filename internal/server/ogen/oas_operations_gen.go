@@ -19,6 +19,8 @@ const (
 	JoinGameOperation              OperationName = "JoinGame"
 	ListGamesOperation             OperationName = "ListGames"
 	LogoutOperation                OperationName = "Logout"
+	MatchmakingJoinOperation       OperationName = "MatchmakingJoin"
+	MatchmakingLeaveOperation      OperationName = "MatchmakingLeave"
 	MoveGameOperation              OperationName = "MoveGame"
 	PingOperation                  OperationName = "Ping"
 	ProposeEndGameOperation        OperationName = "ProposeEndGame"

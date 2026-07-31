@@ -236,3 +236,70 @@ func TestQueue_ConcurrentEnqueueDequeue(_ *testing.T) {
 	}
 	wg.Wait()
 }
+
+// TestQueue_Tick_ExpiresAfterMaxWait verifies that an entry older than MaxWait
+// is removed from the queue and handed to the expire callback (bot fallback).
+func TestQueue_Tick_ExpiresAfterMaxWait(t *testing.T) {
+	cfg := testCfg()
+	cfg.MaxWait = time.Second
+
+	var expired []string
+	q := matchmaking.New(cfg, noopCallback).WithExpireCallback(func(p *game.Player) error {
+		expired = append(expired, p.ID)
+		return nil
+	})
+
+	require.NoError(t, q.EnqueueAt(player("p1", 500), time.Now().Add(-2*time.Second)))
+	require.NoError(t, q.Enqueue(player("p2", 520))) // fresh entry stays
+
+	q.Tick(time.Now())
+
+	assert.Equal(t, []string{"p1"}, expired)
+	assert.Equal(t, 1, q.Len(), "only the fresh entry should remain")
+}
+
+// TestQueue_Tick_RemovesOffline verifies that entries whose player is offline
+// are silently removed (no expire callback).
+func TestQueue_Tick_RemovesOffline(t *testing.T) {
+	var expired []string
+	q := matchmaking.New(testCfg(), noopCallback).
+		WithExpireCallback(func(p *game.Player) error {
+			expired = append(expired, p.ID)
+			return nil
+		}).
+		WithOnlineChecker(func(playerID string) bool { return playerID != "p1" })
+
+	require.NoError(t, q.Enqueue(player("p1", 500)))
+	require.NoError(t, q.Enqueue(player("p2", 520)))
+
+	q.Tick(time.Now())
+
+	assert.Empty(t, expired)
+	assert.Equal(t, 1, q.Len())
+}
+
+// TestQueue_Tick_ExpiredNotMatched verifies that an expired entry is not
+// considered for pairing even if it would match.
+func TestQueue_Tick_ExpiredNotMatched(t *testing.T) {
+	cfg := testCfg()
+	cfg.MaxWait = time.Second
+
+	matched := 0
+	var expired []string
+	q := matchmaking.New(cfg, func(_ []*game.Player) error {
+		matched++
+		return nil
+	}).WithExpireCallback(func(p *game.Player) error {
+		expired = append(expired, p.ID)
+		return nil
+	})
+
+	require.NoError(t, q.EnqueueAt(player("p1", 500), time.Now().Add(-2*time.Second)))
+	require.NoError(t, q.Enqueue(player("p2", 505)))
+
+	q.Tick(time.Now())
+
+	assert.Equal(t, 0, matched, "expired entry must not be matched")
+	assert.Equal(t, []string{"p1"}, expired)
+	assert.Equal(t, 1, q.Len())
+}

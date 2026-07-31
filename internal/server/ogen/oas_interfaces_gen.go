@@ -49,6 +49,14 @@ type LogoutRes interface {
 	logoutRes()
 }
 
+type MatchmakingJoinRes interface {
+	matchmakingJoinRes()
+}
+
+type MatchmakingLeaveRes interface {
+	matchmakingLeaveRes()
+}
+
 type MoveGameRes interface {
 	moveGameRes()
 }

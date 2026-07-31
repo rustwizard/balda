@@ -128,3 +128,24 @@ type EvAchievementUnlocked struct {
 	AchievementID string `json:"achievement_id"`
 	Name          string `json:"name"`
 }
+
+// EvMatchFound is published to the lobby channel when quick matchmaking puts
+// players into a game — either a human pair or a bot fallback after the queue
+// timeout. It carries the board snapshot and per-player subscription tokens so
+// clients can enter the game screen without racing the first turn events.
+type EvMatchFound struct {
+	Type           string             `json:"type"` // "match_found"
+	GameID         string             `json:"game_id"`
+	VsBot          bool               `json:"vs_bot"`
+	Board          [5][5]string       `json:"board"`
+	CurrentTurnUID string             `json:"current_turn_uid"`
+	Players        []MatchFoundPlayer `json:"players"`
+}
+
+// MatchFoundPlayer is one matched player; GameToken is empty for the bot.
+type MatchFoundPlayer struct {
+	UID       string `json:"uid"`
+	Exp       int    `json:"exp"`
+	Rating    int    `json:"rating"`
+	GameToken string `json:"game_token,omitempty"`
+}

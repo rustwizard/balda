@@ -18,8 +18,13 @@ The player with the most words when the game ends wins.
 
 ## Game Modes
 
-- **PvP** — create a game and wait for an opponent to join, or join an existing waiting game.
-- **Play vs Bot** — `POST /games/with-bot` starts an immediate game against a server-side bot. The bot uses a trie-backed DFS strategy to find valid Russian words and plays with a short thinking delay.
+- **Quick Match** — the primary mode. One tap on "Play": the matchmaking queue pairs you with a human of a close ELO rating; if nobody shows up within 15 seconds, a bot game starts automatically.
+- **Private game** — create a waiting game and let an opponent join from the lobby list.
+- **Play vs Bot** — bot games are fully featured for the human: ELO rating (vs the bot's 1000), EXP, and lifetime stats count just like PvP games. The bot uses a trie-backed DFS strategy and plays with a human-like thinking delay (15–60 s).
+
+Progression: ELO rating, weekly/monthly leaderboard, achievements, and per-player statistics (win rate, average word length, best word, favorite letter) at `GET /player/stats`.
+
+The game also runs as a **Telegram Mini App**: inside Telegram the player is authenticated seamlessly via signed init data (`POST /auth/telegram`), no forms or passwords.
 
 ## Tech Stack
 
@@ -182,13 +187,20 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 |--------|------|-------------|
 | POST | `/signup` | Register a new user account; returns a token pair |
 | POST | `/auth` | Authenticate; returns a token pair |
+| POST | `/auth/telegram` | Authenticate via Telegram Mini App init data (find-or-create user) |
 | POST | `/auth/refresh` | Exchange a refresh token for a new access/refresh pair |
 | POST | `/auth/logout` | Revoke the current refresh token (Bearer required) |
 | POST | `/session/ping` | Keepalive — refreshes game presence (Bearer required) |
+| GET | `/config` | Public client config (e.g. whether email signup is enabled) |
 | GET | `/player/state/{uid}` | Get player profile and state |
 | GET | `/player/achievements` | Get the player's achievement list with unlock status |
+| GET | `/player/stats` | Lifetime stats: games, win rate, avg word length, best word, favorite letter |
+| GET | `/leaderboard` | Weekly/monthly top players by rating or EXP |
+| POST | `/matchmaking/join` | Join the quick match queue |
+| POST | `/matchmaking/leave` | Leave the quick match queue (idempotent) |
 | GET | `/games` | List all currently active games |
 | POST | `/games` | Create a new waiting game |
+| POST | `/games/with-bot` | Start an immediate game against the bot |
 | POST | `/games/{id}/join` | Join an existing waiting game |
 | POST | `/games/{id}/move` | Submit a move (place letter + word) |
 | POST | `/games/{id}/skip` | Skip the current turn |
@@ -321,6 +333,7 @@ After auth, the client connects to Centrifugo using `centrifugo_token`. Events f
 |---------|-----------|------|
 | `lobby` | `game_created` | After `POST /games` |
 | `lobby` | `lobby_update` | Whenever the active game list changes |
+| `lobby` | `match_found` | Quick match paired the player into a game (human or bot fallback) |
 | `lobby` + `game:{id}` | `game_started` | After `POST /games/{id}/join` |
 | `game:{id}` | `game_state` | On turn start and after each accepted move |
 | `game:{id}` | `turn_change` | On every turn change (any reason) |
@@ -328,6 +341,7 @@ After auth, the client connects to Centrifugo using `centrifugo_token`. Events f
 | `game:{id}` | `end_proposal` | When a player proposes to end the game early |
 | `game:{id}` | `end_proposal_result` | When the opponent accepts or rejects the proposal |
 | `game:{id}` | `game_over` | When the game ends |
+| `game:{id}` | `achievement_unlocked` | When a player unlocks an achievement |
 
 ### `lobby_update`
 
@@ -338,6 +352,16 @@ Sent to the `lobby` channel whenever the active game list changes. The client re
   { "id": "…", "player_ids": ["…"], "players": [{"uid":"…","exp":42}],
     "status": "waiting", "started_at": 1712600000000 }
 ]}
+```
+
+### `match_found`
+
+Sent to the `lobby` channel when quick matchmaking puts players into a game — a human pair or a bot fallback after the queue timeout (`vs_bot`). Carries the board snapshot and a per-player `game_token` so clients can enter the game without racing the first turn events. Clients filter by their own `uid`.
+
+```json
+{ "type": "match_found", "game_id": "…", "vs_bot": false,
+  "board": [["","…"]], "current_turn_uid": "…",
+  "players": [{"uid":"…","exp":42,"rating":1000,"game_token":"…"}] }
 ```
 
 ### `game_state`
@@ -390,10 +414,11 @@ Sent when the opponent responds to the proposal. If rejected, `remaining_ms` car
 
 ```json
 { "type": "game_over", "game_id": "…", "winner_uid": "…",
+  "board": [["","…"]],
   "players": [{"uid":"…","exp":55,"score":5,"words_count":2,"exp_gained":13}] }
 ```
 
-Sent when the game ends — either because the board became full, a player was kicked, or both players agreed to end early. `winner_uid` is absent on a draw. `exp_gained` reflects experience earned this game.
+Sent when the game ends — either because the board became full, a player was kicked, or both players agreed to end early. `winner_uid` is absent on a draw. `exp_gained` reflects experience earned this game. `board` is the final board snapshot: the last move never triggers a `game_state`, so the final letter arrives only here.
 
 ---
 
@@ -479,8 +504,9 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | user_id | bigserial | PK |
 | first_name | text | |
 | last_name | text | |
-| email | text | unique |
+| email | text | unique when set; NULL for Telegram users |
 | hash_password | text | bcrypt (Go, cost 12) |
+| telegram_id | bigint | unique when set; Telegram account link |
 | role | text | `player` \| `admin`, default `player` |
 | confirmed | boolean | default false |
 | created_at | timestamp | |
@@ -505,8 +531,10 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | nickname | text | auto-generated |
 | exp | bigint | experience points |
 | rating | int | ELO rating (default 1000) |
-| flags | bigint | feature flags |
-| lives | bigint | |
+| flags | bigint | unlocked achievements bitmask |
+| lives | bigint | reserved, unused |
+| total_games | int | finished games counter |
+| consecutive_wins | int | current win streak |
 | created_at | timestamp | |
 | updated_at | timestamp | |
 
@@ -517,7 +545,7 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | id | bigserial | PK |
 | game_id | uuid | unique |
 | winner_id | uuid | null on draw |
-| finish_reason | text | `board_full`, `kick`, `accept_end` |
+| finish_reason | text | `game_finished`, `kick`, `accept_end` |
 | finished_at | timestamptz | |
 
 **game_result_players**
@@ -529,6 +557,20 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | score | int | |
 | words_count | int | |
 | exp_gained | int | |
+| best_word_length | int | |
+| words | jsonb | words submitted by the player |
+
+**achievements**
+
+| Column | Type | Notes |
+|--------|------|-------|
+| id | text | PK, e.g. `first_win` |
+| name | text | display name |
+| description | text | unlock condition, human-readable |
+| condition_type | text | `total_games`, `win`, `score`, `words_count`, `best_word_length`, `consecutive_wins` |
+| operator | text | comparison, default `gte` |
+| threshold | int | value to reach |
+| bit_position | int | bit in `player_state.flags` |
 
 ---
 
@@ -539,6 +581,8 @@ Each game runs an FSM loop (`Game.Run`) driven by `TurnEvent` values sent over a
 | `--server.addr` | `127.0.0.1` | Bind address |
 | `--server.port` | `9666` | HTTP port |
 | `--auth.jwt_secret` | | HMAC secret for signing JWT access tokens |
+| `--auth.email_signup_enabled` | `true` | Allow email/password registration (disabled in prod — Telegram-only sign-up) |
+| `--telegram.bot_token` | | Telegram bot token for Mini App auth (init data validation); empty = endpoint answers 503 |
 | `--pg.host` | `127.0.0.1` | PostgreSQL host |
 | `--pg.port` | `5432` | PostgreSQL port |
 | `--pg.user` | | PostgreSQL user |

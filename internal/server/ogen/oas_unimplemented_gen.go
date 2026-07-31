@@ -139,6 +139,25 @@ func (UnimplementedHandler) Logout(ctx context.Context, req OptLogoutRequest) (r
 	return r, ht.ErrNotImplemented
 }
 
+// MatchmakingJoin implements matchmakingJoin operation.
+//
+// Enqueues the player for quick matchmaking. When a human opponent with a close rating is found, a
+// match_found event is published to the lobby channel; after a timeout the server starts a bot game.
+//
+// POST /matchmaking/join
+func (UnimplementedHandler) MatchmakingJoin(ctx context.Context) (r MatchmakingJoinRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
+// MatchmakingLeave implements matchmakingLeave operation.
+//
+// Idempotent — leaving without being queued is not an error.
+//
+// POST /matchmaking/leave
+func (UnimplementedHandler) MatchmakingLeave(ctx context.Context) (r MatchmakingLeaveRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // MoveGame implements moveGame operation.
 //
 // Places a new letter on the board and submits a word. If the word is valid, the player's score is

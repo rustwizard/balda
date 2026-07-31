@@ -196,6 +196,53 @@ paths:
               schema:
                 $ref: "#/components/schemas/ConfigResponse"
 
+  /matchmaking/join:
+    post:
+      operationId: matchmakingJoin
+      summary: Join the quick match queue
+      description: |
+        Enqueues the player for quick matchmaking. When a human opponent
+        with a close rating is found, a match_found event is published to
+        the lobby channel; after a timeout the server starts a bot game.
+      tags:
+        - Matchmaking
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: Player enqueued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MatchmakingJoinResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          description: Player is already in a game or in the queue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
+  /matchmaking/leave:
+    post:
+      operationId: matchmakingLeave
+      summary: Leave the quick match queue
+      description: Idempotent — leaving without being queued is not an error.
+      tags:
+        - Matchmaking
+      security:
+        - BearerAuth: []
+      responses:
+        "204":
+          description: Removed from the queue (or was not queued)
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
+
   /leaderboard:
     get:
       operationId: getLeaderboard
@@ -1301,6 +1348,15 @@ components:
           description: Whether email/password registration is available
           example: false
           type: boolean
+
+    MatchmakingJoinResponse:
+      type: object
+      properties:
+        status:
+          description: Queue status after joining
+          example: queued
+          type: string
+          enum: [queued]
 
     Achievement:
       type: object

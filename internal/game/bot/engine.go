@@ -13,6 +13,12 @@ import (
 // ErrNoMoveFound is returned when the bot cannot find any valid move.
 var ErrNoMoveFound = errors.New("bot: no valid move found")
 
+// BotPlayerID is the fixed player UUID used for the bot in every game.
+// The bot deliberately has no player_state row: results of bot games are
+// persisted (the human gets ELO/EXP/stats), but the bot itself exists only
+// in memory. A stable ID keeps game_result_players rows attributable.
+const BotPlayerID = "00000000-0000-0000-0000-000000000b07"
+
 // normalizeWord replaces ё/Ё with е/Е so that words differing only by this
 // letter are treated as identical, matching the game package behavior.
 func normalizeWord(word string) string {

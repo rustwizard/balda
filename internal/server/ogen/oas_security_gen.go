@@ -43,6 +43,8 @@ var operationRolesBearerAuth = map[string][]string{
 	JoinGameOperation:              []string{},
 	ListGamesOperation:             []string{},
 	LogoutOperation:                []string{},
+	MatchmakingJoinOperation:       []string{},
+	MatchmakingLeaveOperation:      []string{},
 	MoveGameOperation:              []string{},
 	PingOperation:                  []string{},
 	ProposeEndGameOperation:        []string{},

@@ -95,6 +95,19 @@ type Handler interface {
 	//
 	// POST /auth/logout
 	Logout(ctx context.Context, req OptLogoutRequest) (LogoutRes, error)
+	// MatchmakingJoin implements matchmakingJoin operation.
+	//
+	// Enqueues the player for quick matchmaking. When a human opponent with a close rating is found, a
+	// match_found event is published to the lobby channel; after a timeout the server starts a bot game.
+	//
+	// POST /matchmaking/join
+	MatchmakingJoin(ctx context.Context) (MatchmakingJoinRes, error)
+	// MatchmakingLeave implements matchmakingLeave operation.
+	//
+	// Idempotent — leaving without being queued is not an error.
+	//
+	// POST /matchmaking/leave
+	MatchmakingLeave(ctx context.Context) (MatchmakingLeaveRes, error)
 	// MoveGame implements moveGame operation.
 	//
 	// Places a new letter on the board and submits a word. If the word is valid, the player's score is

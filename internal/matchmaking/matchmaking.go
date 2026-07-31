@@ -28,6 +28,9 @@ type Config struct {
 	ExpandInterval time.Duration
 	// TickInterval is how often the queue is scanned for matches.
 	TickInterval time.Duration
+	// MaxWait is how long a player may wait before being expired from the
+	// queue (the server then falls back to a bot game for them).
+	MaxWait time.Duration
 }
 
 // DefaultConfig returns production-sensible matchmaking defaults.
@@ -37,6 +40,7 @@ func DefaultConfig() Config {
 		ExpandStep:     50,
 		ExpandInterval: 10 * time.Second,
 		TickInterval:   2 * time.Second,
+		MaxWait:        15 * time.Second,
 	}
 }
 
@@ -45,6 +49,11 @@ func DefaultConfig() Config {
 // on the next tick.
 type MatchCallback func(players []*game.Player) error
 
+// ExpireCallback is called (outside the queue lock) for a player who waited
+// longer than Config.MaxWait — the entry is removed first, so the callback
+// owns the fallback (e.g. starting a bot game).
+type ExpireCallback func(p *game.Player) error
+
 type entry struct {
 	player     *game.Player
 	enqueuedAt time.Time
@@ -52,11 +61,13 @@ type entry struct {
 
 // Queue is the matchmaking queue. Safe for concurrent use.
 type Queue struct {
-	mu      sync.Mutex
-	entries []*entry          // insertion-ordered (FIFO within same rating bucket)
-	indexed map[string]*entry // playerID → entry for O(1) lookup
-	cfg     Config
-	onMatch MatchCallback
+	mu       sync.Mutex
+	entries  []*entry          // insertion-ordered (FIFO within same rating bucket)
+	indexed  map[string]*entry // playerID → entry for O(1) lookup
+	cfg      Config
+	onMatch  MatchCallback
+	onExpire ExpireCallback
+	isOnline func(playerID string) bool
 }
 
 // New constructs a Queue with the given config and match callback.
@@ -66,6 +77,19 @@ func New(cfg Config, onMatch MatchCallback) *Queue {
 		cfg:     cfg,
 		onMatch: onMatch,
 	}
+}
+
+// WithExpireCallback sets the fallback invoked for entries that outwait MaxWait.
+func (q *Queue) WithExpireCallback(cb ExpireCallback) *Queue {
+	q.onExpire = cb
+	return q
+}
+
+// WithOnlineChecker sets an optional presence check: entries whose player is
+// offline at tick time are silently removed from the queue.
+func (q *Queue) WithOnlineChecker(f func(playerID string) bool) *Queue {
+	q.isOnline = f
+	return q
 }
 
 // Enqueue adds a player to the matchmaking queue.
@@ -142,9 +166,29 @@ type matchedPair struct {
 // of waiting for the real ticker.
 func (q *Queue) Tick(now time.Time) {
 	q.mu.Lock()
+
+	// Drop expired entries (waited longer than MaxWait) and offline players.
+	var expired []*game.Player
+	if q.cfg.MaxWait > 0 || q.isOnline != nil {
+		keep := q.entries[:0]
+		for _, e := range q.entries {
+			switch {
+			case q.cfg.MaxWait > 0 && now.Sub(e.enqueuedAt) > q.cfg.MaxWait:
+				expired = append(expired, e.player)
+				delete(q.indexed, e.player.ID)
+			case q.isOnline != nil && !q.isOnline(e.player.ID):
+				delete(q.indexed, e.player.ID)
+			default:
+				keep = append(keep, e)
+			}
+		}
+		q.entries = keep
+	}
+
 	n := len(q.entries)
 	if n < 2 {
 		q.mu.Unlock()
+		q.fireExpire(expired)
 		return
 	}
 
@@ -198,13 +242,26 @@ func (q *Queue) Tick(now time.Time) {
 
 	q.mu.Unlock()
 
-	// Call onMatch outside the lock so it can safely call Enqueue/Dequeue.
+	// Call callbacks outside the lock so they can safely call Enqueue/Dequeue.
 	for _, p := range pairs {
 		if err := q.onMatch([]*game.Player{p.a, p.b}); err != nil {
 			// Re-enqueue both players so they can be matched on the next tick.
 			_ = q.Enqueue(p.a)
 			_ = q.Enqueue(p.b)
 		}
+	}
+	q.fireExpire(expired)
+}
+
+// fireExpire invokes the expire callback for each expired player, if set.
+func (q *Queue) fireExpire(players []*game.Player) {
+	if q.onExpire == nil {
+		return
+	}
+	for _, p := range players {
+		// The player is already out of the queue; if the fallback fails there
+		// is nothing to retry — the client times out on its own.
+		_ = q.onExpire(p)
 	}
 }
 

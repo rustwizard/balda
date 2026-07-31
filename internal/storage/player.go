@@ -62,3 +62,20 @@ func (b *Balda) GetPlayerByUID(ctx context.Context, uid int64) (PlayerForGame, e
 	}
 	return p, nil
 }
+
+// GetUIDByPlayerID returns the internal user ID for the given player UUID.
+// Needed to mint per-user Centrifugo tokens for matchmaking callbacks.
+func (b *Balda) GetUIDByPlayerID(ctx context.Context, playerID uuid.UUID) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, b.t)
+	defer cancel()
+
+	var uid int64
+	err := b.db.QueryRow(ctx,
+		`SELECT user_id FROM player_state WHERE player_id = $1`,
+		playerID,
+	).Scan(&uid)
+	if err != nil {
+		return 0, fmt.Errorf("get uid by player id: %w", err)
+	}
+	return uid, nil
+}
