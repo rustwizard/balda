@@ -149,6 +149,14 @@ export function createGameWithBot(): Promise<JoinGameResponse> {
   return apiFetch('/games/with-bot', { method: 'POST' });
 }
 
+export function joinMatchmaking(): Promise<{ status: string }> {
+  return apiFetch('/matchmaking/join', { method: 'POST' });
+}
+
+export function leaveMatchmaking(): Promise<void> {
+  return apiFetch('/matchmaking/leave', { method: 'POST' });
+}
+
 export function joinGame(gameId: string): Promise<JoinGameResponse> {
   return apiFetch(`/games/${gameId}/join`, { method: 'POST' });
 }

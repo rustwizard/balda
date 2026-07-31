@@ -101,6 +101,41 @@
       case 'skip_warn':
         gameState.applySkipWarn(ev);
         break;
+      case 'match_found': {
+        // Quick match paired us into a game. Find our own entry for the
+        // subscription token and enter the game with the board from the
+        // event payload (avoids racing the first turn events).
+        const me = ev.players.find((p) => p.uid === gameState.playerUid);
+        if (!me?.game_token) break;
+        gameState.setSearching(false);
+        centrifugo.subscribe(`game:${ev.game_id}`, me.game_token);
+        gameState.startGame({
+          id: ev.game_id,
+          player_ids: ev.players.map((p) => p.uid),
+          status: 'in_progress',
+          started_at: 0,
+        });
+        gameState.applyGameState({
+          type: 'game_state',
+          game_id: ev.game_id,
+          board: ev.board,
+          current_turn_uid: ev.current_turn_uid,
+          players: ev.players.map((p) => ({
+            uid: p.uid,
+            exp: p.exp,
+            rating: p.rating,
+            score: 0,
+            words_count: 0,
+            words: [],
+          })),
+          status: 'in_progress',
+          move_number: 0,
+        });
+        if (ev.vs_bot) {
+          gameState.showNotif('Живой соперник не нашёлся — играешь с ботом', 'warn');
+        }
+        break;
+      }
       case 'lobby_update':
         gameState.applyLobbyUpdate(ev);
         break;

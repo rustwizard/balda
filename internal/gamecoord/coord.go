@@ -211,6 +211,16 @@ func (c *Coordinator) publishEndProposalResult(accepted bool, remainingMs int64)
 	}
 }
 
+// isBot reports whether the player with the given ID is the bot.
+func (c *Coordinator) isBot(playerID string) bool {
+	for _, p := range c.players {
+		if p.ID == playerID {
+			return p.Type == game.PlayerTypeBot
+		}
+	}
+	return false
+}
+
 func bestWordLength(words []string) int {
 	maxLen := 0
 	for _, w := range words {
@@ -236,6 +246,7 @@ func (c *Coordinator) dispatchGameResult(winnerUID string, reason storage.Finish
 			ExpGained:      storage.ExpGained(s.Score, isWinner, isDraw),
 			BestWordLength: bestWordLength(s.Words),
 			Words:          s.Words,
+			Bot:            c.isBot(s.UID),
 		}
 	}
 	result := storage.GameResult{

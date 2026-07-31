@@ -237,6 +237,22 @@ export interface EvAchievementUnlocked {
     name: string;
 }
 
+export interface MatchFoundPlayer {
+    uid: string;
+    exp: number;
+    rating: number;
+    game_token?: string;
+}
+
+export interface EvMatchFound {
+    type: "match_found";
+    game_id: string;
+    vs_bot: boolean;
+    board: string[][];
+    current_turn_uid: string;
+    players: MatchFoundPlayer[];
+}
+
 export type CentrifugoEvent =
     | EvGameState
     | EvGameOver
@@ -247,4 +263,5 @@ export type CentrifugoEvent =
     | EvLobbyUpdate
     | EvEndProposalResult
     | EvEndProposal
-    | EvAchievementUnlocked;
+    | EvAchievementUnlocked
+    | EvMatchFound;

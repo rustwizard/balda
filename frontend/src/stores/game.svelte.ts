@@ -53,6 +53,9 @@ export function createGameState() {
     // Lobby game list — updated via lobby_update Centrifugo events
     let lobbyGames = $state<GameSummary[]>([]);
 
+    // Quick match search state (matchmaking queue)
+    let searching = $state<boolean>(false);
+
     // End proposal
     let endProposalPending = $state<boolean>(false);
     let endProposalByMe = $state<boolean>(false);
@@ -323,7 +326,6 @@ export function createGameState() {
     function showNotif(message: string, kind: "error" | "warn" = "error") {
         notif = { message, kind };
     }
-
     function clearNotif() {
         notif = null;
     }
@@ -401,6 +403,9 @@ export function createGameState() {
         get lobbyGames() {
             return lobbyGames;
         },
+        get searching() {
+            return searching;
+        },
         get endProposalPending() {
             return endProposalPending;
         },
@@ -431,6 +436,9 @@ export function createGameState() {
         clearSelection,
         showNotif,
         clearNotif,
+        setSearching(value: boolean) {
+            searching = value;
+        },
         setMoveLoading(value: boolean) {
             moveLoading = value;
         },

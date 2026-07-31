@@ -29,6 +29,9 @@ type PlayerResult struct {
 	ExpGained      int
 	BestWordLength int
 	Words          []string
+	// Bot marks the synthetic bot player. Bot results are not persisted:
+	// only the human side of a bot game is saved (score, words, counters).
+	Bot bool
 }
 
 type GameResult struct {
@@ -107,14 +110,20 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 	if len(r.Players) == 2 {
 		p0, p1 := r.Players[0], r.Players[1]
 		var ratings [2]int
-		for i, pid := range []string{p0.PlayerID, p1.PlayerID} {
+		for i, p := range []PlayerResult{p0, p1} {
+			if p.Bot {
+				// The bot has no player_state row by design; rate it at the
+				// default so the human's ELO delta is computed normally.
+				ratings[i] = DefaultRating
+				continue
+			}
 			var rating int
 			err := tx.QueryRow(ctx,
 				`SELECT COALESCE(rating, $1) FROM player_state WHERE player_id = $2`,
-				DefaultRating, pid,
+				DefaultRating, p.PlayerID,
 			).Scan(&rating)
 			if err != nil {
-				return nil, fmt.Errorf("save game result: load rating for %s: %w", pid, err)
+				return nil, fmt.Errorf("save game result: load rating for %s: %w", p.PlayerID, err)
 			}
 			ratings[i] = rating
 		}
@@ -136,6 +145,10 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 	var unlocks []PlayerAchievementUnlock
 
 	for _, p := range r.Players {
+		if p.Bot {
+			continue
+		}
+
 		wordsJSON, err := json.Marshal(p.Words)
 		if err != nil {
 			return nil, fmt.Errorf("save game result: marshal words for %s: %w", p.PlayerID, err)

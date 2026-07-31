@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/rustwizard/balda/internal/achievements"
 	"github.com/rustwizard/balda/internal/game"
+	"github.com/rustwizard/balda/internal/game/bot"
 	"github.com/rustwizard/balda/internal/leaderboard"
 	"github.com/rustwizard/balda/internal/lobby"
 	"github.com/rustwizard/balda/internal/matchmaking"
@@ -129,12 +130,42 @@ func (s *Balda) RevokeAllUserTokens(ctx context.Context, uid int64) error {
 	return s.s.RevokeAllUserTokens(ctx, uid)
 }
 
+// ErrPlayerInGame is returned when a player tries to join matchmaking or
+// create a game while already participating in one.
+var ErrPlayerInGame = errors.New("service: player already in a game")
+
+// QuickMatchJoin enqueues the user for quick matchmaking.
+// Returns ErrPlayerInGame if they are already in a game, or
+// matchmaking.ErrAlreadyQueued if they are already waiting.
+func (s *Balda) QuickMatchJoin(ctx context.Context, uid int64) error {
+	p, err := s.s.GetPlayerByUID(ctx, uid)
+	if err != nil {
+		return fmt.Errorf("quick match join: %w", err)
+	}
+	if rec := s.ActiveGameRecord(p.PlayerID.String()); rec != nil && rec.Status != lobby.GameStatusFinished {
+		return ErrPlayerInGame
+	}
+	return s.mm.Enqueue(&game.Player{ID: p.PlayerID.String(), Exp: p.Exp, Rating: p.Rating, Type: game.PlayerTypeHuman})
+}
+
+// QuickMatchLeave removes the user from the matchmaking queue. It is
+// idempotent: leaving without being queued is not an error.
+func (s *Balda) QuickMatchLeave(ctx context.Context, uid int64) error {
+	p, err := s.s.GetPlayerByUID(ctx, uid)
+	if err != nil {
+		return fmt.Errorf("quick match leave: %w", err)
+	}
+	_ = s.mm.Dequeue(p.PlayerID.String())
+	return nil
+}
+
 // CreateGame creates a new game in waiting status for the given user.
 func (s *Balda) CreateGame(ctx context.Context, uid int64) (*lobby.GameRecord, error) {
 	p, err := s.s.GetPlayerByUID(ctx, uid)
 	if err != nil {
 		return nil, fmt.Errorf("create game: %w", err)
 	}
+	_ = s.mm.Dequeue(p.PlayerID.String())
 	return s.lby.Create(&game.Player{ID: p.PlayerID.String(), Exp: p.Exp, Rating: p.Rating, Type: game.PlayerTypeHuman})
 }
 
@@ -144,6 +175,7 @@ func (s *Balda) JoinGame(ctx context.Context, uid int64, gameID string) (*lobby.
 	if err != nil {
 		return nil, fmt.Errorf("join game: %w", err)
 	}
+	_ = s.mm.Dequeue(p.PlayerID.String())
 	return s.lby.Join(ctx, gameID, &game.Player{ID: p.PlayerID.String(), Exp: p.Exp, Rating: p.Rating, Type: game.PlayerTypeHuman}, &game.NoopNotifier{})
 }
 
@@ -153,9 +185,10 @@ func (s *Balda) CreateGameWithBot(ctx context.Context, uid int64) (*lobby.GameRe
 	if err != nil {
 		return nil, fmt.Errorf("create game with bot: %w", err)
 	}
+	_ = s.mm.Dequeue(p.PlayerID.String())
 	human := &game.Player{ID: p.PlayerID.String(), Exp: p.Exp, Rating: p.Rating, Type: game.PlayerTypeHuman}
 	botPlayer := &game.Player{
-		ID:     uuid.New().String(),
+		ID:     bot.BotPlayerID,
 		Exp:    0,
 		Rating: storage.DefaultRating,
 		Type:   game.PlayerTypeBot,
