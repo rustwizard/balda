@@ -15,7 +15,7 @@ import (
 	"github.com/rustwizard/balda/internal/rnd"
 )
 
-//go:embed assets/russian_nouns_with_definition.json
+//go:embed assets/russian_nouns_with_definition.json assets/custom_words.json
 var data embed.FS
 
 type Dictionary struct {
@@ -60,6 +60,19 @@ func NewDictionary() (*Dictionary, error) {
 
 			def := v.(map[string]interface{})
 			raw[normalizeWord(k)] = def["definition"].(string)
+		}
+	}
+
+	// Hand-picked additions for words missing from the main dictionary.
+	// They go through the same normalization and filtering pipeline.
+	if cf, err := data.Open("assets/custom_words.json"); err == nil {
+		defer cf.Close() //nolint:errcheck
+		var custom map[string]map[string]string
+		if err := json.NewDecoder(cf).Decode(&custom); err != nil {
+			return dict, fmt.Errorf("game: dictionary: decode custom words: %w", err)
+		}
+		for k, v := range custom {
+			raw[normalizeWord(k)] = v["definition"]
 		}
 	}
 

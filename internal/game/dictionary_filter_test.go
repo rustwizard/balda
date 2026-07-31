@@ -54,3 +54,8 @@ func TestSingularCandidates(t *testing.T) {
 	assert.Equal(t, []string{"дом", "домо"}, singularCandidates("дома"))
 	assert.Nil(t, singularCandidates("я"))
 }
+
+func TestDictionaryContainsCustomWords(t *testing.T) {
+	assert.Contains(t, Dict.Definition, "сота")
+	assert.Equal(t, "ж. Одна ячейка пчелиных сот.", Dict.Definition["сота"])
+}
