@@ -14,6 +14,16 @@
 
 Побеждает игрок, набравший больше слов к концу игры.
 
+## Режимы игры
+
+- **Быстрый бой** — основной режим. Одна кнопка «Играть»: очередь матчмейкинга подбирает живого соперника с близким ELO-рейтингом; если за 15 секунд никто не нашёлся — автоматически начинается игра с ботом.
+- **Приватная игра** — создать игру в ожидании, соперник заходит из списка в лобби.
+- **Игра с ботом** — для человека полноценная: ELO-рейтинг (против 1000 у бота), опыт и статистика начисляются как за PvP. Бот ищет слова на trie с DFS и «думает» с человеческой задержкой (15–60 с).
+
+Прогрессия: ELO-рейтинг, недельный/месячный лидерборд, достижения и статистика игрока (винрейт, средняя длина слова, лучшее слово, любимая буква) по `GET /player/stats`.
+
+Игра также работает как **Telegram Mini App**: внутри Телеграма игрок авторизуется бесшовно через подписанный initData (`POST /auth/telegram`) — без форм и паролей.
+
 ## Технологический стек
 
 | Слой | Технология |
@@ -175,13 +185,20 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 |-------|------|----------|
 | POST | `/signup` | Регистрация нового аккаунта; возвращает пару токенов |
 | POST | `/auth` | Аутентификация; возвращает пару токенов |
+| POST | `/auth/telegram` | Вход через Telegram Mini App initData (find-or-create пользователя) |
 | POST | `/auth/refresh` | Обмен refresh-токена на новую пару access/refresh |
 | POST | `/auth/logout` | Отозвать текущий refresh-токен (нужен Bearer) |
 | POST | `/session/ping` | Keepalive — обновляет игровое присутствие (нужен Bearer) |
+| GET | `/config` | Публичный конфиг клиента (включена ли регистрация по email) |
 | GET | `/player/state/{uid}` | Получить профиль и состояние игрока |
 | GET | `/player/achievements` | Список достижений игрока со статусом разблокировки |
+| GET | `/player/stats` | Статистика: игры, винрейт, средняя длина слова, лучшее слово, любимая буква |
+| GET | `/leaderboard` | Недельный/месячный топ игроков по рейтингу или опыту |
+| POST | `/matchmaking/join` | Встать в очередь быстрого боя |
+| POST | `/matchmaking/leave` | Покинуть очередь быстрого боя (идемпотентно) |
 | GET | `/games` | Список всех активных игр |
 | POST | `/games` | Создать новую игру в ожидании |
+| POST | `/games/with-bot` | Немедленно начать игру с ботом |
 | POST | `/games/{id}/join` | Присоединиться к игре в ожидании |
 | POST | `/games/{id}/move` | Отправить ход (поставить букву + слово) |
 | POST | `/games/{id}/skip` | Пропустить текущий ход |
@@ -321,6 +338,8 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | `game:{id}` | `end_proposal` | Когда игрок предлагает завершить игру досрочно |
 | `game:{id}` | `end_proposal_result` | Когда соперник принимает или отклоняет предложение |
 | `game:{id}` | `game_over` | Когда игра завершается |
+| `lobby` | `match_found` | Быстрый бой нашёл игру (живой соперник или фолбэк в бота) |
+| `game:{id}` | `achievement_unlocked` | Когда игрок разблокировал достижение |
 
 ### `lobby_update`
 
@@ -331,6 +350,16 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
   { "id": "…", "player_ids": ["…"], "players": [{"uid":"…","exp":42}],
     "status": "waiting", "started_at": 1712600000000 }
 ]}
+```
+
+### `match_found`
+
+Отправляется в канал `lobby`, когда матчмейкинг нашёл игру — пара людей или фолбэк в бота по таймауту (`vs_bot`). Содержит снимок доски и персональный `game_token` каждого игрока, чтобы клиент вошёл в игру без гонки с событиями первого хода. Клиент фильтрует по своему `uid`.
+
+```json
+{ "type": "match_found", "game_id": "…", "vs_bot": false,
+  "board": [["","…"]], "current_turn_uid": "…",
+  "players": [{"uid":"…","exp":42,"rating":1000,"game_token":"…"}] }
 ```
 
 ### `game_state`
@@ -383,10 +412,11 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 
 ```json
 { "type": "game_over", "game_id": "…", "winner_uid": "…",
+  "board": [["","…"]],
   "players": [{"uid":"…","exp":55,"score":5,"words_count":2,"exp_gained":13}] }
 ```
 
-Отправляется при завершении игры — поле заполнено, игрок исключён или оба согласились завершить досрочно. `winner_uid` отсутствует при ничьей. `exp_gained` — опыт, заработанный в этой игре.
+Отправляется при завершении игры — поле заполнено, игрок исключён или оба согласились завершить досрочно. `winner_uid` отсутствует при ничьей. `exp_gained` — опыт, заработанный в этой игре. `board` — финальный снимок доски: последний ход не порождает `game_state`, поэтому последняя буква приходит только здесь.
 
 ---
 
@@ -472,8 +502,9 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | user_id | bigserial | PK |
 | first_name | text | |
 | last_name | text | |
-| email | text | уникальный |
+| email | text | уникальный при наличии; NULL у Telegram-пользователей |
 | hash_password | text | bcrypt (Go, cost 12) |
+| telegram_id | bigint | уникальный при наличии; привязка Telegram-аккаунта |
 | role | text | `player` \| `admin`, по умолчанию `player` |
 | confirmed | boolean | по умолчанию false |
 | created_at | timestamp | |
@@ -498,8 +529,10 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | nickname | text | автогенерируемый |
 | exp | bigint | очки опыта |
 | rating | int | ELO-рейтинг (по умолчанию 1000) |
-| flags | bigint | флаги функций |
-| lives | bigint | |
+| flags | bigint | битовая маска разблокированных достижений |
+| lives | bigint | зарезервировано, не используется |
+| total_games | int | счётчик сыгранных партий |
+| consecutive_wins | int | текущая серия побед |
 | created_at | timestamp | |
 | updated_at | timestamp | |
 
@@ -510,7 +543,7 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | id | bigserial | PK |
 | game_id | uuid | уникальный |
 | winner_id | uuid | null при ничьей |
-| finish_reason | text | `board_full`, `kick`, `accept_end` |
+| finish_reason | text | `game_finished`, `kick`, `accept_end` |
 | finished_at | timestamptz | |
 
 **game_result_players**
@@ -522,6 +555,20 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | score | int | |
 | words_count | int | |
 | exp_gained | int | |
+| best_word_length | int | |
+| words | jsonb | слова, составленные игроком |
+
+**achievements**
+
+| Столбец | Тип | Примечания |
+|---------|-----|------------|
+| id | text | PK, например `first_win` |
+| name | text | отображаемое название |
+| description | text | условие разблокировки |
+| condition_type | text | `total_games`, `win`, `score`, `words_count`, `best_word_length`, `consecutive_wins` |
+| operator | text | сравнение, по умолчанию `gte` |
+| threshold | int | пороговое значение |
+| bit_position | int | бит в `player_state.flags` |
 
 ---
 
@@ -532,6 +579,8 @@ Swagger UI доступен по адресу `/balda/api/v1/docs` при зап
 | `--server.addr` | `127.0.0.1` | Адрес привязки |
 | `--server.port` | `9666` | HTTP-порт |
 | `--auth.jwt_secret` | | HMAC-секрет для подписи JWT access-токенов |
+| `--auth.email_signup_enabled` | `true` | Разрешить регистрацию по email (в проде выключено — вход через Telegram) |
+| `--telegram.bot_token` | | Токен Telegram-бота для Mini App auth (проверка initData); пусто = эндпоинт отвечает 503 |
 | `--pg.host` | `127.0.0.1` | Хост PostgreSQL |
 | `--pg.port` | `5432` | Порт PostgreSQL |
 | `--pg.user` | | Пользователь PostgreSQL |
