@@ -16,12 +16,16 @@
 
   async function quickMatch() {
     error = '';
+    // Set searching before the request: when nobody is queued the server
+    // starts a bot game immediately and match_found may arrive before the
+    // HTTP response, clearing the flag again.
+    gameState.setSearching(true);
+    searchSeconds = 0;
+    searchTimer = setInterval(() => (searchSeconds += 1), 1000);
     try {
       await joinMatchmaking();
-      gameState.setSearching(true);
-      searchSeconds = 0;
-      searchTimer = setInterval(() => (searchSeconds += 1), 1000);
     } catch (err: any) {
+      stopSearch();
       error = err.message;
     }
   }
@@ -144,7 +148,7 @@
   {#if gameState.searching}
     <div class="mb-4 rounded-xl bg-blue-50 p-4 text-center">
       <div class="mb-1 text-lg font-bold text-blue-800">Ищем соперника…</div>
-      <div class="mb-3 text-sm text-blue-600">{searchSeconds} сек — не найдём живого, сыграешь с ботом</div>
+      <div class="mb-3 text-sm text-blue-600">{searchSeconds} сек</div>
       <button
         onclick={cancelSearch}
         class="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-stone-600 ring-1 ring-stone-200 hover:bg-stone-50"

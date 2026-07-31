@@ -224,15 +224,10 @@ var serverCmd = &cobra.Command{
 			}
 		}
 
-		mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
-			rec, err := lby.StartGame(context.Background(), players, &game.NoopNotifier{})
-			if err != nil {
-				return err
-			}
-			publishMatchFound(rec, players, false)
-			return nil
-		}).WithExpireCallback(func(p *game.Player) error {
-			// No human opponent showed up in time: fall back to a bot game.
+		// startBotGame falls back to a bot game when no human opponent is
+		// available. Used both by the matchmaking expire callback and
+		// synchronously by QuickMatchJoin when the queue is empty.
+		startBotGame := func(p *game.Player) error {
 			players := []*game.Player{p, {ID: bot.BotPlayerID, Rating: storage.DefaultRating, Type: game.PlayerTypeBot}}
 			rec, err := lby.StartGame(context.Background(), players, &game.NoopNotifier{})
 			if err != nil {
@@ -240,12 +235,20 @@ var serverCmd = &cobra.Command{
 			}
 			publishMatchFound(rec, players, true)
 			return nil
-		}).WithOnlineChecker(presenceChecker{pres}.IsOnline)
+		}
+		mm := matchmaking.New(matchmaking.DefaultConfig(), func(players []*game.Player) error {
+			rec, err := lby.StartGame(context.Background(), players, &game.NoopNotifier{})
+			if err != nil {
+				return err
+			}
+			publishMatchFound(rec, players, false)
+			return nil
+		}).WithExpireCallback(startBotGame).WithOnlineChecker(presenceChecker{pres}.IsOnline)
 		go mm.Run(cmd.Context())
 
 		lb := leaderboard.NewService(s, rdb, 5*time.Minute)
 
-		svc := service.New(lby, mm, s, lb, achSvc)
+		svc := service.New(lby, mm, s, lb, achSvc).WithBotFallback(startBotGame)
 
 		h := handlers.New(svc, pres, cfg.Auth.JWTSecret, cf, cfg.Centrifugo.TokenHMACSecret, cfg.Auth.EmailSignupEnabled, cfg.Telegram.BotToken)
 
