@@ -26,10 +26,20 @@ type Balda struct {
 	s   *storage.Balda
 	lb  *leaderboard.Service
 	ach *achievements.Service
+	// botFallback starts a bot game for a player who found no human opponent.
+	botFallback func(p *game.Player) error
 }
 
 func New(lby *lobby.Lobby, mm *matchmaking.Queue, s *storage.Balda, lb *leaderboard.Service, ach *achievements.Service) *Balda {
 	return &Balda{lby: lby, mm: mm, s: s, lb: lb, ach: ach}
+}
+
+// WithBotFallback sets the function used to start a bot game when no human
+// opponent is available. It is invoked synchronously by QuickMatchJoin when
+// the matchmaking queue is empty.
+func (s *Balda) WithBotFallback(f func(p *game.Player) error) *Balda {
+	s.botFallback = f
+	return s
 }
 
 func (s *Balda) GameSummary(playerID string) *lobby.GameSummary {
@@ -134,8 +144,9 @@ func (s *Balda) RevokeAllUserTokens(ctx context.Context, uid int64) error {
 // create a game while already participating in one.
 var ErrPlayerInGame = errors.New("service: player already in a game")
 
-// QuickMatchJoin enqueues the user for quick matchmaking.
-// Returns ErrPlayerInGame if they are already in a game, or
+// QuickMatchJoin enqueues the user for quick matchmaking. When nobody else is
+// waiting, a bot game is started immediately via the bot fallback instead of
+// queuing. Returns ErrPlayerInGame if they are already in a game, or
 // matchmaking.ErrAlreadyQueued if they are already waiting.
 func (s *Balda) QuickMatchJoin(ctx context.Context, uid int64) error {
 	p, err := s.s.GetPlayerByUID(ctx, uid)
@@ -145,7 +156,11 @@ func (s *Balda) QuickMatchJoin(ctx context.Context, uid int64) error {
 	if rec := s.ActiveGameRecord(p.PlayerID.String()); rec != nil && rec.Status != lobby.GameStatusFinished {
 		return ErrPlayerInGame
 	}
-	return s.mm.Enqueue(&game.Player{ID: p.PlayerID.String(), Exp: p.Exp, Rating: p.Rating, Type: game.PlayerTypeHuman})
+	player := &game.Player{ID: p.PlayerID.String(), Exp: p.Exp, Rating: p.Rating, Type: game.PlayerTypeHuman}
+	if s.mm.Len() == 0 && s.botFallback != nil {
+		return s.botFallback(player)
+	}
+	return s.mm.Enqueue(player)
 }
 
 // QuickMatchLeave removes the user from the matchmaking queue. It is

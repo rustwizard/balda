@@ -6,6 +6,7 @@ package matchmaking
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"math"
 	"sync"
 	"time"
@@ -261,7 +262,9 @@ func (q *Queue) fireExpire(players []*game.Player) {
 	for _, p := range players {
 		// The player is already out of the queue; if the fallback fails there
 		// is nothing to retry — the client times out on its own.
-		_ = q.onExpire(p)
+		if err := q.onExpire(p); err != nil {
+			slog.Error("matchmaking: expire fallback failed", slog.String("playerID", p.ID), slog.Any("error", err))
+		}
 	}
 }
 
