@@ -11,8 +11,11 @@ import (
 
 const (
 	botMoveTimeout = 5 * time.Second
-	thinkingMin    = 500 * time.Millisecond
-	thinkingMax    = 1500 * time.Millisecond
+	// Default thinking range: how long the bot "ponders" before moving.
+	// Close to a human pace — the bot used to answer in ~1s, which felt
+	// like playing against a script rather than an opponent.
+	defaultThinkingMin = 15 * time.Second
+	defaultThinkingMax = 60 * time.Second
 )
 
 // Notifier implements game.Notifier and triggers bot moves on the bot's turn.
@@ -20,6 +23,8 @@ type Notifier struct {
 	engine      *Engine
 	g           *game.Game
 	botPlayerID string
+	thinkingMin time.Duration
+	thinkingMax time.Duration
 }
 
 // NewNotifier creates a notifier that drives the given bot player.
@@ -27,7 +32,17 @@ func NewNotifier(engine *Engine, botPlayerID string) *Notifier {
 	return &Notifier{
 		engine:      engine,
 		botPlayerID: botPlayerID,
+		thinkingMin: defaultThinkingMin,
+		thinkingMax: defaultThinkingMax,
 	}
+}
+
+// WithThinkingRange overrides how long the bot waits before moving.
+// Tests use this to keep the game fast; prod keeps the defaults.
+func (n *Notifier) WithThinkingRange(lo, hi time.Duration) *Notifier {
+	n.thinkingMin = lo
+	n.thinkingMax = hi
+	return n
 }
 
 // SetGame stores the game reference. Must be called before game.Run starts.
@@ -43,7 +58,7 @@ func (n *Notifier) NotifyTurnStart(playerID string) {
 	}
 
 	go func() {
-		thinkingTime := thinkingMin + time.Duration(rand.Int63n(int64(thinkingMax-thinkingMin)))
+		thinkingTime := n.thinkingMin + time.Duration(rand.Int63n(int64(n.thinkingMax-n.thinkingMin)))
 		// Ensure the previous event has time to be published before the bot acts.
 		select {
 		case <-n.g.Done():
