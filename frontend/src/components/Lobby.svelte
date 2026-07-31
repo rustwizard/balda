@@ -51,7 +51,13 @@
       if (res.game_token) {
         centrifugo.subscribe(`game:${res.game.id}`, res.game_token);
       }
-      gameState.startGame(res.game);
+      // A freshly created game is waiting for an opponent — show the
+      // waiting screen (with a working cancel), not the game board.
+      if (res.game.status === 'waiting') {
+        gameState.setWaiting(res.game);
+      } else {
+        gameState.startGame(res.game);
+      }
     } catch (err: any) {
       error = err.message;
     } finally {

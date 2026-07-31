@@ -161,6 +161,10 @@ export function joinGame(gameId: string): Promise<JoinGameResponse> {
   return apiFetch(`/games/${gameId}/join`, { method: 'POST' });
 }
 
+export function leaveGame(gameId: string): Promise<void> {
+  return apiFetch(`/games/${gameId}/leave`, { method: 'POST' });
+}
+
 export function submitMove(gameId: string, payload: MoveRequest): Promise<MoveResponse> {
   return apiFetch(`/games/${gameId}/move`, { method: 'POST', body: JSON.stringify(payload) });
 }

@@ -83,6 +83,13 @@ type Handler interface {
 	//
 	// POST /games/{id}/join
 	JoinGame(ctx context.Context, params JoinGameParams) (JoinGameRes, error)
+	// LeaveGame implements leaveGame operation.
+	//
+	// Removes the player from a game in waiting status. If the game becomes empty, it is deleted.
+	// In-progress games cannot be left this way.
+	//
+	// POST /games/{id}/leave
+	LeaveGame(ctx context.Context, params LeaveGameParams) (LeaveGameRes, error)
 	// ListGames implements listGames operation.
 	//
 	// Returns a snapshot of all currently active games.

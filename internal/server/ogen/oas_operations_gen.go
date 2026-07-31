@@ -17,6 +17,7 @@ const (
 	GetPlayerStateUIDOperation     OperationName = "GetPlayerStateUID"
 	GetPlayerStatsOperation        OperationName = "GetPlayerStats"
 	JoinGameOperation              OperationName = "JoinGame"
+	LeaveGameOperation             OperationName = "LeaveGame"
 	ListGamesOperation             OperationName = "ListGames"
 	LogoutOperation                OperationName = "Logout"
 	MatchmakingJoinOperation       OperationName = "MatchmakingJoin"
