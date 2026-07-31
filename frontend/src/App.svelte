@@ -59,11 +59,12 @@
     }
   });
 
-  // Reload achievements each time the player returns to the lobby so the UI
-  // reflects the latest unlocks without waiting for a new event.
+  // Reload achievements and profile (exp/rating) each time the player
+  // returns to the lobby so the UI reflects the just-finished game.
   $effect(() => {
     if (gameState.phase === 'lobby') {
       achievements.load();
+      gameState.refreshProfile();
     }
   });
 
@@ -131,9 +132,6 @@
           status: 'in_progress',
           move_number: 0,
         });
-        if (ev.vs_bot) {
-          gameState.showNotif('Живой соперник не нашёлся — играешь с ботом', 'warn');
-        }
         break;
       }
       case 'lobby_update':

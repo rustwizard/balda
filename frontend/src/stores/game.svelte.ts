@@ -1,3 +1,4 @@
+import { getPlayerState } from "../lib/api";
 import type {
     GameSummary,
     PlayerGameState,
@@ -92,6 +93,20 @@ export function createGameState() {
         lobbyToken = data.lobbyToken;
     }
 
+    // refreshProfile re-reads the player's exp/rating from the server.
+    // Called when entering the lobby so the header reflects games just
+    // finished (ELO/EXP are updated server-side at game over).
+    async function refreshProfile() {
+        if (!playerUid) return;
+        try {
+            const ps = await getPlayerState(playerUid);
+            exp = ps.exp;
+            rating = ps.rating;
+        } catch {
+            // Stale numbers in the header are acceptable; next visit retries.
+        }
+    }
+
     function resetToAuth() {
         phase = "auth";
         playerUid = "";
@@ -108,8 +123,7 @@ export function createGameState() {
 
     function setLobby() {
         phase = "lobby";
-        game = null;
-        resetBoard();
+        game = null;        resetBoard();
         selectedPath = [];
         newLetterCell = null;
         currentWord = "";
@@ -417,6 +431,7 @@ export function createGameState() {
         resetToAuth,
         setLobby,
         setWaiting,
+        refreshProfile,
         startGame,
         applyGameState,
         applyMoveResponse,
