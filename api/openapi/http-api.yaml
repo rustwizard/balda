@@ -611,6 +611,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /games/{id}/leave:
+    post:
+      operationId: leaveGame
+      summary: Leave a waiting game
+      description: |
+        Removes the player from a game in waiting status. If the game
+        becomes empty, it is deleted. In-progress games cannot be left
+        this way.
+      tags:
+        - Games
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID of the game
+      responses:
+        "204":
+          description: Left the game successfully
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Game not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Game is not in waiting status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /player/achievements:
     get:
       operationId: getPlayerAchievements

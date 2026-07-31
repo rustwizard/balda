@@ -41,6 +41,10 @@ type JoinGameRes interface {
 	joinGameRes()
 }
 
+type LeaveGameRes interface {
+	leaveGameRes()
+}
+
 type ListGamesRes interface {
 	listGamesRes()
 }

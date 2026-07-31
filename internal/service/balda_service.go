@@ -159,6 +159,16 @@ func (s *Balda) QuickMatchLeave(ctx context.Context, uid int64) error {
 	return nil
 }
 
+// LeaveGame removes the user from a waiting game, deleting the game
+// entirely when it becomes empty.
+func (s *Balda) LeaveGame(ctx context.Context, uid int64, gameID string) error {
+	pid, err := s.playerIDByUID(ctx, uid)
+	if err != nil {
+		return err
+	}
+	return s.lby.Leave(gameID, pid)
+}
+
 // CreateGame creates a new game in waiting status for the given user.
 func (s *Balda) CreateGame(ctx context.Context, uid int64) (*lobby.GameRecord, error) {
 	p, err := s.s.GetPlayerByUID(ctx, uid)

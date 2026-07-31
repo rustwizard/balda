@@ -121,6 +121,16 @@ func (UnimplementedHandler) JoinGame(ctx context.Context, params JoinGameParams)
 	return r, ht.ErrNotImplemented
 }
 
+// LeaveGame implements leaveGame operation.
+//
+// Removes the player from a game in waiting status. If the game becomes empty, it is deleted.
+// In-progress games cannot be left this way.
+//
+// POST /games/{id}/leave
+func (UnimplementedHandler) LeaveGame(ctx context.Context, params LeaveGameParams) (r LeaveGameRes, _ error) {
+	return r, ht.ErrNotImplemented
+}
+
 // ListGames implements listGames operation.
 //
 // Returns a snapshot of all currently active games.

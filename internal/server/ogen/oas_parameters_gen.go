@@ -433,6 +433,72 @@ func decodeJoinGameParams(args [1]string, argsEscaped bool, r *http.Request) (pa
 	return params, nil
 }
 
+// LeaveGameParams is parameters of leaveGame operation.
+type LeaveGameParams struct {
+	// ID of the game.
+	ID uuid.UUID
+}
+
+func unpackLeaveGameParams(packed middleware.Parameters) (params LeaveGameParams) {
+	{
+		key := middleware.ParameterKey{
+			Name: "id",
+			In:   "path",
+		}
+		params.ID = packed[key].(uuid.UUID)
+	}
+	return params
+}
+
+func decodeLeaveGameParams(args [1]string, argsEscaped bool, r *http.Request) (params LeaveGameParams, _ error) {
+	// Decode path: id.
+	if err := func() error {
+		param := args[0]
+		if argsEscaped {
+			unescaped, err := url.PathUnescape(args[0])
+			if err != nil {
+				return errors.Wrap(err, "unescape path")
+			}
+			param = unescaped
+		}
+		if len(param) > 0 {
+			d := uri.NewPathDecoder(uri.PathDecoderConfig{
+				Param:   "id",
+				Value:   param,
+				Style:   uri.PathStyleSimple,
+				Explode: false,
+			})
+
+			if err := func() error {
+				val, err := d.DecodeValue()
+				if err != nil {
+					return err
+				}
+
+				c, err := conv.ToUUID(val)
+				if err != nil {
+					return err
+				}
+
+				params.ID = c
+				return nil
+			}(); err != nil {
+				return err
+			}
+		} else {
+			return validate.ErrFieldRequired
+		}
+		return nil
+	}(); err != nil {
+		return params, &ogenerrors.DecodeParamError{
+			Name: "id",
+			In:   "path",
+			Err:  err,
+		}
+	}
+	return params, nil
+}
+
 // MoveGameParams is parameters of moveGame operation.
 type MoveGameParams struct {
 	// ID of the game.

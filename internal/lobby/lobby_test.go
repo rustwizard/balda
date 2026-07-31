@@ -205,3 +205,47 @@ func TestLobby_ConcurrentAccess(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+// TestLobby_Leave covers leaving a waiting game: participant removal, game
+// removal when it becomes empty, and error cases.
+func TestLobby_Leave(t *testing.T) {
+	t.Run("creator leaves, empty game is removed", func(t *testing.T) {
+		l := newLobby()
+		rec, err := l.Create(makePlayers("p1")[0])
+		require.NoError(t, err)
+
+		require.NoError(t, l.Leave(rec.ID, "p1"))
+		assert.Empty(t, l.List())
+		assert.ErrorIs(t, l.Leave(rec.ID, "p1"), lobby.ErrGameNotFound)
+	})
+
+	t.Run("second player cannot leave (only waiting games)", func(t *testing.T) {
+		l := newLobby()
+		rec, err := l.Create(makePlayers("p1")[0])
+		require.NoError(t, err)
+
+		_, err = l.Join(context.Background(), rec.ID, makePlayers("p2")[0], &game.NoopNotifier{})
+		require.NoError(t, err)
+
+		assert.ErrorIs(t, l.Leave(rec.ID, "p2"), lobby.ErrGameNotWaiting)
+	})
+
+	t.Run("non-participant gets ErrNotParticipant", func(t *testing.T) {
+		l := newLobby()
+		rec, err := l.Create(makePlayers("p1")[0])
+		require.NoError(t, err)
+
+		assert.ErrorIs(t, l.Leave(rec.ID, "ghost"), lobby.ErrNotParticipant)
+	})
+
+	t.Run("after leaving the player can create a new game", func(t *testing.T) {
+		l := newLobby()
+		rec, err := l.Create(makePlayers("p1")[0])
+		require.NoError(t, err)
+
+		require.NoError(t, l.Leave(rec.ID, "p1"))
+
+		_, err = l.Create(makePlayers("p1")[0])
+		assert.NoError(t, err)
+	})
+}

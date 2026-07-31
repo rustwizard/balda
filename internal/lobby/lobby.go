@@ -16,6 +16,7 @@ var (
 	ErrPlayerInGame   = errors.New("lobby: player already in a game")
 	ErrGameNotWaiting = errors.New("lobby: game is not in waiting status")
 	ErrGameFull       = errors.New("lobby: game already has enough players")
+	ErrNotParticipant = errors.New("lobby: player is not a participant of this game")
 )
 
 type GameStatus string
@@ -224,6 +225,39 @@ func (l *Lobby) StartGame(ctx context.Context, players []*game.Player, n game.No
 	}()
 
 	return rec, nil
+}
+
+// Leave removes the player from a waiting game. If the game becomes empty,
+// it is removed entirely. Only waiting games can be left this way — leaving
+// an in-progress game is a forfeit, which is a separate mechanic.
+func (l *Lobby) Leave(gameID, playerID string) error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	rec, ok := l.games[gameID]
+	if !ok {
+		return ErrGameNotFound
+	}
+	if rec.Status != GameStatusWaiting {
+		return ErrGameNotWaiting
+	}
+	idx := -1
+	for i, p := range rec.Players {
+		if p.ID == playerID {
+			idx = i
+			break
+		}
+	}
+	if idx < 0 {
+		return ErrNotParticipant
+	}
+
+	delete(l.byPlayer, playerID)
+	rec.Players = append(rec.Players[:idx], rec.Players[idx+1:]...)
+	if len(rec.Players) == 0 {
+		delete(l.games, rec.ID)
+	}
+	return nil
 }
 
 // Remove stops and deregisters a game by its ID.

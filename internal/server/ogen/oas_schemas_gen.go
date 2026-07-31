@@ -1048,6 +1048,27 @@ func (s *LeaderboardResponseSort) UnmarshalText(data []byte) error {
 	}
 }
 
+type LeaveGameConflict ErrorResponse
+
+func (*LeaveGameConflict) leaveGameRes() {}
+
+type LeaveGameForbidden ErrorResponse
+
+func (*LeaveGameForbidden) leaveGameRes() {}
+
+// LeaveGameNoContent is response for LeaveGame operation.
+type LeaveGameNoContent struct{}
+
+func (*LeaveGameNoContent) leaveGameRes() {}
+
+type LeaveGameNotFound ErrorResponse
+
+func (*LeaveGameNotFound) leaveGameRes() {}
+
+type LeaveGameUnauthorized ErrorResponse
+
+func (*LeaveGameUnauthorized) leaveGameRes() {}
+
 // Ref: #/components/schemas/ListGamesResponse
 type ListGamesResponse struct {
 	Games []GameSummary `json:"games"`
