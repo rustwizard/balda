@@ -14,7 +14,7 @@ func TestBotVsHuman_GameProgresses(t *testing.T) {
 
 	coord := &game.NoopNotifier{}
 	engine := NewEngine(NewRandomValidStrategy(game.Dict))
-	botNotifier := NewNotifier(engine, botPlayer.ID)
+	botNotifier := NewNotifier(engine, botPlayer.ID).WithThinkingRange(100*time.Millisecond, 500*time.Millisecond)
 	composite := game.NewCompositeNotifier(coord, botNotifier)
 
 	g, err := game.NewGame([]*game.Player{human, botPlayer}, composite)
