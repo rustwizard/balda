@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -88,10 +89,18 @@ func NewDictionary() (*Dictionary, error) {
 	return dict, nil
 }
 
-// isArchaic reports whether the dictionary entry is marked obsolete (устар.).
+// isArchaic reports whether the dictionary entry as a whole is obsolete.
+// Only entries whose FIRST meaning is marked устар. (right after the
+// part-of-speech tag, e.g. "м. устар. ...", "1. ж. устар. ...") count:
+// words that merely have an archaic sub-meaning among common ones
+// (like "коса") are kept.
 func isArchaic(def string) bool {
-	return strings.Contains(def, "устар.")
+	return archaicRe.MatchString(def)
 }
+
+// archaicRe matches a definition that starts with an optional meaning
+// number, a part-of-speech tag and immediately the устар. marker.
+var archaicRe = regexp.MustCompile(`^(\d+\.\s+)?(м|ж|ср|мн)\.\s+устар\.`)
 
 // isPluralAlias reports whether the entry is a plural form that merely
 // aliases another word ("мн. ... То же, что: ...") while its singular form

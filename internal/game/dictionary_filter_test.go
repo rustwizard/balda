@@ -7,9 +7,13 @@ import (
 )
 
 func TestIsArchaic(t *testing.T) {
+	// Fully obsolete words — устар. marks the first meaning.
 	assert.True(t, isArchaic("м. устар. То же, что: нанаец."))
 	assert.True(t, isArchaic("ж. устар. редк. Старинная обувь."))
-	assert.False(t, isArchaic("м. 1) Жилое здание."))
+	assert.True(t, isArchaic("1. ж. устар. Инструмент для резки."))
+	// Common words with an archaic sub-meaning are kept.
+	assert.False(t, isArchaic("1. ж. Несколько прядей волос. 2. ж. 1) Сельскохозяйственное орудие. 2) устар. Изображение такого орудия в руках у скелета. 3. ж. Длинная узкая отмель."))
+	assert.False(t, isArchaic("м. 1) Жилое здание. 2) устар. Старая развалина."))
 	assert.False(t, isArchaic("мн. Верхняя одежда."))
 }
 
