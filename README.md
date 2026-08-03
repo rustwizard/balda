@@ -18,9 +18,8 @@ The player with the most words when the game ends wins.
 
 ## Game Modes
 
-- **Quick Match** — the primary mode. One tap on "Play": the matchmaking queue pairs you with a human of a close ELO rating; if nobody shows up within 15 seconds, a bot game starts automatically.
+- **Quick Match** — the primary mode. One tap on "Play": the matchmaking queue pairs you with an opponent of a close ELO rating and the game starts right away.
 - **Private game** — create a waiting game and let an opponent join from the lobby list.
-- **Play vs Bot** — bot games are fully featured for the human: ELO rating (vs the bot's 1000), EXP, and lifetime stats count just like PvP games. The bot uses a trie-backed DFS strategy and plays with a human-like thinking delay (15–60 s).
 
 Progression: ELO rating, weekly/monthly leaderboard, achievements, and per-player statistics (win rate, average word length, best word, favorite letter) at `GET /player/stats`.
 
@@ -200,7 +199,6 @@ Swagger UI is available at `/balda/api/v1/docs` when the server is running.
 | POST | `/matchmaking/leave` | Leave the quick match queue (idempotent) |
 | GET | `/games` | List all currently active games |
 | POST | `/games` | Create a new waiting game |
-| POST | `/games/with-bot` | Start an immediate game against the bot |
 | POST | `/games/{id}/join` | Join an existing waiting game |
 | POST | `/games/{id}/move` | Submit a move (place letter + word) |
 | POST | `/games/{id}/skip` | Skip the current turn |
@@ -333,7 +331,7 @@ After auth, the client connects to Centrifugo using `centrifugo_token`. Events f
 |---------|-----------|------|
 | `lobby` | `game_created` | After `POST /games` |
 | `lobby` | `lobby_update` | Whenever the active game list changes |
-| `lobby` | `match_found` | Quick match paired the player into a game (human or bot fallback) |
+| `lobby` | `match_found` | Quick match paired the player into a game |
 | `lobby` + `game:{id}` | `game_started` | After `POST /games/{id}/join` |
 | `game:{id}` | `game_state` | On turn start and after each accepted move |
 | `game:{id}` | `turn_change` | On every turn change (any reason) |
@@ -356,10 +354,10 @@ Sent to the `lobby` channel whenever the active game list changes. The client re
 
 ### `match_found`
 
-Sent to the `lobby` channel when quick matchmaking puts players into a game — a human pair or a bot fallback after the queue timeout (`vs_bot`). Carries the board snapshot and a per-player `game_token` so clients can enter the game without racing the first turn events. Clients filter by their own `uid`.
+Sent to the `lobby` channel when quick matchmaking puts players into a game. Carries the board snapshot and a per-player `game_token` so clients can enter the game without racing the first turn events. Clients filter by their own `uid`.
 
 ```json
-{ "type": "match_found", "game_id": "…", "vs_bot": false,
+{ "type": "match_found", "game_id": "…",
   "board": [["","…"]], "current_turn_uid": "…",
   "players": [{"uid":"…","exp":42,"rating":1000,"game_token":"…"}] }
 ```
