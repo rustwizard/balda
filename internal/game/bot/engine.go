@@ -3,6 +3,7 @@ package bot
 import (
 	"errors"
 	"math/rand"
+	"regexp"
 	"strings"
 	"sync"
 	"unicode/utf8"
@@ -63,13 +64,28 @@ var (
 func globalBotTrie() *Trie {
 	globalTrieOnce.Do(func() {
 		words := make([]string, 0, len(game.Dict.Definition))
-		for w := range game.Dict.Definition {
+		for w, def := range game.Dict.Definition {
+			if isPluralEntry(def) {
+				continue
+			}
 			words = append(words, normalizeWord(w))
 		}
 		globalTrie = NewTrie(words)
 	})
 	return globalTrie
 }
+
+// isPluralEntry reports whether the dictionary entry is a plural-form word
+// ("мн. ..." or "1. мн. ..."). The bot must not play such words
+// (сыры, сыны, осы): they look like cheating to a human, even though they
+// are legitimate dictionary entries and human players may use them.
+func isPluralEntry(def string) bool {
+	return pluralRe.MatchString(def)
+}
+
+// pluralRe matches a definition starting with an optional meaning number
+// followed by the plural tag.
+var pluralRe = regexp.MustCompile(`^(\d+\.\s+)?мн\.`)
 
 // NewRandomValidStrategy builds a strategy backed by a trie of all dictionary words.
 // When the production dictionary is used, the underlying trie is shared across
@@ -80,7 +96,10 @@ func NewRandomValidStrategy(dict *game.Dictionary) *RandomValidStrategy {
 	}
 
 	words := make([]string, 0, len(dict.Definition))
-	for w := range dict.Definition {
+	for w, def := range dict.Definition {
+		if isPluralEntry(def) {
+			continue
+		}
 		words = append(words, normalizeWord(w))
 	}
 	return &RandomValidStrategy{trie: NewTrie(words)}

@@ -131,3 +131,22 @@ func TestRandomValidStrategy_RespectsUsedWords(t *testing.T) {
 		t.Fatal("bot returned an already used word")
 	}
 }
+
+func TestBotTrieExcludesPluralEntries(t *testing.T) {
+	dict := &game.Dictionary{Definition: map[string]string{
+		"сыр":     "м. Пищевой продукт.",
+		"сыры":    "мн. Различные сорта сыра.",
+		"ножницы": "1. мн. Инструмент для резки.",
+	}}
+	s := NewRandomValidStrategy(dict)
+
+	if !s.trie.IsWord("сыр") {
+		t.Error("singular form must be in the bot trie")
+	}
+	if s.trie.IsWord("сыры") {
+		t.Error("plural entry must not be in the bot trie")
+	}
+	if s.trie.IsWord("ножницы") {
+		t.Error("pluralia tantum entry must not be in the bot trie")
+	}
+}
