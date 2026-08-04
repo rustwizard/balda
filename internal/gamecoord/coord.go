@@ -222,7 +222,7 @@ func (c *Coordinator) isBot(playerID string) bool {
 }
 
 func bestWordLength(words []string) int {
-	maxLen := 0
+	var maxLen int
 	for _, w := range words {
 		if n := utf8.RuneCountInString(w); n > maxLen {
 			maxLen = n

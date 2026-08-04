@@ -36,6 +36,8 @@ const (
 // player is offline (no presence ping within the absence window), so an
 // abandoned game advances and cleans up quickly instead of waiting a full turn.
 // It is a var so tests can shrink it. Only ever reduces a turn, never extends.
+// OfflineGraceDuration is a var (not a const) on purpose: the accelerated
+// timeout tests override it to keep games fast.
 var OfflineGraceDuration = 10 * time.Second
 
 // OnlineChecker reports whether a player (by player_id) is currently present.
@@ -403,7 +405,7 @@ func (g *Game) SubmitWord(playerID string, newLetter *Letter, word []Letter) err
 		return ErrWordHasGaps
 	}
 
-	newLetterUsed := false
+	var newLetterUsed bool
 	for i, l := range word {
 		if l.RowID == newLetter.RowID && l.ColID == newLetter.ColID {
 			newLetterUsed = true
@@ -559,7 +561,7 @@ func (g *Game) CurrentPlayerID() string {
 func (g *Game) MoveNumber() int {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	total := 0
+	var total int
 	for _, p := range g.players {
 		total += len(p.Words)
 	}
