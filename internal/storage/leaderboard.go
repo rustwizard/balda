@@ -49,7 +49,7 @@ func (b *Balda) GetLeaderboard(ctx context.Context, periodStart time.Time, sortB
 	}
 	defer rows.Close()
 
-	var out []LeaderboardEntry
+	out := make([]LeaderboardEntry, 0)
 	for rows.Next() {
 		var e LeaderboardEntry
 		if err := rows.Scan(&e.PlayerID, &e.Nickname, &e.Rating, &e.Exp, &e.UpdatedAt); err != nil {

@@ -142,7 +142,7 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 		ratingDeltas[p1.PlayerID] = EloDelta(ratings[1], ratings[0], score1)
 	}
 
-	var unlocks []PlayerAchievementUnlock
+	unlocks := make([]PlayerAchievementUnlock, 0)
 
 	for _, p := range r.Players {
 		if p.Bot {
