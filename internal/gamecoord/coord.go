@@ -61,13 +61,14 @@ func (c *Coordinator) SetOnGameOver(fn func(storage.GameResult)) {
 // game_state snapshot so both clients know whose turn it is and see the board.
 func (c *Coordinator) NotifyTurnStart(playerID string) {
 	var reason string
-	if c.firstTurn {
+	switch {
+	case c.firstTurn:
 		reason = "game_start"
 		c.firstTurn = false
-	} else if c.nextReason != "" {
+	case c.nextReason != "":
 		reason = c.nextReason
 		c.nextReason = ""
-	} else {
+	default:
 		reason = "move"
 	}
 	// Publish both in one goroutine so turn_change always precedes game_state

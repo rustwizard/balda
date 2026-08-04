@@ -106,10 +106,15 @@ func (h *Handlers) buildActiveGame(uid int64, playerID string) *baldaapi.ActiveG
 		return nil
 	}
 
-	var players []baldaapi.PlayerGameState
-	if rec.Status == lobby.GameStatusInProgress {
+	ag := &baldaapi.ActiveGame{
+		GameID:    baldaapi.NewOptUUID(gameID),
+		GameToken: baldaapi.NewOptString(gameToken),
+	}
+
+	switch rec.Status {
+	case lobby.GameStatusInProgress:
 		scores := rec.Game.PlayerScores()
-		players = make([]baldaapi.PlayerGameState, 0, len(scores))
+		players := make([]baldaapi.PlayerGameState, 0, len(scores))
 		for _, s := range scores {
 			pid, err := uuid.Parse(s.UID)
 			if err != nil {
@@ -124,8 +129,15 @@ func (h *Handlers) buildActiveGame(uid int64, playerID string) *baldaapi.ActiveG
 				Words:      s.Words,
 			})
 		}
-	} else {
-		players = make([]baldaapi.PlayerGameState, 0, len(rec.Players))
+		ag.Status = baldaapi.NewOptGameStatus(baldaapi.GameStatusInProgress)
+		ag.Players = players
+
+		currentTurnUID, _ := uuid.Parse(rec.Game.CurrentPlayerID())
+		ag.Board = boardToSlice(rec.Game.BoardSnapshot())
+		ag.CurrentTurnUID = baldaapi.NewOptUUID(currentTurnUID)
+		ag.MoveNumber = baldaapi.NewOptInt(rec.Game.MoveNumber())
+	default:
+		players := make([]baldaapi.PlayerGameState, 0, len(rec.Players))
 		for _, p := range rec.Players {
 			pid, err := uuid.Parse(p.ID)
 			if err != nil {
@@ -140,25 +152,8 @@ func (h *Handlers) buildActiveGame(uid int64, playerID string) *baldaapi.ActiveG
 				Words:      []string{},
 			})
 		}
-	}
-
-	status := baldaapi.GameStatusWaiting
-	if rec.Status == lobby.GameStatusInProgress {
-		status = baldaapi.GameStatusInProgress
-	}
-
-	ag := &baldaapi.ActiveGame{
-		GameID:    baldaapi.NewOptUUID(gameID),
-		GameToken: baldaapi.NewOptString(gameToken),
-		Status:    baldaapi.NewOptGameStatus(status),
-		Players:   players,
-	}
-
-	if rec.Status == lobby.GameStatusInProgress {
-		currentTurnUID, _ := uuid.Parse(rec.Game.CurrentPlayerID())
-		ag.Board = boardToSlice(rec.Game.BoardSnapshot())
-		ag.CurrentTurnUID = baldaapi.NewOptUUID(currentTurnUID)
-		ag.MoveNumber = baldaapi.NewOptInt(rec.Game.MoveNumber())
+		ag.Status = baldaapi.NewOptGameStatus(baldaapi.GameStatusWaiting)
+		ag.Players = players
 	}
 
 	return ag
