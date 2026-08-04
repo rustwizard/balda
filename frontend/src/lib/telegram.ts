@@ -3,8 +3,10 @@
 
 interface TelegramWebApp {
   initData: string;
+  initDataUnsafe?: { start_param?: string };
   ready(): void;
   expand(): void;
+  openTelegramLink?(url: string): void;
 }
 
 interface TelegramWindow extends Window {
@@ -28,6 +30,18 @@ export function isMiniApp(): boolean {
 export function getTelegramInitData(): string | null {
   const app = webApp();
   return app && app.initData.length > 0 ? app.initData : null;
+}
+
+// getStartParam returns the startapp deep-link payload the Mini App was
+// opened with (e.g. "game_<id>" from a friend invite), or null.
+export function getStartParam(): string | null {
+  const p = webApp()?.initDataUnsafe?.start_param;
+  return p && p.length > 0 ? p : null;
+}
+
+// shareTelegramLink opens the native Telegram share dialog for the given URL.
+export function shareTelegramLink(url: string): void {
+  webApp()?.openTelegramLink?.(`https://t.me/share/url?url=${encodeURIComponent(url)}`);
 }
 
 // initMiniApp tells Telegram the app is ready and asks for the full-height

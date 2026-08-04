@@ -23,7 +23,7 @@ func setupLeaderboard(t *testing.T) (*handlers.Handlers, *storage.Balda, *redis.
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true, "")
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true, "", "")
 	return h, core.s, core.rdb, core.cleanup
 }
 

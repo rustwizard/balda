@@ -11,5 +11,6 @@ import (
 func (h *Handlers) GetConfig(_ context.Context) (*baldaapi.ConfigResponse, error) {
 	return &baldaapi.ConfigResponse{
 		EmailSignupEnabled: baldaapi.NewOptBool(h.emailSignupEnabled),
+		TelegramAppURL:     baldaapi.NewOptString(h.telegramAppURL),
 	}, nil
 }

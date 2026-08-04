@@ -386,13 +386,15 @@ Centrifugo уже есть — достаточно добавить канал 
 
 ### Telegram и рост
 
-### 40. Приглашение друга в партию через startapp (P1)
-**Затрагивает:** фронт (`GameScreen`/`WaitingScreen`), Mini App
+### 40. ✅ Приглашение друга в партию через startapp (P1)
+**Затрагивает:** фронт (`WaitingScreen`/`AuthForm`), `GET /config`
 
-Кнопка «Пригласить друга» в ожидании соперника: шарится ссылка
-`t.me/<bot>/<app>?startapp=game_<id>`. Payload приезжает во фронт в
-`WebApp.initDataUnsafe.start_param` — клиент сразу джойнит указанную игру после
-авто-логина. Бэкенд бота не нужен. Самая дешёвая виральная механика.
+**Сделано:**
+- `GET /config` отдаёт `telegram_app_url` (флаг `telegram.app_url` / env `TELEGRAM_APP_URL`).
+- WaitingScreen: кнопка «Пригласить друга» → ссылка `<app_url>?startapp=game_<id>`
+  (в Telegram — нативный шаринг, в браузере — копирование в буфер).
+- Приём: после авто-логина по initData читается `initDataUnsafe.start_param`;
+  `game_<id>` → автоджойн через `joinGame`; недоступная игра → лобби + нотификация.
 
 ### 41. Бот-бэкенд: /start-ответчик и уведомления (P2)
 **Затрагивает:** `internal/server/restapi/` (webhook), `cmd/server.go`, `internal/storage/`

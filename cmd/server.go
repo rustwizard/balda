@@ -91,6 +91,9 @@ type TelegramConfig struct {
 	// BotToken validates Telegram Mini App init data. Empty means Telegram
 	// auth is not configured; the endpoint then answers 503.
 	BotToken string
+	// AppURL is the public Mini App link (https://t.me/<bot>/<app>) used by
+	// the client to build friend-invite links. Empty hides the invite button.
+	AppURL string
 }
 
 type Config struct {
@@ -250,7 +253,7 @@ var serverCmd = &cobra.Command{
 
 		svc := service.New(lby, mm, s, lb, achSvc).WithBotFallback(startBotGame)
 
-		h := handlers.New(svc, pres, cfg.Auth.JWTSecret, cf, cfg.Centrifugo.TokenHMACSecret, cfg.Auth.EmailSignupEnabled, cfg.Telegram.BotToken)
+		h := handlers.New(svc, pres, cfg.Auth.JWTSecret, cf, cfg.Centrifugo.TokenHMACSecret, cfg.Auth.EmailSignupEnabled, cfg.Telegram.BotToken, cfg.Telegram.AppURL)
 
 		srv, err := baldaapi.NewServer(h, h,
 			baldaapi.WithPathPrefix("/balda/api/v1"),
@@ -338,6 +341,7 @@ func (c *Config) Flags(prefix string) *pflag.FlagSet {
 	f.StringVar(&c.Auth.JWTSecret, "auth.jwt_secret", "", "HMAC secret for signing JWT access tokens")
 	f.BoolVar(&c.Auth.EmailSignupEnabled, "auth.email_signup_enabled", true, "allow email/password registration (disable in prod)")
 	f.StringVar(&c.Telegram.BotToken, "telegram.bot_token", "", "telegram bot token for Mini App auth (init data validation)")
+	f.StringVar(&c.Telegram.AppURL, "telegram.app_url", "", "public Mini App URL (https://t.me/<bot>/<app>) for friend invites")
 	f.StringVar(&c.Centrifugo.APIURL, "centrifugo.api_url", "http://127.0.0.1:8000/api", "centrifugo api url")
 	f.StringVar(&c.Centrifugo.APIKey, "centrifugo.api_key", "", "centrifugo api key")
 	f.StringVar(&c.Centrifugo.TokenHMACSecret, "centrifugo.token_hmac_secret_key", "", "centrifugo token hmac secret")

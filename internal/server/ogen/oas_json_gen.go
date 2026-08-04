@@ -1067,10 +1067,17 @@ func (s *ConfigResponse) encodeFields(e *jx.Encoder) {
 			s.EmailSignupEnabled.Encode(e)
 		}
 	}
+	{
+		if s.TelegramAppURL.Set {
+			e.FieldStart("telegram_app_url")
+			s.TelegramAppURL.Encode(e)
+		}
+	}
 }
 
-var jsonFieldsNameOfConfigResponse = [1]string{
+var jsonFieldsNameOfConfigResponse = [2]string{
 	0: "email_signup_enabled",
+	1: "telegram_app_url",
 }
 
 // Decode decodes ConfigResponse from json.
@@ -1090,6 +1097,16 @@ func (s *ConfigResponse) Decode(d *jx.Decoder) error {
 				return nil
 			}(); err != nil {
 				return errors.Wrap(err, "decode field \"email_signup_enabled\"")
+			}
+		case "telegram_app_url":
+			if err := func() error {
+				s.TelegramAppURL.Reset()
+				if err := s.TelegramAppURL.Decode(d); err != nil {
+					return err
+				}
+				return nil
+			}(); err != nil {
+				return errors.Wrap(err, "decode field \"telegram_app_url\"")
 			}
 		default:
 			return d.Skip()

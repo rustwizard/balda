@@ -1388,6 +1388,10 @@ components:
           description: Whether email/password registration is available
           example: false
           type: boolean
+        telegram_app_url:
+          description: Public Telegram Mini App URL used to build friend-invite links (empty when not configured)
+          example: https://t.me/balda_bot/game
+          type: string
 
     MatchmakingJoinResponse:
       type: object
