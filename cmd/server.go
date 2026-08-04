@@ -253,7 +253,13 @@ var serverCmd = &cobra.Command{
 
 		svc := service.New(lby, mm, s, lb, achSvc).WithBotFallback(startBotGame)
 
-		h := handlers.New(svc, pres, cfg.Auth.JWTSecret, cf, cfg.Centrifugo.TokenHMACSecret, cfg.Auth.EmailSignupEnabled, cfg.Telegram.BotToken, cfg.Telegram.AppURL)
+		h := handlers.New(svc, pres, cf, handlers.Config{
+			JWTSecret:                 cfg.Auth.JWTSecret,
+			CentrifugoTokenHMACSecret: cfg.Centrifugo.TokenHMACSecret,
+			EmailSignupEnabled:        cfg.Auth.EmailSignupEnabled,
+			TelegramBotToken:          cfg.Telegram.BotToken,
+			TelegramAppURL:            cfg.Telegram.AppURL,
+		})
 
 		srv, err := baldaapi.NewServer(h, h,
 			baldaapi.WithPathPrefix("/balda/api/v1"),

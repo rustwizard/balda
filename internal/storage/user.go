@@ -108,10 +108,18 @@ func (b *Balda) GetUserByTelegramID(ctx context.Context, telegramID int64) (User
 	return u, nil
 }
 
+// CreateTelegramUserParams holds the fields for registering a Telegram user.
+type CreateTelegramUserParams struct {
+	Firstname  string
+	Lastname   string
+	Nickname   string
+	TelegramID int64
+}
+
 // CreateTelegramUser inserts a new user registered via Telegram Mini App auth
 // together with their player_state in a single transaction. The user has no
 // email and no usable password: password login is unavailable for them.
-func (b *Balda) CreateTelegramUser(ctx context.Context, firstname, lastname, nickname string, telegramID int64) (UserCreated, error) {
+func (b *Balda) CreateTelegramUser(ctx context.Context, p CreateTelegramUserParams) (UserCreated, error) {
 	ctx, cancel := context.WithTimeout(ctx, b.t)
 	defer cancel()
 
@@ -132,7 +140,7 @@ func (b *Balda) CreateTelegramUser(ctx context.Context, firstname, lastname, nic
 	err = tx.QueryRow(ctx,
 		`INSERT INTO users(first_name, last_name, email, hash_password, telegram_id, confirmed)
 		 VALUES($1, $2, NULL, $3, $4, true) RETURNING user_id, role`,
-		firstname, lastname, string(hash), telegramID,
+		p.Firstname, p.Lastname, string(hash), p.TelegramID,
 	).Scan(&created.UID, &created.Role)
 	if err != nil {
 		return UserCreated{}, fmt.Errorf("create telegram user: insert users: %w", err)
@@ -141,7 +149,7 @@ func (b *Balda) CreateTelegramUser(ctx context.Context, firstname, lastname, nic
 	err = tx.QueryRow(ctx,
 		`INSERT INTO player_state(user_id, nickname, exp, rating, flags, lives, total_games, consecutive_wins)
 		 VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING player_id`,
-		created.UID, nickname, 0, DefaultRating, 0, 5, 0, 0,
+		created.UID, p.Nickname, 0, DefaultRating, 0, 5, 0, 0,
 	).Scan(&created.PlayerID)
 	created.Rating = DefaultRating
 	if err != nil {
@@ -154,8 +162,17 @@ func (b *Balda) CreateTelegramUser(ctx context.Context, firstname, lastname, nic
 	return created, nil
 }
 
+// CreateUserParams holds the fields for registering an email/password user.
+type CreateUserParams struct {
+	Firstname string
+	Lastname  string
+	Email     string
+	Password  string
+	Nickname  string
+}
+
 // CreateUser inserts a new user and their player_state in a single transaction.
-func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, password, nickname string) (UserCreated, error) {
+func (b *Balda) CreateUser(ctx context.Context, p CreateUserParams) (UserCreated, error) {
 	ctx, cancel := context.WithTimeout(ctx, b.t)
 	defer cancel()
 
@@ -165,7 +182,7 @@ func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, pass
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(p.Password), bcryptCost)
 	if err != nil {
 		return UserCreated{}, fmt.Errorf("create user: hash password: %w", err)
 	}
@@ -174,7 +191,7 @@ func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, pass
 	err = tx.QueryRow(ctx,
 		`INSERT INTO users(first_name, last_name, email, hash_password)
 		 VALUES($1, $2, $3, $4) RETURNING user_id, role`,
-		firstname, lastname, email, string(hash),
+		p.Firstname, p.Lastname, p.Email, string(hash),
 	).Scan(&created.UID, &created.Role)
 	if err != nil {
 		return UserCreated{}, fmt.Errorf("create user: insert users: %w", err)
@@ -183,7 +200,7 @@ func (b *Balda) CreateUser(ctx context.Context, firstname, lastname, email, pass
 	err = tx.QueryRow(ctx,
 		`INSERT INTO player_state(user_id, nickname, exp, rating, flags, lives, total_games, consecutive_wins)
 		 VALUES($1, $2, $3, $4, $5, $6, $7, $8) RETURNING player_id`,
-		created.UID, nickname, 0, DefaultRating, 0, 5, 0, 0,
+		created.UID, p.Nickname, 0, DefaultRating, 0, 5, 0, 0,
 	).Scan(&created.PlayerID)
 	created.Rating = DefaultRating
 	if err != nil {

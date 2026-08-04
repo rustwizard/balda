@@ -8,11 +8,12 @@ import (
 	"github.com/rustwizard/balda/internal/auth"
 	"github.com/rustwizard/balda/internal/flname"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
+	"github.com/rustwizard/balda/internal/storage"
 )
 
 // Signup implements baldaapi.Handler.
 func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (baldaapi.SignupRes, error) {
-	if !h.emailSignupEnabled {
+	if !h.cfg.EmailSignupEnabled {
 		return &baldaapi.ErrorResponse{
 			Message: baldaapi.NewOptString("registration is disabled"),
 			Status:  baldaapi.NewOptInt(http.StatusForbidden),
@@ -20,7 +21,13 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 		}, nil
 	}
 
-	created, err := h.svc.CreateUser(ctx, req.Firstname, req.Lastname, req.Email, req.Password, flname.GenNickname())
+	created, err := h.svc.CreateUser(ctx, storage.CreateUserParams{
+		Firstname: req.Firstname,
+		Lastname:  req.Lastname,
+		Email:     req.Email,
+		Password:  req.Password,
+		Nickname:  flname.GenNickname(),
+	})
 	if err != nil {
 		slog.Error("signup: create user", slog.Any("error", err))
 		return &baldaapi.ErrorResponse{
@@ -30,7 +37,7 @@ func (h *Handlers) Signup(ctx context.Context, req *baldaapi.SignupRequest) (bal
 		}, nil
 	}
 
-	access, refresh, err := h.issueTokens(ctx, created.UID, created.PlayerID, created.Role, "", "")
+	access, refresh, err := h.issueTokens(ctx, created.UID, created.PlayerID, created.Role, tokenMeta{})
 	if err != nil {
 		slog.Error("signup: issue tokens", slog.Any("error", err))
 		return &baldaapi.ErrorResponse{

@@ -10,7 +10,7 @@ import (
 // client can adapt its UI before authentication.
 func (h *Handlers) GetConfig(_ context.Context) (*baldaapi.ConfigResponse, error) {
 	return &baldaapi.ConfigResponse{
-		EmailSignupEnabled: baldaapi.NewOptBool(h.emailSignupEnabled),
-		TelegramAppURL:     baldaapi.NewOptString(h.telegramAppURL),
+		EmailSignupEnabled: baldaapi.NewOptBool(h.cfg.EmailSignupEnabled),
+		TelegramAppURL:     baldaapi.NewOptString(h.cfg.TelegramAppURL),
 	}, nil
 }

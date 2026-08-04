@@ -106,7 +106,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	}
 
 	gameToken, err := centrifugo.GenerateSubscriptionToken(
-		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,
+		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.cfg.CentrifugoTokenHMACSecret, 24*time.Hour,
 	)
 	if err != nil {
 		slog.Error("join_game: generate game token", slog.Any("error", err))

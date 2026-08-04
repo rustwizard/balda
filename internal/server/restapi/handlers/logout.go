@@ -15,7 +15,7 @@ import (
 // blacklist for immediate access-token revocation is a future enhancement.
 func (h *Handlers) Logout(ctx context.Context, req baldaapi.OptLogoutRequest) (baldaapi.LogoutRes, error) {
 	if req.Set && req.Value.RefreshToken.Set && req.Value.RefreshToken.Value != "" {
-		hash := auth.HashRefreshToken(h.jwtSecret, req.Value.RefreshToken.Value)
+		hash := auth.HashRefreshToken(h.cfg.JWTSecret, req.Value.RefreshToken.Value)
 		if err := h.svc.RevokeRefreshToken(ctx, hash); err != nil {
 			slog.Error("logout: revoke refresh token", slog.Any("error", err))
 		}

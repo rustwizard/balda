@@ -13,28 +13,28 @@ import (
 	"github.com/rustwizard/balda/internal/presence"
 	baldaapi "github.com/rustwizard/balda/internal/server/ogen"
 	"github.com/rustwizard/balda/internal/service"
+	"github.com/rustwizard/balda/internal/storage"
 )
+
+// Config holds the static configuration Handlers needs at runtime.
+type Config struct {
+	JWTSecret                 string
+	CentrifugoTokenHMACSecret string
+	EmailSignupEnabled        bool
+	TelegramBotToken          string
+	TelegramAppURL            string
+}
 
 // Handlers implements baldaapi.Handler and baldaapi.SecurityHandler.
 type Handlers struct {
-	svc                       *service.Balda
-	pres                      *presence.Service
-	jwtSecret                 string
-	cf                        *centrifugo.Client
-	centrifugoTokenHMACSecret string
-	emailSignupEnabled        bool
-	telegramBotToken          string
-	telegramAppURL            string
+	svc  *service.Balda
+	pres *presence.Service
+	cf   *centrifugo.Client
+	cfg  Config
 }
 
-func New(svc *service.Balda, pres *presence.Service, jwtSecret string, cf *centrifugo.Client, centrifugoTokenHMACSecret string, emailSignupEnabled bool, telegramBotToken, telegramAppURL string) *Handlers {
-	return &Handlers{
-		svc: svc, pres: pres, jwtSecret: jwtSecret, cf: cf,
-		centrifugoTokenHMACSecret: centrifugoTokenHMACSecret,
-		emailSignupEnabled:        emailSignupEnabled,
-		telegramBotToken:          telegramBotToken,
-		telegramAppURL:            telegramAppURL,
-	}
+func New(svc *service.Balda, pres *presence.Service, cf *centrifugo.Client, cfg Config) *Handlers {
+	return &Handlers{svc: svc, pres: pres, cf: cf, cfg: cfg}
 }
 
 // uidFromContext returns the authenticated user's id from the JWT claims placed
@@ -47,10 +47,16 @@ func uidFromContext(ctx context.Context) (uid int64, ok bool) {
 	return c.UID, true
 }
 
+// tokenMeta carries optional client metadata attached to a refresh token.
+type tokenMeta struct {
+	UserAgent string
+	IPAddr    string
+}
+
 // issueTokens mints an access token and a rotated refresh token for the user,
 // persisting the HMAC hash of the refresh token. Returns the raw tokens.
-func (h *Handlers) issueTokens(ctx context.Context, uid int64, pid uuid.UUID, role, userAgent, ipAddr string) (access, refresh string, err error) {
-	access, err = auth.GenerateAccessToken(uid, pid, role, h.jwtSecret)
+func (h *Handlers) issueTokens(ctx context.Context, uid int64, pid uuid.UUID, role string, meta tokenMeta) (access, refresh string, err error) {
+	access, err = auth.GenerateAccessToken(uid, pid, role, h.cfg.JWTSecret)
 	if err != nil {
 		return "", "", fmt.Errorf("issue tokens: access: %w", err)
 	}
@@ -58,8 +64,14 @@ func (h *Handlers) issueTokens(ctx context.Context, uid int64, pid uuid.UUID, ro
 	if err != nil {
 		return "", "", fmt.Errorf("issue tokens: refresh: %w", err)
 	}
-	hash := auth.HashRefreshToken(h.jwtSecret, refresh)
-	if err := h.svc.SaveRefreshToken(ctx, uid, hash, time.Now().Add(auth.RefreshTokenTTL), userAgent, ipAddr); err != nil {
+	hash := auth.HashRefreshToken(h.cfg.JWTSecret, refresh)
+	if err := h.svc.SaveRefreshToken(ctx, storage.RefreshToken{
+		UserID:    uid,
+		TokenHash: hash,
+		ExpiresAt: time.Now().Add(auth.RefreshTokenTTL),
+		UserAgent: meta.UserAgent,
+		IPAddr:    meta.IPAddr,
+	}); err != nil {
 		return "", "", fmt.Errorf("issue tokens: save: %w", err)
 	}
 	return access, refresh, nil
@@ -69,12 +81,12 @@ func (h *Handlers) issueTokens(ctx context.Context, uid int64, pid uuid.UUID, ro
 func (h *Handlers) generateCentrifugoTokens(uid int64) (cfToken, lobbyToken string, err error) {
 	sub := strconv.FormatInt(uid, 10)
 	ttl := 24 * time.Hour
-	cfToken, err = centrifugo.GenerateConnectionToken(sub, h.centrifugoTokenHMACSecret, ttl)
+	cfToken, err = centrifugo.GenerateConnectionToken(sub, h.cfg.CentrifugoTokenHMACSecret, ttl)
 	if err != nil {
 		slog.Error("generate centrifugo connection token", slog.Any("error", err))
 		return
 	}
-	lobbyToken, err = centrifugo.GenerateSubscriptionToken(sub, centrifugo.ChannelLobby, h.centrifugoTokenHMACSecret, ttl)
+	lobbyToken, err = centrifugo.GenerateSubscriptionToken(sub, centrifugo.ChannelLobby, h.cfg.CentrifugoTokenHMACSecret, ttl)
 	if err != nil {
 		slog.Error("generate centrifugo lobby token", slog.Any("error", err))
 	}
@@ -113,7 +125,7 @@ func (h *Handlers) publishLobbyUpdate(ctx context.Context) {
 // access token and injects the resulting claims into the request context.
 // A returned error is rendered by ogen as 401 Unauthorized.
 func (h *Handlers) HandleBearerAuth(ctx context.Context, _ baldaapi.OperationName, t baldaapi.BearerAuth) (context.Context, error) {
-	claims, err := auth.ParseAccessToken(t.Token, h.jwtSecret)
+	claims, err := auth.ParseAccessToken(t.Token, h.cfg.JWTSecret)
 	if err != nil {
 		return ctx, err
 	}

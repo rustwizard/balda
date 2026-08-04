@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rustwizard/balda/internal/auth"
+	"github.com/rustwizard/balda/internal/storage"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -30,7 +31,9 @@ func TestRefreshTokenStorage(t *testing.T) {
 	hash := auth.HashRefreshToken(secret, raw)
 	exp := time.Now().Add(auth.RefreshTokenTTL)
 
-	require.NoError(t, s.SaveRefreshToken(ctx, uid, hash, exp, "test-agent", "192.168.1.1"))
+	require.NoError(t, s.SaveRefreshToken(ctx, storage.RefreshToken{
+		UserID: uid, TokenHash: hash, ExpiresAt: exp, UserAgent: "test-agent", IPAddr: "192.168.1.1",
+	}))
 
 	t.Run("get returns the saved token", func(t *testing.T) {
 		rt, err := s.GetRefreshToken(ctx, hash)
@@ -59,7 +62,9 @@ func TestRefreshTokenStorage(t *testing.T) {
 		raw2, err := auth.GenerateRefreshToken()
 		require.NoError(t, err)
 		hash2 := auth.HashRefreshToken(secret, raw2)
-		require.NoError(t, s.SaveRefreshToken(ctx, uid, hash2, exp, "", ""))
+		require.NoError(t, s.SaveRefreshToken(ctx, storage.RefreshToken{
+			UserID: uid, TokenHash: hash2, ExpiresAt: exp,
+		}))
 
 		require.NoError(t, s.RevokeAllUserTokens(ctx, uid))
 		rt, err := s.GetRefreshToken(ctx, hash2)
