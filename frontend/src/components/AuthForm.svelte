@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { auth, signup, setTokens, getConfig, authTelegram } from '../lib/api';
+  import { auth, signup, setTokens, getConfig, authTelegram, joinGame } from '../lib/api';
   import { centrifugo } from '../lib/centrifugo';
   import { gameState } from '../stores/game.svelte';
-  import { isMiniApp, getTelegramInitData, initMiniApp } from '../lib/telegram';
+  import { isMiniApp, getTelegramInitData, initMiniApp, getStartParam } from '../lib/telegram';
   import type { AuthResponse, SignupResponse } from '../types';
 
   let isSignup = $state(false);
@@ -71,7 +71,10 @@
   // email stays for local testing). Login remains available either way.
   $effect(() => {
     getConfig()
-      .then((cfg) => (signupEnabled = cfg.email_signup_enabled))
+      .then((cfg) => {
+        signupEnabled = cfg.email_signup_enabled;
+        gameState.setTelegramAppUrl(cfg.telegram_app_url ?? '');
+      })
       .catch(() => {});
   });
 
@@ -83,10 +86,42 @@
     initMiniApp();
     authTelegram(initData)
       .then(applyAuthResponse)
+      .then(handleInvite)
       .catch((e) => {
         telegramError = e instanceof Error ? e.message : 'Ошибка входа через Telegram';
       });
   });
+
+  // handleInvite auto-joins the game from a friend-invite deep link
+  // (startapp=game_<id>). Unavailable games degrade to the lobby with a note.
+  async function handleInvite() {
+    const param = getStartParam();
+    if (!param || !param.startsWith('game_')) return;
+    const gameId = param.slice('game_'.length);
+    try {
+      const res = await joinGame(gameId);
+      if (res.game_token) {
+        centrifugo.subscribe(`game:${res.game.id}`, res.game_token);
+      }
+      gameState.startGame(res.game);
+      if (res.board && res.current_turn_uid) {
+        const players = res.game.players?.length
+          ? res.game.players.map((p) => ({ uid: p.uid, rating: p.rating, score: 0, words_count: 0, words: [] }))
+          : res.game.player_ids.map((uid) => ({ uid, rating: 0, score: 0, words_count: 0, words: [] }));
+        gameState.applyGameState({
+          type: 'game_state',
+          game_id: res.game.id,
+          board: res.board,
+          current_turn_uid: res.current_turn_uid,
+          players,
+          status: 'in_progress',
+          move_number: 0,
+        });
+      }
+    } catch {
+      gameState.showNotif('Эта игра уже недоступна', 'warn');
+    }
+  }
 
   async function handleSubmit(e: Event) {
     e.preventDefault();

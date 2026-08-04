@@ -154,7 +154,7 @@ func setupHandlers(t *testing.T) (*handlers.Handlers, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true, "")
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true, "", "")
 	return h, core.cleanup
 }
 
@@ -163,7 +163,7 @@ func TestSignupDisabled(t *testing.T) {
 	core := setupCore(ctx, t)
 	defer core.cleanup()
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", false, "")
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", false, "", "https://t.me/balda_test_bot/game")
 
 	res, err := h.Signup(ctx, &baldaapi.SignupRequest{
 		Firstname: "No",
@@ -177,10 +177,11 @@ func TestSignupDisabled(t *testing.T) {
 	require.True(t, isErr, "expected *ErrorResponse, got %T", res)
 	assert.Equal(t, http.StatusForbidden, errResp.Status.Value)
 
-	// The public config endpoint reports the same flag.
+	// The public config endpoint reports the same flags.
 	cfg, err := h.GetConfig(ctx)
 	require.NoError(t, err)
 	assert.False(t, cfg.EmailSignupEnabled.Value)
+	assert.Equal(t, "https://t.me/balda_test_bot/game", cfg.TelegramAppURL.Value)
 }
 
 func TestSignupHandler(t *testing.T) {
@@ -485,7 +486,7 @@ func setupFull(t *testing.T) (*handlers.Handlers, *lobby.Lobby, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true, "")
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", true, "", "")
 	return h, core.lby, core.cleanup
 }
 

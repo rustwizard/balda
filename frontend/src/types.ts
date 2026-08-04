@@ -227,6 +227,7 @@ export interface PlayerStats {
 
 export interface ClientConfig {
     email_signup_enabled: boolean;
+    telegram_app_url?: string;
 }
 
 export interface EvAchievementUnlocked {

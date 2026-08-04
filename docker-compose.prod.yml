@@ -54,6 +54,8 @@ services:
       AUTH_EMAIL_SIGNUP_ENABLED: "false"
       # Telegram Mini App auth (optional; endpoint answers 503 when empty).
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      # Public Mini App link (https://t.me/<bot>/<app>) for friend invites.
+      TELEGRAM_APP_URL: ${TELEGRAM_APP_URL:-}
       PG_HOST: pg
       PG_USER: balda
       PG_DATABASE: balda

@@ -57,6 +57,9 @@ export function createGameState() {
     // Quick match search state (matchmaking queue)
     let searching = $state<boolean>(false);
 
+    // Public Telegram Mini App URL (from /config) for friend-invite links.
+    let telegramAppUrl = $state<string>("");
+
     // End proposal
     let endProposalPending = $state<boolean>(false);
     let endProposalByMe = $state<boolean>(false);
@@ -420,6 +423,9 @@ export function createGameState() {
         get searching() {
             return searching;
         },
+        get telegramAppUrl() {
+            return telegramAppUrl;
+        },
         get endProposalPending() {
             return endProposalPending;
         },
@@ -453,6 +459,9 @@ export function createGameState() {
         clearNotif,
         setSearching(value: boolean) {
             searching = value;
+        },
+        setTelegramAppUrl(value: string) {
+            telegramAppUrl = value;
         },
         setMoveLoading(value: boolean) {
             moveLoading = value;

@@ -94,6 +94,9 @@ docker compose -f docker-compose.prod.yml logs --tail 200 centrifugo
    на нашу сессию через `POST /auth/telegram` — без форм и паролей; первый
    визит создаёт пользователя (привязка по `telegram_id`).
 5. Menu button бота (Bot Settings → Menu Button) — «Играть» с тем же URL.
+6. Для приглашений друзей в партию: вписать публичную ссылку аппа в `.env`
+   (`TELEGRAM_APP_URL=https://t.me/<bot>/<app>`) и перезапустить — кнопка
+   «Пригласить друга» появится на экране ожидания соперника.
 
 Регистрация по email в проде выключена (`AUTH_EMAIL_SIGNUP_ENABLED: "false"`
 в `docker-compose.prod.yml`) — это локально-тестовый способ входа. Логин

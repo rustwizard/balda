@@ -1,8 +1,31 @@
 <script lang="ts">
   import { gameState } from '../stores/game.svelte';
   import { leaveGame } from '../lib/api';
+  import { isMiniApp, shareTelegramLink } from '../lib/telegram';
 
   let error = $state('');
+  let copied = $state(false);
+
+  let inviteUrl = $derived(
+    gameState.telegramAppUrl && gameState.game?.id
+      ? `${gameState.telegramAppUrl}?startapp=game_${gameState.game.id}`
+      : ''
+  );
+
+  async function invite() {
+    if (!inviteUrl) return;
+    if (isMiniApp()) {
+      shareTelegramLink(inviteUrl);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      copied = true;
+      setTimeout(() => (copied = false), 2000);
+    } catch {
+      error = 'Не удалось скопировать ссылку';
+    }
+  }
 
   async function cancel() {
     error = '';
@@ -27,9 +50,17 @@
   {#if error}
     <div class="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>
   {/if}
+  {#if inviteUrl}
+    <button
+      onclick={invite}
+      class="mt-6 w-full rounded-xl bg-blue-600 px-6 py-2 font-bold text-white transition hover:bg-blue-700"
+    >
+      {copied ? 'Ссылка скопирована ✓' : 'Пригласить друга'}
+    </button>
+  {/if}
   <button
     onclick={cancel}
-    class="mt-6 rounded-xl bg-stone-200 px-6 py-2 font-bold text-stone-700 transition hover:bg-stone-300"
+    class="mt-3 rounded-xl bg-stone-200 px-6 py-2 font-bold text-stone-700 transition hover:bg-stone-300"
   >
     Отменить
   </button>

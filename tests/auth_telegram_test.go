@@ -59,7 +59,7 @@ func setupTelegramHandlers(t *testing.T) (*handlers.Handlers, func()) {
 	ctx := context.Background()
 	core := setupCore(ctx, t)
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", false, testTelegramBotToken)
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", false, testTelegramBotToken, "")
 	return h, core.cleanup
 }
 
@@ -115,7 +115,7 @@ func TestAuthTelegram_NotConfigured(t *testing.T) {
 	core := setupCore(ctx, t)
 	defer core.cleanup()
 	cf := centrifugo.NewClient("http://localhost:8000/api", "test-key")
-	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", false, "")
+	h := handlers.New(core.svc, core.pres, testJWTSecret, cf, "test-secret", false, "", "")
 
 	res, err := h.AuthTelegram(ctx, &baldaapi.TelegramAuthRequest{InitData: "whatever=1"})
 	require.NoError(t, err)

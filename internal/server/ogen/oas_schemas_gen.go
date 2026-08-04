@@ -442,6 +442,8 @@ func (s *BoardCell) SetCol(val int) {
 type ConfigResponse struct {
 	// Whether email/password registration is available.
 	EmailSignupEnabled OptBool `json:"email_signup_enabled"`
+	// Public Telegram Mini App URL used to build friend-invite links (empty when not configured).
+	TelegramAppURL OptString `json:"telegram_app_url"`
 }
 
 // GetEmailSignupEnabled returns the value of EmailSignupEnabled.
@@ -449,9 +451,19 @@ func (s *ConfigResponse) GetEmailSignupEnabled() OptBool {
 	return s.EmailSignupEnabled
 }
 
+// GetTelegramAppURL returns the value of TelegramAppURL.
+func (s *ConfigResponse) GetTelegramAppURL() OptString {
+	return s.TelegramAppURL
+}
+
 // SetEmailSignupEnabled sets the value of EmailSignupEnabled.
 func (s *ConfigResponse) SetEmailSignupEnabled(val OptBool) {
 	s.EmailSignupEnabled = val
+}
+
+// SetTelegramAppURL sets the value of TelegramAppURL.
+func (s *ConfigResponse) SetTelegramAppURL(val OptString) {
+	s.TelegramAppURL = val
 }
 
 // Ref: #/components/schemas/CreateGameResponse
