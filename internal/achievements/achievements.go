@@ -51,12 +51,6 @@ type PlayerGameStats struct {
 	IsWinner        bool
 }
 
-// Unlock represents a newly unlocked achievement.
-type Unlock struct {
-	PlayerID string
-	Achievement
-}
-
 // Service holds achievement definitions and evaluates them against player stats.
 // Definitions are loaded from persistent storage and can be reloaded at runtime.
 type Service struct {
@@ -116,11 +110,6 @@ func (s *Service) Start(ctx context.Context, interval time.Duration) {
 			}
 		}
 	}
-}
-
-// Reload is a synchronous convenience wrapper around Load.
-func (s *Service) Reload(ctx context.Context) error {
-	return s.Load(ctx)
 }
 
 func (s *Service) definitions() []Definition {
@@ -196,7 +185,7 @@ func matches(d Definition, stats PlayerGameStats) bool {
 	}
 }
 
-// WordLength returns the number of runes in a word.
-func WordLength(w string) int {
+// wordLength returns the number of runes in a word.
+func wordLength(w string) int {
 	return utf8.RuneCountInString(w)
 }

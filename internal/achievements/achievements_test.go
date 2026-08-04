@@ -145,9 +145,9 @@ func TestList(t *testing.T) {
 }
 
 func TestWordLength(t *testing.T) {
-	assert.Equal(t, 5, WordLength("масло"))
-	assert.Equal(t, 10, WordLength("достаточно"))
-	assert.Equal(t, 0, WordLength(""))
+	assert.Equal(t, 5, wordLength("масло"))
+	assert.Equal(t, 10, wordLength("достаточно"))
+	assert.Equal(t, 0, wordLength(""))
 }
 
 func ids(a []Achievement) []string {
