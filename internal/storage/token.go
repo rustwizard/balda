@@ -21,15 +21,16 @@ type RefreshToken struct {
 }
 
 // SaveRefreshToken stores an HMAC-SHA256-hashed refresh token for the user.
-// Empty userAgent / ipAddr are stored as NULL.
-func (b *Balda) SaveRefreshToken(ctx context.Context, uid int64, tokenHash string, expiresAt time.Time, userAgent, ipAddr string) error {
+// TokenID, IssuedAt and Revoked are not used on insert (defaults apply).
+// Empty UserAgent / IPAddr are stored as NULL.
+func (b *Balda) SaveRefreshToken(ctx context.Context, rt RefreshToken) error {
 	ctx, cancel := context.WithTimeout(ctx, b.t)
 	defer cancel()
 
 	_, err := b.db.Exec(ctx,
 		`INSERT INTO refresh_tokens(user_id, token_hash, expires_at, user_agent, ip_addr)
 		 VALUES($1, $2, $3, NULLIF($4, ''), NULLIF($5, '')::inet)`,
-		uid, tokenHash, expiresAt, userAgent, ipAddr,
+		rt.UserID, rt.TokenHash, rt.ExpiresAt, rt.UserAgent, rt.IPAddr,
 	)
 	if err != nil {
 		return fmt.Errorf("save refresh token: %w", err)

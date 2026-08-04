@@ -20,7 +20,7 @@ const telegramInitDataMaxAge = 24 * time.Hour
 // init data against the bot token, then logs in the linked user or creates a
 // new one on first visit.
 func (h *Handlers) AuthTelegram(ctx context.Context, req *baldaapi.TelegramAuthRequest) (baldaapi.AuthTelegramRes, error) {
-	if h.telegramBotToken == "" {
+	if h.cfg.TelegramBotToken == "" {
 		return &baldaapi.AuthTelegramServiceUnavailable{
 			Status:  baldaapi.NewOptInt(http.StatusServiceUnavailable),
 			Message: baldaapi.NewOptString("telegram auth is not configured"),
@@ -28,7 +28,7 @@ func (h *Handlers) AuthTelegram(ctx context.Context, req *baldaapi.TelegramAuthR
 		}, nil
 	}
 
-	tgUser, err := auth.ValidateInitData(req.InitData, h.telegramBotToken, telegramInitDataMaxAge)
+	tgUser, err := auth.ValidateInitData(req.InitData, h.cfg.TelegramBotToken, telegramInitDataMaxAge)
 	if err != nil {
 		return &baldaapi.AuthTelegramUnauthorized{
 			Status:  baldaapi.NewOptInt(http.StatusUnauthorized),
@@ -49,7 +49,12 @@ func (h *Handlers) AuthTelegram(ctx context.Context, req *baldaapi.TelegramAuthR
 		if nickname == "" {
 			nickname = flname.GenNickname()
 		}
-		created, err := h.svc.CreateTelegramUser(ctx, tgUser.FirstName, tgUser.LastName, nickname, tgUser.ID)
+		created, err := h.svc.CreateTelegramUser(ctx, storage.CreateTelegramUserParams{
+			Firstname:  tgUser.FirstName,
+			Lastname:   tgUser.LastName,
+			Nickname:   nickname,
+			TelegramID: tgUser.ID,
+		})
 		if err != nil {
 			slog.Error("auth telegram: create user", slog.Any("error", err))
 			return authTelegramInternalError(), nil

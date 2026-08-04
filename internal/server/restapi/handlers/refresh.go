@@ -15,7 +15,7 @@ import (
 // RefreshToken implements baldaapi.Handler. It validates the presented refresh
 // token, rotates it (revoking the old one), and returns a fresh token pair.
 func (h *Handlers) RefreshToken(ctx context.Context, req *baldaapi.RefreshRequest) (baldaapi.RefreshTokenRes, error) {
-	hash := auth.HashRefreshToken(h.jwtSecret, req.RefreshToken)
+	hash := auth.HashRefreshToken(h.cfg.JWTSecret, req.RefreshToken)
 
 	rt, err := h.svc.GetRefreshToken(ctx, hash)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -62,7 +62,7 @@ func (h *Handlers) RefreshToken(ctx context.Context, req *baldaapi.RefreshReques
 		}, nil
 	}
 
-	access, refresh, err := h.issueTokens(ctx, rt.UserID, u.PlayerID, u.Role, rt.UserAgent, rt.IPAddr)
+	access, refresh, err := h.issueTokens(ctx, rt.UserID, u.PlayerID, u.Role, tokenMeta{UserAgent: rt.UserAgent, IPAddr: rt.IPAddr})
 	if err != nil {
 		slog.Error("refresh: issue tokens", slog.Any("error", err))
 		return &baldaapi.ErrorResponse{

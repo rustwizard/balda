@@ -77,8 +77,9 @@ func (s *Balda) AuthUser(ctx context.Context, email, password string) (storage.U
 }
 
 // CreateUser registers a new user with their player profile in one transaction.
-func (s *Balda) CreateUser(ctx context.Context, firstname, lastname, email, password, nickname string) (storage.UserCreated, error) {
-	return s.s.CreateUser(ctx, firstname, lastname, email, password, nickname)
+// CreateUser creates a new email/password user with their player state.
+func (s *Balda) CreateUser(ctx context.Context, p storage.CreateUserParams) (storage.UserCreated, error) {
+	return s.s.CreateUser(ctx, p)
 }
 
 // GetPlayerState returns the profile fields for the given player UUID.
@@ -116,13 +117,13 @@ func (s *Balda) GetUserByTelegramID(ctx context.Context, telegramID int64) (stor
 }
 
 // CreateTelegramUser creates a new user registered via Telegram Mini App auth.
-func (s *Balda) CreateTelegramUser(ctx context.Context, firstname, lastname, nickname string, telegramID int64) (storage.UserCreated, error) {
-	return s.s.CreateTelegramUser(ctx, firstname, lastname, nickname, telegramID)
+func (s *Balda) CreateTelegramUser(ctx context.Context, p storage.CreateTelegramUserParams) (storage.UserCreated, error) {
+	return s.s.CreateTelegramUser(ctx, p)
 }
 
 // SaveRefreshToken persists the HMAC hash of a refresh token for the user.
-func (s *Balda) SaveRefreshToken(ctx context.Context, uid int64, tokenHash string, expiresAt time.Time, userAgent, ipAddr string) error {
-	return s.s.SaveRefreshToken(ctx, uid, tokenHash, expiresAt, userAgent, ipAddr)
+func (s *Balda) SaveRefreshToken(ctx context.Context, rt storage.RefreshToken) error {
+	return s.s.SaveRefreshToken(ctx, rt)
 }
 
 // GetRefreshToken fetches a refresh token row by its hash.

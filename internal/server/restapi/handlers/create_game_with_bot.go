@@ -89,7 +89,7 @@ func (h *Handlers) CreateGameWithBot(ctx context.Context) (baldaapi.CreateGameWi
 	firstPlayerID := rec.Game.CurrentPlayerID()
 
 	gameToken, err := centrifugo.GenerateSubscriptionToken(
-		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,
+		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.cfg.CentrifugoTokenHMACSecret, 24*time.Hour,
 	)
 	if err != nil {
 		slog.Error("create_game_with_bot: generate game token", slog.Any("error", err))

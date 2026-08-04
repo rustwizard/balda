@@ -47,7 +47,7 @@ func (h *Handlers) Auth(ctx context.Context, req *baldaapi.AuthRequest) (baldaap
 // optional active game snapshot) for an already-identified user. It is shared
 // by the email/password and Telegram auth handlers.
 func (h *Handlers) newAuthResponse(ctx context.Context, u storage.UserAuth) (*baldaapi.AuthResponse, *baldaapi.ErrorResponse) {
-	access, refresh, err := h.issueTokens(ctx, u.UID, u.PlayerID, u.Role, "", "")
+	access, refresh, err := h.issueTokens(ctx, u.UID, u.PlayerID, u.Role, tokenMeta{})
 	if err != nil {
 		slog.Error("auth: issue tokens", slog.Any("error", err))
 		return nil, &baldaapi.ErrorResponse{
@@ -94,7 +94,7 @@ func (h *Handlers) buildActiveGame(uid int64, playerID string) *baldaapi.ActiveG
 	}
 
 	gameToken, err := centrifugo.GenerateSubscriptionToken(
-		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.centrifugoTokenHMACSecret, 24*time.Hour,
+		strconv.FormatInt(uid, 10), centrifugo.ChannelGame(rec.ID), h.cfg.CentrifugoTokenHMACSecret, 24*time.Hour,
 	)
 	if err != nil {
 		slog.Error("auth: generate game token for reconnect", slog.Any("error", err))
