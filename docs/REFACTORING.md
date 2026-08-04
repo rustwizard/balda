@@ -84,8 +84,13 @@
 
 ## Приоритизация
 
-### Этап 1 — быстрые выигрыши (~полдня)
-C3, C5, C6 (кроме flname), switch-замены из C1 (`coord.go:64`, `lobby.go:112`, `auth.go:110`), `slog.Warn` в dictionary, R4 (инициализация слайсов `[]T{}` в storage).
+### Этап 1 — быстрые выигрыши (~полдня) ✅ ВЫПОЛНЕН (ветка refactor/stage1-cleanup)
+~~C3, C5, C6 (кроме flname), switch-замены из C1 (`coord.go:64`, `lobby.go:112`, `auth.go:110`), `slog.Warn` в dictionary, R4 (инициализация слайсов `[]T{}` в storage)~~
+
+Сделано: R4 (пустые слайсы в storage), C3 (var для zero-value; `OfflineGraceDuration`
+оставлен var — тесты его переопределяют), C5 (мёртвый код achievements + legacy
+session.Service удалён, −195 строк), C6 (%q, JoinHostPort, strings.Builder),
+C1-три switch (coord/lobby/auth buildActiveGame), slog.Warn в dictionary.
 
 ### Этап 2 — средние
 R1 (options struct для `handlers.New`, `CreateUser`, `SaveRefreshToken`), вынос ELO-хелпера из `SaveGameResultWithAchievements`, R3 (дедупликация `EvGameOver` и `boardToSlice`, статус-switch в `lobby.Join`), C2 (порядок импортов/файлов, ошибки в одном месте).
