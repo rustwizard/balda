@@ -123,7 +123,7 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 				DefaultRating, p.PlayerID,
 			).Scan(&rating)
 			if err != nil {
-				return nil, fmt.Errorf("save game result: load rating for %s: %w", p.PlayerID, err)
+				return nil, fmt.Errorf("save game result: load rating for %q: %w", p.PlayerID, err)
 			}
 			ratings[i] = rating
 		}
@@ -142,7 +142,7 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 		ratingDeltas[p1.PlayerID] = EloDelta(ratings[1], ratings[0], score1)
 	}
 
-	var unlocks []PlayerAchievementUnlock
+	unlocks := make([]PlayerAchievementUnlock, 0)
 
 	for _, p := range r.Players {
 		if p.Bot {
@@ -151,7 +151,7 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 
 		wordsJSON, err := json.Marshal(p.Words)
 		if err != nil {
-			return nil, fmt.Errorf("save game result: marshal words for %s: %w", p.PlayerID, err)
+			return nil, fmt.Errorf("save game result: marshal words for %q: %w", p.PlayerID, err)
 		}
 		if p.Words == nil {
 			wordsJSON = []byte("[]")
@@ -163,7 +163,7 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 			resultID, p.PlayerID, p.Score, p.WordsCount, p.ExpGained, p.BestWordLength, wordsJSON,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("save game result: insert game_result_players for %s: %w", p.PlayerID, err)
+			return nil, fmt.Errorf("save game result: insert game_result_players for %q: %w", p.PlayerID, err)
 		}
 
 		isWinner := r.WinnerID != "" && r.WinnerID == p.PlayerID
@@ -178,7 +178,7 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 			p.PlayerID,
 		).Scan(&oldTotal, &oldStreak, &oldFlags)
 		if err != nil {
-			return nil, fmt.Errorf("save game result: load counters for %s: %w", p.PlayerID, err)
+			return nil, fmt.Errorf("save game result: load counters for %q: %w", p.PlayerID, err)
 		}
 
 		newTotal := oldTotal + 1
@@ -212,7 +212,7 @@ func (b *Balda) SaveGameResultWithAchievements(ctx context.Context, r GameResult
 			p.ExpGained, ratingDeltas[p.PlayerID], newTotal, newStreak, newBits, p.PlayerID,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("save game result: update player_state for %s: %w", p.PlayerID, err)
+			return nil, fmt.Errorf("save game result: update player_state for %q: %w", p.PlayerID, err)
 		}
 
 		if len(newlyUnlocked) > 0 {

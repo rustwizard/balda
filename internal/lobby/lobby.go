@@ -109,11 +109,13 @@ func (l *Lobby) Join(_ context.Context, gameID string, p *game.Player, n game.No
 		l.mu.RUnlock()
 		return nil, ErrGameNotFound
 	}
-	if rec.Status != GameStatusWaiting {
+	switch rec.Status {
+	case GameStatusWaiting:
+	case GameStatusInProgress:
 		l.mu.RUnlock()
-		if rec.Status == GameStatusInProgress {
-			return nil, ErrGameFull
-		}
+		return nil, ErrGameFull
+	default:
+		l.mu.RUnlock()
 		return nil, ErrGameNotWaiting
 	}
 	if _, alreadyIn := l.byPlayer[p.ID]; alreadyIn {
@@ -146,11 +148,13 @@ func (l *Lobby) Join(_ context.Context, gameID string, p *game.Player, n game.No
 		cancel()
 		return nil, ErrGameNotFound
 	}
-	if rec.Status != GameStatusWaiting {
+	switch rec.Status {
+	case GameStatusWaiting:
+	case GameStatusInProgress:
 		cancel()
-		if rec.Status == GameStatusInProgress {
-			return nil, ErrGameFull
-		}
+		return nil, ErrGameFull
+	default:
+		cancel()
 		return nil, ErrGameNotWaiting
 	}
 	if _, alreadyIn := l.byPlayer[p.ID]; alreadyIn {

@@ -94,8 +94,8 @@ func (b *Balda) GetPlayerStats(ctx context.Context, playerID uuid.UUID) (PlayerS
 
 // bestWord returns the longest word by rune count; ties keep the first one.
 func bestWord(words []string) string {
-	best := ""
-	bestLen := 0
+	var best string
+	var bestLen int
 	for _, w := range words {
 		if l := utf8.RuneCountInString(w); l > bestLen {
 			best, bestLen = w, l
@@ -109,8 +109,8 @@ func bestWord(words []string) string {
 // Ties keep the letter that reached its maximum first.
 func favoriteLetter(words []string) string {
 	counts := make(map[rune]int)
-	best := rune(0)
-	bestCount := 0
+	var best rune
+	var bestCount int
 	for _, w := range words {
 		for _, r := range strings.ToLower(w) {
 			if r == 'ё' {

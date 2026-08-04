@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"regexp"
 	"strings"
@@ -65,7 +66,9 @@ func NewDictionary() (*Dictionary, error) {
 
 	// Hand-picked additions for words missing from the main dictionary.
 	// They go through the same normalization and filtering pipeline.
-	if cf, err := data.Open("assets/custom_words.json"); err == nil {
+	cf, err := data.Open("assets/custom_words.json")
+	switch {
+	case err == nil:
 		defer cf.Close() //nolint:errcheck
 		var custom map[string]map[string]string
 		if err := json.NewDecoder(cf).Decode(&custom); err != nil {
@@ -74,6 +77,10 @@ func NewDictionary() (*Dictionary, error) {
 		for k, v := range custom {
 			raw[normalizeWord(k)] = v["definition"]
 		}
+	case errors.Is(err, fs.ErrNotExist):
+		// The supplement is optional; its absence is fine.
+	default:
+		slog.Warn("game: dictionary: failed to open custom words", slog.Any("error", err))
 	}
 
 	// Filter out entries that break the classic Balda rules or feel unfair

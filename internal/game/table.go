@@ -2,6 +2,7 @@ package game
 
 import (
 	"errors"
+	"strings"
 	"unicode/utf8"
 )
 
@@ -46,14 +47,14 @@ func NewLettersTable(w string) (*LettersTable, error) {
 }
 
 func (lt *LettersTable) InitialWord() string {
-	var word string
+	var word strings.Builder
 	for _, v := range lt.Table[2] {
 		if v == nil {
 			continue
 		}
-		word += v.Char
+		word.WriteString(v.Char)
 	}
-	return word
+	return word.String()
 }
 
 // AsStrings converts the board to a 5x5 string matrix suitable for JSON serialization.

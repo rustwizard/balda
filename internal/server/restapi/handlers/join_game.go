@@ -100,7 +100,7 @@ func (h *Handlers) JoinGame(ctx context.Context, params baldaapi.JoinGameParams)
 	h.publishLobbyUpdate(ctx)
 
 	// The creator (index 0) always moves first.
-	firstPlayerID := ""
+	var firstPlayerID string
 	if len(rec.Players) > 0 {
 		firstPlayerID = rec.Players[0].ID
 	}

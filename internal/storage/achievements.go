@@ -22,7 +22,7 @@ func (b *Balda) LoadAchievementDefinitions(ctx context.Context) ([]achievements.
 	}
 	defer rows.Close()
 
-	var out []achievements.Definition
+	out := make([]achievements.Definition, 0)
 	for rows.Next() {
 		var d achievements.Definition
 		if err := rows.Scan(&d.ID, &d.Name, &d.Description, &d.IconURL, &d.ConditionType, &d.Operator, &d.Threshold, &d.BitPosition); err != nil {
