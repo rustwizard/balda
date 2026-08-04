@@ -114,11 +114,11 @@ func (g *Game) CheckWordExistence(word string) bool {
 }
 
 func MakeWord(word []Letter) string {
-	var w string
+	var w strings.Builder
 	for _, v := range word {
-		w += v.Char
+		w.WriteString(v.Char)
 	}
-	return normalizeWord(w)
+	return normalizeWord(w.String())
 }
 
 // normalizeWord replaces ё/Ё with е/Е so that words differing only by

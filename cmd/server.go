@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"sync"
@@ -280,7 +281,7 @@ var serverCmd = &cobra.Command{
 		})
 		mux.Handle("/", srv)
 
-		addr := fmt.Sprintf("%s:%d", cfg.ServerAddr, cfg.ServerPort)
+		addr := net.JoinHostPort(cfg.ServerAddr, strconv.Itoa(cfg.ServerPort))
 		httpSrv := &http.Server{
 			Addr:              addr,
 			Handler:           mux,
